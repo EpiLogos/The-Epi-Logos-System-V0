@@ -1,0 +1,126 @@
+version: '3.8'
+
+services:
+  # Local Qdrant vector database
+  qdrant:
+    image: qdrant/qdrant:v1.15.3
+    container_name: epi-logos-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - epi-logos-network
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: epi-logos-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+      - NEXT_PUBLIC_GRAPHQL_URL=http://backend:8000/graphql
+    volumes:
+      - ./frontend:/app/frontend
+      - ./packages:/app/packages
+      - /app/frontend/node_modules
+      - /app/packages/shared-types/node_modules
+      - /app/packages/ui-components/node_modules
+    depends_on:
+      - backend
+    networks:
+      - epi-logos-network
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend/src
+          target: /app/frontend/src
+        - action: sync
+          path: ./packages
+          target: /app/packages
+
+  # Backend (FastAPI)
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: epi-logos-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_USERNAME=${NEO4J_USERNAME}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - MONGODB_URI=${MONGODB_URI}
+      - REDIS_URL=${REDIS_URL}
+      - QDRANT_URL=http://qdrant:6333
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./backend:/app/backend
+      - /app/backend/__pycache__
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    networks:
+      - epi-logos-network
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+
+  # Agentic Layer (Pydantic AI)
+  agentic:
+    build:
+      context: .
+      dockerfile: agentic/Dockerfile
+    container_name: epi-logos-agentic
+    ports:
+      - "8001:8001"
+    environment:
+      - ENVIRONMENT=development
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_USERNAME=${NEO4J_USERNAME}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - MONGODB_URI=${MONGODB_URI}
+      - REDIS_URL=${REDIS_URL}
+      - QDRANT_URL=http://qdrant:6333
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./agentic:/app/agentic
+      - /app/agentic/__pycache__
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    networks:
+      - epi-logos-network
+    develop:
+      watch:
+        - action: sync
+          path: ./agentic
+          target: /app/agentic
+
+volumes:
+  qdrant_storage:
+    driver: local
+
+networks:
+  epi-logos-network:
+    driver: bridge

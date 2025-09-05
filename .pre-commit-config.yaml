@@ -1,0 +1,77 @@
+repos:
+  # Frontend (TypeScript/React) hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+
+  # Prettier for frontend formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        files: \.(js|jsx|ts|tsx|json|css|md|yaml|yml)$
+        exclude: |
+          (?x)^(
+              \.next/.*|
+              node_modules/.*|
+              dist/.*|
+              build/.*|
+              coverage/.*
+          )$
+
+  # ESLint for frontend linting
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.18.0
+    hooks:
+      - id: eslint
+        files: \.(js|jsx|ts|tsx)$
+        args: [--fix]
+        additional_dependencies:
+          - eslint@9.18.0
+          - "@typescript-eslint/eslint-plugin@8.21.0"
+          - "@typescript-eslint/parser@8.21.0"
+
+  # Python backend hooks
+  - repo: https://github.com/psf/black
+    rev: 24.12.0
+    hooks:
+      - id: black
+        files: ^(backend|agentic)/.*\.py$
+        language_version: python3.13
+
+  # Ruff for Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.8
+    hooks:
+      - id: ruff
+        files: ^(backend|agentic)/.*\.py$
+        args: [--fix]
+      - id: ruff-format
+        files: ^(backend|agentic)/.*\.py$
+
+  # Python import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        files: ^(backend|agentic)/.*\.py$
+        args: ["--profile", "black"]
+
+  # Security checks
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: |
+          (?x)^(
+              \.env\.example|
+              package-lock\.json|
+              .*\.lock
+          )$

@@ -1,0 +1,9 @@
+type BimbaNodeBasic {
+    coordinate: String!
+    name: String!
+    subsystem: String
+}
+
+type Query {
+    getNodeByCoordinate(coordinate: String!): BimbaNodeBasic
+}

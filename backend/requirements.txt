@@ -1,0 +1,56 @@
+# FastAPI and web framework dependencies
+fastapi==0.116.1
+uvicorn[standard]>=0.34.0
+pydantic>=2.11.2,<3.0.0
+pydantic-settings>=2.7.1
+
+# AG-UI Protocol for agent-to-UI communication
+pydantic-ai==0.8.1
+ag-ui-protocol==0.1.8
+
+# GraphQL with Ariadne
+ariadne==0.23.0
+
+# Database drivers
+neo4j==5.28.0
+pymongo==4.10.1
+redis==5.2.1
+qdrant-client==1.15.1
+
+# Authentication and security
+python-jose[cryptography]==3.3.0
+PyJWT>=2.10.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.20
+slowapi==0.1.9
+bleach==6.2.0
+tinycss2>=1.2.0
+pyotp==2.9.0
+cryptography>=42.0.0
+
+# HTTP client and utilities
+httpx>=0.28.1
+aiohttp==3.10.11
+aiofiles==24.1.0
+
+# Payment processing
+stripe>=12.0.0
+
+# Data processing and validation
+python-dateutil==2.9.0
+email-validator==2.2.0
+numpy>=1.24.0
+
+# Monitoring and logging
+structlog==24.4.0
+prometheus-client==0.21.1
+
+# Development and testing
+pytest==8.4.1
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+black==24.10.0
+ruff==0.8.6
+
+# Environment and configuration
+python-dotenv==1.0.1

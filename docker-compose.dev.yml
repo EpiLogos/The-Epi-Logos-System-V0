@@ -1,0 +1,44 @@
+# Development override for docker-compose.yml
+# This file runs only infrastructure services for local development
+# Use: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  # Only run Qdrant for local development
+  # Other databases (Neo4j, MongoDB, Redis) are cloud services
+  qdrant:
+    # Inherit from main docker-compose.yml
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Remove frontend, backend, and agentic services for local development
+  # They will run locally using venv
+  frontend:
+    profiles: ["full-docker"]  # Only run with --profile full-docker
+  
+  backend:
+    profiles: ["full-docker"]
+  
+  agentic:
+    profiles: ["full-docker"]
+
+volumes:
+  qdrant_storage:
+    driver: local
+
+networks:
+  epi-logos-network:
+    driver: bridge
