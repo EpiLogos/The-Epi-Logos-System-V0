@@ -78,7 +78,10 @@ class UnifiedOrchestrator:
         self.session_manager = SessionManager(redis_url)
         self.context_builder = ContextPackageBuilder()
         self.bimba_client = BimbaGraphQLClient(graphql_endpoint)
-        self.conversation_manager = ConversationManager(mongodb_url)
+        # Get database name from environment or use default
+        import os
+        mongodb_db_name = os.getenv("MONGODB_DATABASE", "EpiiTest")
+        self.conversation_manager = ConversationManager(mongodb_url, mongodb_db_name)
         
         # Initialize the underlying Pydantic AI agent
         self._agent = self._create_agent()

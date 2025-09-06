@@ -34,6 +34,13 @@ except ImportError:
     ANTHROPIC_AVAILABLE = False
 
 try:
+    # Deepseek uses OpenAI-compatible API
+    from openai import OpenAI as DeepseekClient
+    DEEPSEEK_AVAILABLE = True
+except ImportError:
+    DEEPSEEK_AVAILABLE = False
+
+try:
     import langextract as lx
     LANGEXTRACT_AVAILABLE = True
 except ImportError:
@@ -50,8 +57,9 @@ class LLMServiceManager:
         self.openai_client = None
         self.gemini_model = None
         self.anthropic_client = None
+        self.deepseek_client = None
         self.langextract_available = LANGEXTRACT_AVAILABLE
-        
+
         self._initialize_services()
     
     def _initialize_services(self):
@@ -84,7 +92,18 @@ class LLMServiceManager:
                 logger.info("Anthropic client initialized")
             except Exception as e:
                 logger.warning(f"Failed to initialize Anthropic: {e}")
-        
+
+        # Initialize Deepseek
+        if DEEPSEEK_AVAILABLE and os.getenv("DEEPSEEK_API_KEY"):
+            try:
+                self.deepseek_client = DeepseekClient(
+                    api_key=os.getenv("DEEPSEEK_API_KEY"),
+                    base_url="https://api.deepseek.com"
+                )
+                logger.info("Deepseek client initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Deepseek: {e}")
+
         # Initialize LangExtract
         if LANGEXTRACT_AVAILABLE and os.getenv("GEMINI_API_KEY"):
             try:
@@ -164,26 +183,35 @@ class LLMServiceManager:
             return await self._gemini_chat(messages, **kwargs)
         elif provider == "anthropic" and self.anthropic_client:
             return await self._anthropic_chat(messages, model, **kwargs)
+        elif provider == "deepseek" and self.deepseek_client:
+            return await self._deepseek_chat(messages, model, **kwargs)
         else:
             logger.error(f"Provider {provider} not available or not initialized")
             return None
     
     async def _openai_chat(
-        self, 
-        messages: List[Dict[str, str]], 
+        self,
+        messages: List[Dict[str, str]],
         model: Optional[str] = None,
         **kwargs
     ) -> Optional[str]:
         """OpenAI chat completion."""
         try:
             model = model or os.getenv("OPENAI_MODEL", "gpt-4")
-            
-            response = self.openai_client.chat.completions.create(
-                model=model,
-                messages=messages,
-                **kwargs
+
+            # Use asyncio to run the synchronous OpenAI client
+            import asyncio
+            loop = asyncio.get_event_loop()
+
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.openai_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    **kwargs
+                )
             )
-            
+
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"OpenAI chat completion failed: {e}")
@@ -194,35 +222,77 @@ class LLMServiceManager:
         try:
             # Convert messages to Gemini format
             prompt = "\n".join([f"{msg['role']}: {msg['content']}" for msg in messages])
-            
-            response = self.gemini_model.generate_content(prompt)
+
+            # Use asyncio to run the synchronous Gemini client
+            import asyncio
+            loop = asyncio.get_event_loop()
+
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.gemini_model.generate_content(prompt)
+            )
             return response.text
         except Exception as e:
             logger.error(f"Gemini chat completion failed: {e}")
             return None
     
     async def _anthropic_chat(
-        self, 
-        messages: List[Dict[str, str]], 
+        self,
+        messages: List[Dict[str, str]],
         model: Optional[str] = None,
         **kwargs
     ) -> Optional[str]:
         """Anthropic chat completion."""
         try:
-            model = model or "claude-3-sonnet-20240229"
-            
-            response = self.anthropic_client.messages.create(
-                model=model,
-                messages=messages,
-                max_tokens=kwargs.get("max_tokens", 1000),
-                **{k: v for k, v in kwargs.items() if k != "max_tokens"}
+            model = model or os.getenv("ANTHROPIC_MODEL", "claude-3-sonnet-20240229")
+
+            # Use asyncio to run the synchronous Anthropic client
+            import asyncio
+            loop = asyncio.get_event_loop()
+
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.anthropic_client.messages.create(
+                    model=model,
+                    messages=messages,
+                    max_tokens=kwargs.get("max_tokens", 1000),
+                    **{k: v for k, v in kwargs.items() if k != "max_tokens"}
+                )
             )
-            
+
             return response.content[0].text
         except Exception as e:
             logger.error(f"Anthropic chat completion failed: {e}")
             return None
-    
+
+    async def _deepseek_chat(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        **kwargs
+    ) -> Optional[str]:
+        """Deepseek chat completion."""
+        try:
+            model = model or os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+
+            # Use asyncio to run the synchronous Deepseek client
+            import asyncio
+            loop = asyncio.get_event_loop()
+
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.deepseek_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    **kwargs
+                )
+            )
+
+            return response.choices[0].message.content
+        except Exception as e:
+            logger.error(f"Deepseek chat completion failed: {e}")
+            return None
+
     async def realtime_audio_session(self, audio_data: bytes) -> Optional[bytes]:
         """Handle OpenAI Realtime API for audio processing."""
         if not self.openai_client:
@@ -249,7 +319,9 @@ class LLMServiceManager:
             providers.append("gemini")
         if self.anthropic_client:
             providers.append("anthropic")
-        
+        if self.deepseek_client:
+            providers.append("deepseek")
+
         return providers
     
     def get_service_status(self) -> Dict[str, bool]:
@@ -258,6 +330,7 @@ class LLMServiceManager:
             "openai": self.openai_client is not None,
             "gemini": self.gemini_model is not None,
             "anthropic": self.anthropic_client is not None,
+            "deepseek": self.deepseek_client is not None,
             "langextract": self.langextract_available and os.getenv("GEMINI_API_KEY") is not None,
         }
 

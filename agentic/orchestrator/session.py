@@ -265,7 +265,26 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Error getting active sessions count: {e}")
             return 0
-    
+
+    async def extend_session(self, session_id: str, duration_seconds: int = None) -> bool:
+        """Extend session expiration time"""
+        try:
+            redis = await self._get_redis()
+            session_key = f"session:{session_id}"
+
+            # Check if session exists
+            if not await redis.exists(session_key):
+                return False
+
+            # Use provided duration or default session timeout
+            expire_seconds = duration_seconds or int(self.session_timeout.total_seconds())
+            await redis.expire(session_key, expire_seconds)
+            return True
+
+        except Exception as e:
+            logger.error(f"Error extending session {session_id}: {e}")
+            return False
+
     async def cleanup_expired_sessions(self) -> int:
         """
         Clean up all expired sessions.

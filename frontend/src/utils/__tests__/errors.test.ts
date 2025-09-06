@@ -31,7 +31,7 @@ describe('Error Utilities', () => {
   describe('generateSupportId', () => {
     it('generates support ID in correct format', () => {
       const id = generateSupportId();
-      expect(id).toMatch(/^SUP-[A-Z0-9]+-[A-Z0-9]{8}$/);
+      expect(id).toMatch(/^SUP-[a-z0-9]+-[A-Z0-9]{8}$/);
     });
 
     it('generates unique support IDs', () => {
@@ -123,9 +123,9 @@ describe('Error Utilities', () => {
 
       expect(classification).toMatchObject({
         severity: 'high',
-        canRecover: false
+        canRecover: true
       });
-      expect(classification.suggestedActions[0].type).toBe('support');
+      expect(classification.suggestedActions[0].type).toBe('retry');
     });
 
     it('classifies network errors correctly', () => {

@@ -9,6 +9,7 @@ conversation history for session restoration and analysis.
 """
 
 import logging
+import certifi
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
 
@@ -105,14 +106,18 @@ class ConversationManager:
     async def _get_database(self) -> AsyncIOMotorDatabase:
         """Get or create MongoDB database connection"""
         if self.client is None:
-            self.client = AsyncIOMotorClient(self.mongodb_url)
+            # Configure SSL for MongoDB Atlas
+            self.client = AsyncIOMotorClient(
+                self.mongodb_url,
+                tlsCAFile=certifi.where()
+            )
             self.database = self.client[self.database_name]
             self.turns_collection = self.database.conversation_turns
             self.summaries_collection = self.database.conversation_summaries
-            
+
             # Create indexes for efficient queries
             await self._create_indexes()
-            
+
         return self.database
     
     async def _create_indexes(self):

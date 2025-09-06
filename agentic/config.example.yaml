@@ -1,0 +1,5 @@
+# Default configuration for the Agentic CLI
+default_model: openai:gpt-4o
+default_persona: default
+transcripts_dir: transcripts
+
