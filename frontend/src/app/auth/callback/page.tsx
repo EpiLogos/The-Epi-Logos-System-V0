@@ -4,16 +4,10 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { GlowParticles } from '@/components/system/GlowParticles';
-import { useAuth } from '@/auth/auth-context';
-import { OAuthCallbackHandler } from '@/auth/oauth/oauth-callback-handler';
-import { AccountLinkingService } from '@/auth/oauth/account-linking-service';
+import { useOAuthCallback } from '@/auth';
 import HexGridLoader from '@/components/HexGridLoader';
 
-// Service instances
-const callbackHandler = new OAuthCallbackHandler();
-const linkingService = new AccountLinkingService();
-
-type CallbackState = 'processing' | 'success' | 'error' | 'linking_required';
+type CallbackState = 'processing' | 'success' | 'error';
 
 interface CallbackError {
   code: string;
@@ -22,11 +16,6 @@ interface CallbackError {
   shouldRetry?: boolean;
 }
 
-interface LinkingData {
-  googleProfile: any;
-  existingUser: any;
-  requiresReAuth: boolean;
-}
 
 /**
  * OAuth Callback Handler Page
@@ -34,20 +23,19 @@ interface LinkingData {
  * Handles the return flow from Google OAuth including:
  * - Authorization code exchange for tokens
  * - User profile extraction and validation
- * - Account linking flow for existing users
+ * - Automatic account linking for existing users
  * - Security validation (state, nonce, PKCE)
  * - Error handling and user feedback
  */
 export default function CallbackPage() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { signIn } = useAuth();
-  
+  const { processCallback, isProcessing, error: oauthError } = useOAuthCallback();
+
   const [callbackState, setCallbackState] = useState<CallbackState>('processing');
   const [error, setError] = useState<CallbackError | null>(null);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('Initializing authentication...');
-  const [linkingData, setLinkingData] = useState<LinkingData | null>(null);
 
   useEffect(() => {
     handleOAuthCallback();
@@ -73,95 +61,44 @@ export default function CallbackPage() {
         throw new Error('Missing authorization code or state parameter');
       }
 
-      // Step 1: Validate state and exchange code for tokens
+      // Step 1: Process OAuth callback
       setProgress(20);
       setStatusMessage('Validating authorization...');
       await new Promise(resolve => setTimeout(resolve, 500)); // UX delay
 
-      const callbackResult = await callbackHandler.handleCallback({ code, state });
-      
-      if (!callbackResult.success) {
-        throw new Error(callbackResult.error || 'Token exchange failed');
-      }
-
-      // Step 2: Handle account linking or create new user
       setProgress(60);
-      setStatusMessage('Setting up your account...');
+      setStatusMessage('Processing your account...');
       await new Promise(resolve => setTimeout(resolve, 500)); // UX delay
 
-      const linkingResult = await linkingService.handleOAuthSignIn(callbackResult.user);
-      
-      if (linkingResult.requiresLinking) {
-        // User has existing account - need linking flow
-        setLinkingData({
-          googleProfile: callbackResult.user,
-          existingUser: linkingResult.existingUser,
-          requiresReAuth: true
-        });
-        setCallbackState('linking_required');
-        setStatusMessage('Account linking required...');
-        return;
-      }
+      // Use unified OAuth callback processing
+      await processCallback('google', code, state);
 
       // Step 3: Complete authentication
       setProgress(90);
-      setStatusMessage('Finalizing sign-in...');
+      setStatusMessage('Welcome to Epi-Logos!');
       await new Promise(resolve => setTimeout(resolve, 500)); // UX delay
-
-      // Normalize token fields to AuthContext shape
-      const raw = callbackResult.tokens as any;
-      
-      // Check if we have backend JWT tokens (preferred) or fallback to Google tokens
-      const normalizedTokens = raw
-        ? {
-            accessToken: raw.access_token || raw.accessToken,
-            refreshToken: raw.refresh_token || raw.refreshToken,
-            idToken: raw.id_token || raw.idToken || '',
-            expiresAt: new Date(Date.now() + (raw.expires_in || 3600) * 1000).toISOString()
-          }
-        : null;
-
-      // Debug logging
-      console.log('OAuth Callback Debug:', {
-        rawTokens: raw,
-        normalizedTokens,
-        hasJwtToken: !!raw?.accessToken,
-        hasGoogleToken: !!raw?.access_token
-      });
-
-      // Store authentication state via global auth context
-      signIn({
-        user: callbackResult.user || linkingResult.newUser,
-        tokens: normalizedTokens,
-        linkedAccount: linkingResult.linkedAccount
-      });
 
       // Success!
       setProgress(100);
-      setStatusMessage('Welcome to Epi-Logos!');
       setCallbackState('success');
 
-      // Determine redirect based on user's password status
-      const hasPassword = callbackResult.user?.hasPassword === true || linkingResult.newUser?.hasPassword === true;
-      const redirectPath = hasPassword ? '/account' : '/account?tab=security';
-
-      // Redirect after short delay
+      // Redirect to account page
       setTimeout(() => {
-        router.push(redirectPath);
+        router.push('/account');
       }, 2000);
 
     } catch (err) {
       console.error('OAuth callback error:', err);
-      
+
       const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
-      
+
       setError({
         code: 'callback_failed',
         message: errorMessage,
         userMessage: getCallbackErrorMessage(errorMessage),
         shouldRetry: !errorMessage.includes('state') && !errorMessage.includes('nonce')
       });
-      
+
       setCallbackState('error');
     }
   };
@@ -208,13 +145,6 @@ export default function CallbackPage() {
     router.push('/auth/signin');
   };
 
-  const handleLinkAccount = () => {
-    // Store linking data for the linking flow
-    if (typeof window !== 'undefined' && linkingData) {
-      sessionStorage.setItem('pending_link', JSON.stringify(linkingData));
-    }
-    router.push('/auth/link-account');
-  };
 
   const renderCallbackState = () => {
     switch (callbackState) {
@@ -285,33 +215,6 @@ export default function CallbackPage() {
           </div>
         );
 
-      case 'linking_required':
-        return (
-          <div className="text-center">
-            <div className="mb-6">
-              <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-              </div>
-            </div>
-            
-            <h2 className="font-heading text-2xl text-white mb-4">
-              Account Linking Required
-            </h2>
-            
-            <p className="font-sans text-gray-300 text-lg mb-6">
-              An account with your email already exists. We'll help you link your Google account securely.
-            </p>
-            
-            <button
-              onClick={handleLinkAccount}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg transition-colors"
-            >
-              Continue to Account Linking
-            </button>
-          </div>
-        );
 
       case 'error':
         return (

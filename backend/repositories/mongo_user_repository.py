@@ -568,3 +568,106 @@ class MongoUserRepository(UserRepository):
         except Exception as exc:
             logger.error(f"Failed to update password for user {user_id}: {exc}")
             raise map_database_exception(exc)
+
+    async def update_mfa_setup(
+        self,
+        user_id: str,
+        secret: str,
+        backup_codes: List[str]
+    ) -> bool:
+        """
+        Update user's MFA setup with secret and backup codes.
+
+        Args:
+            user_id: User identifier
+            secret: TOTP secret
+            backup_codes: List of hashed backup codes
+
+        Returns:
+            True if successfully updated, False otherwise
+
+        Raises:
+            UserNotFoundError: If user doesn't exist
+            UserServiceError: If update fails
+        """
+        try:
+            mongo_client = await self._get_mongo_client()
+
+            # Convert string ID to ObjectId
+            try:
+                object_id = ObjectId(user_id) if isinstance(user_id, str) else user_id
+            except Exception:
+                raise ValidationError(f"Invalid user ID format: {user_id}")
+
+            # Update MFA settings
+            result = await mongo_client.update_one(
+                self.collection_name,
+                {"_id": object_id},
+                {
+                    "$set": {
+                        "mfaEnabled": True,
+                        "mfaSecret": secret,
+                        "backupCodes": backup_codes,
+                        "updatedAt": datetime.now(timezone.utc)
+                    }
+                }
+            )
+
+            if result.matched_count == 0:
+                raise UserNotFoundError(f"User not found", user_id=user_id)
+
+            logger.info(f"Updated MFA setup for user {user_id}")
+            return True
+
+        except UserNotFoundError:
+            raise
+        except ValidationError:
+            raise
+        except Exception as exc:
+            logger.error(f"Failed to update MFA setup for user {user_id}: {exc}")
+            raise map_database_exception(exc)
+
+    async def get_user_mfa_secret(self, user_id: str) -> Optional[str]:
+        """
+        Get user's MFA secret for verification.
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            MFA secret if user has MFA enabled, None otherwise
+
+        Raises:
+            UserServiceError: If retrieval fails
+        """
+        try:
+            mongo_client = await self._get_mongo_client()
+
+            # Convert string ID to ObjectId
+            try:
+                object_id = ObjectId(user_id) if isinstance(user_id, str) else user_id
+            except Exception:
+                raise ValidationError(f"Invalid user ID format: {user_id}")
+
+            user_data = await mongo_client.find_one(
+                self.collection_name,
+                {"_id": object_id},
+                {"mfaEnabled": 1, "mfaSecret": 1}
+            )
+
+            if not user_data:
+                raise UserNotFoundError(f"User not found", user_id=user_id)
+
+            # Return secret only if MFA is enabled
+            if user_data.get("mfaEnabled") and user_data.get("mfaSecret"):
+                return user_data["mfaSecret"]
+
+            return None
+
+        except UserNotFoundError:
+            raise
+        except ValidationError:
+            raise
+        except Exception as exc:
+            logger.error(f"Failed to get MFA secret for user {user_id}: {exc}")
+            raise map_database_exception(exc)

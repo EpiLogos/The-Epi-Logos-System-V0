@@ -6,7 +6,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useOAuth } from '@/contexts/OAuthContext';
 
 interface User {
   id: string;

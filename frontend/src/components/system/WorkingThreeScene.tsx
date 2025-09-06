@@ -8,6 +8,7 @@ import Link from 'next/link';
 import * as THREE from 'three';
 import { GlowParticles } from './GlowParticles';
 import { ThreeErrorBoundary } from '../ErrorBoundary';
+import ClientOnly from '../ClientOnly';
 
 // Background controller that sets Three.js scene background based on theme
 function BackgroundController({ theme }: { theme: 'light' | 'dark' | 'dark-theme' }) {
@@ -294,10 +295,11 @@ export function WorkingThreeScene({
 
       {/* Three.js Canvas (optional) */}
       {!hideThree && (
-        <ThreeErrorBoundary>
-          <Canvas
-            camera={{ position: [0, 0, 8], fov: 60 }}
-          >
+        <ClientOnly fallback={<div className="absolute inset-0 bg-gradient-to-b from-black to-slate-600" />}>
+          <ThreeErrorBoundary>
+            <Canvas
+              camera={{ position: [0, 0, 8], fov: 60 }}
+            >
           {/* Background Controller - sets scene.background properly */}
           <BackgroundController theme={theme} />
 
@@ -341,8 +343,9 @@ export function WorkingThreeScene({
             minDistance={3}
             maxDistance={20}
           />
-        </Canvas>
-        </ThreeErrorBoundary>
+          </Canvas>
+          </ThreeErrorBoundary>
+        </ClientOnly>
       )}
 
       {/* UI Overlays */}

@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
+import ClientOnly from "./ClientOnly";
 
 type HexGridLoaderProps = {
   size?: number; // overall visual size in px
@@ -79,17 +80,31 @@ export function HexGridLoader({
   const movers = new Array(path.length).fill(null).map((_, i) => i);
 
   return (
-    <div style={{ lineHeight: 0 }}>
-      <div
-        style={{
-          width: 96,
-          height: 96,
-          position: "relative",
-          transform: `scale(${scale})`,
-          background: backgroundColor,
-          overflow: "visible",
-        }}
-      >
+    <ClientOnly fallback={
+      <div style={{ lineHeight: 0 }}>
+        <div
+          style={{
+            width: 96,
+            height: 96,
+            position: "relative",
+            transform: `scale(${scale})`,
+            background: backgroundColor,
+            overflow: "visible",
+          }}
+        />
+      </div>
+    }>
+      <div style={{ lineHeight: 0 }}>
+        <div
+          style={{
+            width: 96,
+            height: 96,
+            position: "relative",
+            transform: `scale(${scale})`,
+            background: backgroundColor,
+            overflow: "visible",
+          }}
+        >
         {movers.map((m) => {
           // Phase-rotate keyframes per mover to stagger without delay
           const kxBase = rotate(keyframesX, m);
@@ -97,8 +112,8 @@ export function HexGridLoader({
           // Apply per-step jitter (deterministic for SSR)
           const seedX = (m * 12345 + 67890) % 1000 / 1000; // deterministic pseudo-random
           const seedY = (m * 54321 + 98765) % 1000 / 1000;
-          const kx = kxBase.map((x) => x + (jitterPx ? (seedX * 2 - 1) * jitterPx : 1));
-          const ky = kyBase.map((y) => y + (jitterPx ? (seedY * 2 - 1) * jitterPx : 1));
+          const kx = kxBase.map((x) => x + (jitterPx ? (seedX * 2 - 1) * jitterPx : 0));
+          const ky = kyBase.map((y) => y + (jitterPx ? (seedY * 2 - 1) * jitterPx : 0));
 
           // Opacity as a smooth sinusoid with deterministic amplitude/phase
           const L = kx.length;
@@ -148,8 +163,9 @@ export function HexGridLoader({
             }}
           />
         );})}
+        </div>
       </div>
-    </div>
+    </ClientOnly>
   );
 }
 

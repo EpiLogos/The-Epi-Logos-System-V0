@@ -153,6 +153,7 @@ __pypackages__/
 
 # Documentation (as requested)
 docs/
+data/
 
 # Dotfile directories (as requested)
 .ai/

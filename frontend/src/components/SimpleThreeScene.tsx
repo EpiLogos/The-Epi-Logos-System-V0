@@ -5,6 +5,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { motion } from 'framer-motion';
 import * as THREE from 'three';
+import ClientOnly from './ClientOnly';
 
 // TEST 1: Simple rotating cube to verify Three.js works
 function TestCube() {
@@ -75,12 +76,14 @@ export function SimpleThreeScene() {
   return (
     <div className="relative w-full h-screen bg-black">
       {/* TEST: Three.js Canvas */}
-      <Canvas camera={{ position: [0, 0, 5] }}>
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} />
-        <TestCube />
-        <OrbitControls />
-      </Canvas>
+      <ClientOnly fallback={<div className="absolute inset-0 bg-black" />}>
+        <Canvas camera={{ position: [0, 0, 5] }}>
+          <ambientLight intensity={0.5} />
+          <pointLight position={[10, 10, 10]} />
+          <TestCube />
+          <OrbitControls />
+        </Canvas>
+      </ClientOnly>
       
       {/* TEST: Animated Text Overlay */}
       <TestText isTransitioned={isTransitioned} />

@@ -73,7 +73,7 @@ class UserMetadata(BaseModel):
 class User(BaseModel):
     """Main user document model for MongoDB."""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     id: Optional[PyObjectId] = Field(default_factory=PyObjectId, alias="_id")
     email: str
     passwordHash: Optional[str] = None
@@ -88,6 +88,11 @@ class User(BaseModel):
     oauthProviders: List[OAuthProvider] = Field(default_factory=list)
     preferences: UserPreferences = Field(default_factory=UserPreferences)
     metadata: UserMetadata
+
+    # MFA (Multi-Factor Authentication) fields
+    mfaEnabled: bool = False
+    mfaSecret: Optional[str] = None  # TOTP secret (encrypted in production)
+    backupCodes: List[str] = Field(default_factory=list)  # Hashed backup codes
     
     @field_validator('email')
     @classmethod
@@ -108,17 +113,22 @@ class User(BaseModel):
     def to_public_dict(self) -> Dict[str, Any]:
         """Convert to dictionary excluding sensitive data."""
         user_dict = self.model_dump(by_alias=True)
-        
+
         # Remove sensitive fields
         user_dict.pop('passwordHash', None)
-        
+        user_dict.pop('mfaSecret', None)  # Never expose MFA secret
+        user_dict.pop('backupCodes', None)  # Never expose backup codes
+
         # Add password status for OAuth integration
         user_dict['hasPassword'] = self.has_password()
-        
+
+        # Add MFA status (safe to expose)
+        user_dict['hasMFA'] = self.has_mfa()
+
         # Convert ObjectId to string for JSON serialization
         if '_id' in user_dict and user_dict['_id']:
             user_dict['_id'] = str(user_dict['_id'])
-        
+
         # Convert datetime objects to ISO strings
         for field in ['createdAt', 'lastLoginAt', 'lastActiveAt']:
             if user_dict.get(field):
@@ -134,7 +144,11 @@ class User(BaseModel):
     def has_password(self) -> bool:
         """Check if user has a password set."""
         return self.passwordHash is not None
-    
+
+    def has_mfa(self) -> bool:
+        """Check if user has MFA enabled and configured."""
+        return bool(self.mfaEnabled and self.mfaSecret and len(self.mfaSecret.strip()) > 0)
+
     def has_oauth_provider(self, provider: str) -> bool:
         """Check if user has a specific OAuth provider linked."""
         return any(oauth.provider == provider for oauth in self.oauthProviders)

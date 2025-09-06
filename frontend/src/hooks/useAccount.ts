@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useOAuth } from '@/contexts/OAuthContext';
+import { useAuth } from '@/auth';
 
 interface UseAccountOptions {
   autoFetch?: boolean;
@@ -44,7 +44,7 @@ interface UseAccountReturn extends AccountActions {
 
 export function useAccount(options: UseAccountOptions = {}): UseAccountReturn {
   const { autoFetch = true, refreshInterval = 5 * 60 * 1000 } = options;
-  const { user, isAuthenticated, updateUser } = useOAuth();
+  const { user, isAuthenticated, updateProfile: updateUser, getAuthHeader } = useAuth();
   
   const [data, setData] = useState<AccountData>({
     sessions: [],
@@ -58,12 +58,12 @@ export function useAccount(options: UseAccountOptions = {}): UseAccountReturn {
 
   // Helper function to get auth headers
   const getAuthHeaders = useCallback(() => {
-    const token = localStorage.getItem('oauth_access_token');
+    const authHeader = getAuthHeader();
     return {
-      'Authorization': `Bearer ${token}`,
+      'Authorization': authHeader || '',
       'Content-Type': 'application/json',
     };
-  }, []);
+  }, [getAuthHeader]);
 
   // Helper function to handle API errors
   const handleApiError = useCallback((error: any, context: string) => {

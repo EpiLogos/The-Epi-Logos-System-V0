@@ -31,12 +31,7 @@
       "@/utils/*": [
         "./src/utils/*"
       ],
-      "@epi-logos/shared-types": [
-        "../packages/shared-types/src"
-      ],
-      "@epi-logos/ui-components": [
-        "../packages/ui-components/src"
-      ]
+
     },
     "jsx": "preserve"
   },

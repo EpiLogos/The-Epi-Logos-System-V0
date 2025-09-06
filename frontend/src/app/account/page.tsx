@@ -7,7 +7,7 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth';
 import { motion } from 'framer-motion';
 import { WorkingThreeScene } from '@/components/system/WorkingThreeScene';
 import { GlowingEffect } from '@/components/ui/glowing-effect';
@@ -39,7 +39,7 @@ import {
 
 // Coordinate context for AG-UI integration
 const COORDINATE_CONTEXT = {
-  coordinate: '#4.4.4',
+  coordinate: '#4.4.4.4',
   subsystem: 4,
   name: 'Personal Account Management',
   context: 'nara-user-account'
@@ -55,7 +55,7 @@ const sidebarItems = [
 ];
 
 export default function AccountPage() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, hasPassword, hasMFA } = useAuth();
   const router = useRouter();
   const { completeTransition, transitionState } = usePageTransition();
 
@@ -84,7 +84,15 @@ export default function AccountPage() {
     }
   }, [transitionState, completeTransition]);
 
-
+  // Broadcast coordinate context to global navbar
+  useEffect(() => {
+    // Store on window for immediate access
+    (window as any).__CURRENT_COORDINATE_DATA__ = COORDINATE_CONTEXT;
+    
+    // Dispatch event for listeners
+    const event = new CustomEvent('coordinate-updated', { detail: COORDINATE_CONTEXT });
+    window.dispatchEvent(event);
+  }, []);
 
   // Redirect if not authenticated with graceful loading
   useEffect(() => {
@@ -120,7 +128,7 @@ export default function AccountPage() {
       case 'profile':
         return <ProfileSection isEditing={isEditing} setIsEditing={setIsEditing} user={user} />;
       case 'security':
-        return <SecuritySection user={user} />;
+        return <SecuritySection user={user} hasPassword={hasPassword()} hasMFA={hasMFA()} />;
       case 'notifications':
         return <NotificationsSection />;
       case 'billing':
@@ -439,20 +447,29 @@ function ProfileSection({ isEditing, setIsEditing, user }: { isEditing: boolean;
 }
 
 // Security section with password setup for OAuth users
-function SecuritySection({ user }: { user: any }) {
+function SecuritySection({ user, hasPassword: hasPasswordProp, hasMFA: hasMFAProp }: { user: any; hasPassword: boolean; hasMFA: boolean }) {
   const [userState, setUserState] = useState(user);
   const [activeSecurityTab, setActiveSecurityTab] = useState<'overview' | 'mfa' | 'password'>('overview');
-  const [mfaEnabled, setMfaEnabled] = useState(false); // Would come from user data
-  const hasPassword = userState?.hasPassword === true; // Only true when explicitly set
+  const [mfaEnabled, setMfaEnabled] = useState(hasMFAProp);
+  const hasPassword = hasPasswordProp; // Use the prop from unified auth system
   const isOAuthUser = userState?.oauthProviders?.length > 0 || userState?.googleId;
-  
+
+  // Sync MFA state when user data changes
+  useEffect(() => {
+    setMfaEnabled(hasMFAProp);
+    setUserState(user);
+  }, [user, hasMFAProp]);
+
   // Debug logging
   console.log('SecuritySection Debug:', {
     user: userState,
     hasPassword,
     isOAuthUser,
     shouldShowPasswordSetup: isOAuthUser && !hasPassword,
-    oauthProviders: userState?.oauthProviders
+    oauthProviders: userState?.oauthProviders,
+    mfaEnabled,
+    userMfaEnabled: user?.mfaEnabled,
+    userHasMFA: user?.hasMFA
   });
   
   const handlePasswordSetupSuccess = () => {
@@ -463,6 +480,8 @@ function SecuritySection({ user }: { user: any }) {
   const handleMfaSetupSuccess = () => {
     // Update MFA status
     setMfaEnabled(true);
+    // Also update the user state to reflect the change
+    setUserState(prev => ({ ...prev, mfaEnabled: true, hasMFA: true }));
     setActiveSecurityTab('overview');
   };
 

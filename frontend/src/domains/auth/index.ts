@@ -1,13 +1,21 @@
 /**
  * Auth Domain Exports
  * Central export point for all auth domain logic
+ *
+ * UPDATED: Now includes canonical types and validation logic
  */
 
-// OAuth domain
+// Canonical types - SINGLE SOURCE OF TRUTH
+export * from './canonical-user.types';
+
+// Validation domain logic
+export * from './validation.domain';
+
+// Core auth domain logic
+export * from './auth.domain';
+
+// OAuth domain logic
 export * from './oauth.domain';
 
-// Session domain  
+// Session management domain logic
 export * from './session.domain';
-
-// General auth domain
-export * from './auth.domain';

@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import { Tourney } from 'next/font/google';
 import './globals.css';
-import { AuthProvider } from '@/auth/auth-context';
-import { OAuthProvider } from '@/contexts/OAuthContext';
+import { UnifiedAuthProvider } from '@/auth';
 import { PageTransitionProvider } from '@/contexts/PageTransitionContext';
 import ConditionalNavigation from '@/components/navigation/ConditionalNavigation';
 
@@ -41,14 +40,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${tourneySemiBold.variable} ${tourney.variable}`}>
       <body className={tourneySemiBold.className}>
-        <OAuthProvider>
-          <AuthProvider>
-            <PageTransitionProvider>
-              <ConditionalNavigation />
-              {children}
-            </PageTransitionProvider>
-          </AuthProvider>
-        </OAuthProvider>
+        <UnifiedAuthProvider>
+          <PageTransitionProvider>
+            <ConditionalNavigation />
+            {children}
+          </PageTransitionProvider>
+        </UnifiedAuthProvider>
       </body>
     </html>
   );

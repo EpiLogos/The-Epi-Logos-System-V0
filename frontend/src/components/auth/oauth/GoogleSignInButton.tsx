@@ -1,10 +1,12 @@
 /**
  * Google Sign-In Button Component
- * Implements OAuth 2.0 flow with PKCE security and OIDC nonce validation
+ * Pure presentation layer consuming useOAuth hook
+ * 
+ * REFACTORED: Phase 3 - Removed duplicate business logic, now consumes domain functions via hook
  */
 
 import React, { useState } from 'react';
-import { useOAuth } from '../../../contexts/OAuthContext';
+import { useOAuth } from '../../../auth/hooks/useOAuth';
 
 interface GoogleSignInButtonProps {
   returnUrl?: string;
@@ -29,37 +31,8 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
     );
   }
 
-  const generatePKCEParameters = () => {
-    // Generate cryptographically secure random bytes for code verifier
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    const codeVerifier = btoa(String.fromCharCode(...array))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-
-    // Generate code challenge using SHA-256
-    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(codeVerifier))
-      .then(hashBuffer => {
-        const hashArray = new Uint8Array(hashBuffer);
-        const codeChallenge = btoa(String.fromCharCode(...hashArray))
-          .replace(/\+/g, '-')
-          .replace(/\//g, '_')
-          .replace(/=/g, '');
-        
-        return { codeVerifier, codeChallenge };
-      });
-  };
-
-  const generateNonce = () => {
-    // Generate 24 random bytes for nonce
-    const array = new Uint8Array(24);
-    crypto.getRandomValues(array);
-    return btoa(String.fromCharCode(...array))
-      .replace(/\+/g, '-')
-      .replace(/\//g, '_')
-      .replace(/=/g, '');
-  };
+  // REMOVED: PKCE generation moved to oauth.domain.ts
+  // REMOVED: Nonce generation moved to oauth.domain.ts
 
   const handleSignIn = async () => {
     try {
@@ -70,17 +43,10 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         clearError();
       }
 
-      // Generate PKCE parameters and nonce
-      const { codeVerifier, codeChallenge } = await generatePKCEParameters();
-      const nonce = generateNonce();
-
-      // Initiate OAuth flow with security parameters
+      // SIMPLIFIED: Hook handles all domain logic (PKCE, nonce, URL building)
       await initiateOAuthFlow({
         provider: 'google',
         returnUrl: returnUrl || window.location.pathname,
-        codeVerifier,
-        codeChallenge,
-        nonce,
         linkAccount
       });
 

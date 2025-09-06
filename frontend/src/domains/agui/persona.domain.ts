@@ -27,6 +27,17 @@ export type PersonaStatus = PersonaState['status'];
 export type ConnectionStatus = AGUIState['connectionStatus'];
 
 /**
+ * AGUI action types for reducer
+ * EXTRACTED FROM: AGUIProvider.tsx:27-32
+ */
+export type AGUIAction =
+  | { type: 'SET_ACTIVE_PERSONA'; payload: string }
+  | { type: 'UPDATE_PERSONA_STATUS'; payload: { id: string; status: PersonaState['status'] } }
+  | { type: 'SET_COORDINATE'; payload: string }
+  | { type: 'SET_CONNECTION_STATUS'; payload: AGUIState['connectionStatus'] }
+  | { type: 'SET_SESSION_ACTIVE'; payload: boolean };
+
+/**
  * Initial persona definitions
  * EXTRACTED FROM: AGUIProvider.tsx:35-42
  */
@@ -86,6 +97,36 @@ export const setActivePersona = (
 ): AGUIState => {
   return { ...state, activePersona: persona };
 };
+
+/**
+ * AGUI reducer function
+ * EXTRACTED FROM: AGUIProvider.tsx:49-80
+ */
+export function aguiReducer(state: AGUIState, action: AGUIAction): AGUIState {
+  switch (action.type) {
+    case 'SET_ACTIVE_PERSONA':
+      return { ...state, activePersona: action.payload };
+    
+    case 'UPDATE_PERSONA_STATUS':
+      const { id, status } = action.payload;
+      return {
+        ...state,
+        personas: updatePersonaStatus(state.personas, id, status)
+      };
+    
+    case 'SET_COORDINATE':
+      return { ...state, currentCoordinate: action.payload };
+    
+    case 'SET_CONNECTION_STATUS':
+      return { ...state, connectionStatus: action.payload };
+    
+    case 'SET_SESSION_ACTIVE':
+      return { ...state, sessionActive: action.payload };
+    
+    default:
+      return state;
+  }
+}
 
 /**
  * Set current coordinate

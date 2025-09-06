@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import HexagonNavigation from '@/components/HexagonNavigation';
+// import HexagonNavigation from '@/components/HexagonNavigation'; // DEPRECATED - Replaced by EpiiNavigation
 import SprintProgressTracker from '@/components/dev/SprintProgressTracker';
 import SystemHealthMonitor from '@/components/dev/SystemHealthMonitor';
 import { getSprintStatus, SprintStatus } from '@/lib/serviceHealth';
@@ -77,12 +77,7 @@ export default function DeveloperDashboard() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <HexagonNavigation
-                preset="nav"
-                interactive={true}
-                onClick={navigateHome}
-                className="cursor-pointer"
-              />
+              {/* HexagonNavigation removed - replaced by EpiiNavigation */}
               <div>
                 <h1 className="text-2xl font-bold text-blue-12">
                   Developer Control Center
@@ -127,6 +122,48 @@ export default function DeveloperDashboard() {
             </div>
           </div>
         )}
+
+        {/* Development Tools */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-blue-12 mb-4">Development Tools</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Link
+              href="/placeholder-demo"
+              className="bg-purple-900/30 border border-purple-600/50 hover:border-purple-400/70 rounded-lg p-6 transition-all duration-200 hover:bg-purple-800/30 group"
+              role="link"
+              aria-label="Placeholder Demo - Living Placeholder System"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">🧪</div>
+                  <h3 className="text-lg font-medium text-blue-12">Placeholder Demo</h3>
+                </div>
+                <span className="px-2 py-1 bg-purple-500/20 text-purple-300 text-xs rounded group-hover:bg-purple-400/30 transition-colors">
+                  LIVE
+                </span>
+              </div>
+              <p className="text-gray-300 text-sm mb-3">
+                Living Placeholder System with Development Mode
+              </p>
+              <div className="space-y-2 text-xs text-gray-400">
+                <div>• Live coordinate switching & template variations</div>
+                <div>• Real-time styling controls & design experimentation</div>
+                <div>• Canvas, Card & Dynamic interface templates</div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded">
+                  Dev Mode
+                </span>
+                <span className="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded">
+                  Design Lab
+                </span>
+                <span className="px-2 py-1 bg-purple-600/20 text-purple-300 text-xs rounded">
+                  Story 01.01
+                </span>
+              </div>
+            </Link>
+          </div>
+        </div>
 
         {/* Sprint Navigation */}
         <div className="mb-8">

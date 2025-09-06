@@ -1,13 +1,16 @@
 /**
  * Hexagon Navigation Component
- * Global navigation with authentication state (AC: #14, #15, #16)
+ * Pure presentation layer consuming navigation hooks
+ * 
+ * REFACTORED: Phase 3 - Removed static data and business logic, now consumes domain functions via hooks
  */
 
 'use client';
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth';
+import { useNavigation } from '@/subsystems/navigation/useNavigation';
 
 export interface HexagonNavigationProps {
   className?: string;
@@ -18,26 +21,22 @@ export const HexagonNavigation: React.FC<HexagonNavigationProps> = ({
 }) => {
   const router = useRouter();
   const { isAuthenticated, user, signOut } = useAuth();
+  const { subsystems, handleSubsystemNavigation } = useNavigation();
 
-  const subsystems = [
-    { id: 0, name: 'Anuttara', coordinate: '#0', description: 'Absolute Ground' },
-    { id: 1, name: 'Paramasiva', coordinate: '#1', description: 'Foundational Architect' },
-    { id: 2, name: 'Parashakti', coordinate: '#2', description: 'Cosmic Imagination' },
-    { id: 3, name: 'Mahamaya', coordinate: '#3', description: 'Universal Transcription' },
-    { id: 4, name: 'Nara', coordinate: '#4', description: 'Dialogical Identity' },
-    { id: 5, name: 'Epii', coordinate: '#5', description: 'Synthesis & Orchestration' }
-  ];
-
+  // REMOVED: Static subsystem data moved to navigation.domain.ts
+  // REMOVED: Route calculation logic moved to navigation.domain.ts
+  
   const handleSubsystemClick = (subsystem: { id: number; name: string }) => {
-    if (!isAuthenticated) {
-      // Show authentication required warning for protected routes
-      alert('Authentication required to access ' + subsystem.name);
+    const navigationResult = handleSubsystemNavigation(subsystem, isAuthenticated);
+    
+    if (navigationResult.type === 'auth_required') {
+      alert(navigationResult.message || 'Authentication required');
       return;
     }
-
-    // Navigate to subsystem (Nara is protected)
-    const route = `/${subsystem.name.toLowerCase()}`;
-    router.push(route);
+    
+    if (navigationResult.type === 'navigate' && navigationResult.route) {
+      router.push(navigationResult.route);
+    }
   };
 
   const handleSignIn = () => {

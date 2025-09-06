@@ -101,7 +101,20 @@ class MfaService:
             backup_codes.append(code)
         
         return backup_codes
-    
+
+    def hash_backup_code(self, backup_code: str) -> str:
+        """
+        Hash a backup code for secure storage.
+
+        Args:
+            backup_code: Plain text backup code
+
+        Returns:
+            Hashed backup code
+        """
+        import hashlib
+        return hashlib.sha256(backup_code.encode()).hexdigest()
+
     def verify_backup_code(self, backup_code: str, used_codes: List[str]) -> bool:
         """
         Verify backup code and check if it's already used.

@@ -4,28 +4,61 @@ import React, { useMemo, useRef, useState } from "react"
 import { LazyMotion, domAnimation, m, AnimatePresence } from "framer-motion"
 import { useRouter, usePathname } from "next/navigation"
 import { UserRound } from "lucide-react"
-import { useAuth } from "@/auth/auth-context"
+import { useAuth } from "@/auth"
 import UserAvatar from "@/components/ui/UserAvatar"
 import { useNavbarToggle } from "@/hooks/useNavbarToggle"
 import { useSmartPositioning } from "@/hooks/useSmartPositioning"
 import { NavbarToggle } from "@/components/ui/NavbarToggle"
 
-// Lightweight coordinate badge, just shows coordinate number (no subsystem name)
+// Coordinate display component - gets real coordinate data from page context
 function CoordinateBadge() {
-  const [coordinate, setCoordinate] = React.useState<string | null>(null)
+  const [coordinateData, setCoordinateData] = React.useState<any>(null)
+  const [showDetails, setShowDetails] = React.useState(false)
 
   React.useEffect(() => {
-    try {
-      const el = document.querySelector('[data-coordinate]') as HTMLElement | null
-      const coord = el?.getAttribute('data-coordinate') || null
-      setCoordinate(coord)
-    } catch { setCoordinate(null) }
+    // Listen for coordinate updates from the page
+    const handleCoordinateUpdate = (event: CustomEvent) => {
+      setCoordinateData(event.detail)
+    }
+
+    // Check if there's already coordinate data available
+    const existingData = (window as any).__CURRENT_COORDINATE_DATA__
+    if (existingData) {
+      setCoordinateData(existingData)
+    }
+
+    // Listen for updates
+    window.addEventListener('coordinate-updated' as any, handleCoordinateUpdate)
+    
+    return () => {
+      window.removeEventListener('coordinate-updated' as any, handleCoordinateUpdate)
+    }
   }, [])
 
-  if (!coordinate) return null
+  if (!coordinateData) return null
+
   return (
-    <div className="text-xs tracking-wide text-white/60 select-none pointer-events-none">
-      {coordinate}
+    <div 
+      className="relative"
+      onMouseEnter={() => setShowDetails(true)}
+      onMouseLeave={() => setShowDetails(false)}
+    >
+      {/* Simple text display */}
+      <div className="text-xs text-white/80 cursor-default select-none whitespace-nowrap">
+        {coordinateData.coordinate}
+      </div>
+      
+      {/* Hover details */}
+      {showDetails && (
+        <div className="absolute top-8 left-0 z-50 bg-slate-900/95 border border-white/20 rounded-lg p-3 min-w-64 backdrop-blur-xl shadow-xl">
+          <div className="text-sm font-semibold text-white mb-1">
+            {coordinateData.coordinate} - {coordinateData.name}
+          </div>
+          <div className="text-xs text-white/70">
+            {coordinateData.description}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

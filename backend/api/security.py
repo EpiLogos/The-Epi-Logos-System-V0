@@ -83,11 +83,12 @@ class PasswordChangeRequest(BaseModel):
 async def setup_mfa(
     setup_request: MfaSetupRequest,
     current_user = Depends(get_current_user),
-    mfa_service: MfaService = Depends(get_mfa_service_dependency)
+    mfa_service: MfaService = Depends(get_mfa_service_dependency),
+    user_service: UserService = Depends(get_user_service_dependency)
 ) -> APIResponse:
     """
     Set up MFA for the current user.
-    
+
     Returns TOTP secret, QR code URL, and backup codes.
     """
     try:
@@ -96,15 +97,28 @@ async def setup_mfa(
             user_id=str(current_user.id),
             user_email=current_user.email
         )
-        
-        logger.info(f"MFA setup initiated for user {current_user.email}")
-        
+
+        # Hash backup codes for storage
+        hashed_backup_codes = [
+            mfa_service.hash_backup_code(code)
+            for code in setup_data["backup_codes"]
+        ]
+
+        # Save MFA configuration to database
+        await user_service.user_repository.update_mfa_setup(
+            user_id=str(current_user.id),
+            secret=setup_data["secret"],
+            backup_codes=hashed_backup_codes
+        )
+
+        logger.info(f"MFA setup completed and saved for user {current_user.email}")
+
         return APIResponse(
             success=True,
             message="MFA setup completed successfully",
             data=MfaSetupResponse(**setup_data).dict()
         )
-        
+
     except Exception as e:
         logger.error(f"MFA setup failed for user {current_user.email}: {e}")
         raise HTTPException(
@@ -126,22 +140,18 @@ async def verify_mfa_code(
     This endpoint would typically be used during login or when enabling MFA.
     """
     try:
-        # Get user's MFA secret (this would come from the database in a real implementation)
-        # For now, we'll assume the user has MFA enabled with a secret
-        # In practice, you'd fetch this from user_service.get_user_mfa_secret()
-        
-        # During setup, secret is passed in request; otherwise get from user
+        # During setup, secret is passed in request; otherwise get from database
         if verify_request.secret:
             # Setup verification flow - use provided secret
             secret = verify_request.secret
         else:
-            # Regular verification flow - get from user
-            if not hasattr(current_user, 'mfa_secret') or not current_user.mfa_secret:
+            # Regular verification flow - get from database
+            secret = await user_service.user_repository.get_user_mfa_secret(str(current_user.id))
+            if not secret:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="MFA is not set up for this user"
                 )
-            secret = current_user.mfa_secret
         
         # Verify the TOTP code
         is_valid = mfa_service.verify_totp_code(

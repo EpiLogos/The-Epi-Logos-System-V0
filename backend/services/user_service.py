@@ -416,6 +416,51 @@ class UserService:
             logger.error(f"Failed to setup password for user {user_id}: {e}")
             raise UserServiceError(f"Password setup failed: {str(e)}")
 
+    async def update_2fa_setting(self, user_id: str, enabled: bool) -> bool:
+        """
+        Update user's 2FA enabled setting.
+
+        Args:
+            user_id: User identifier
+            enabled: Whether to enable or disable 2FA
+
+        Returns:
+            True if successfully updated, False otherwise
+
+        Raises:
+            UserNotFoundError: If user doesn't exist
+            UserServiceError: If update fails
+        """
+        try:
+            # Get user to verify existence
+            user = await self.user_repository.get_user_by_id(user_id)
+            if not user:
+                raise UserNotFoundError(f"User not found: {user_id}")
+
+            # If disabling MFA, clear secret and backup codes
+            update_data = {"mfaEnabled": enabled}
+            if not enabled:
+                update_data.update({
+                    "mfaSecret": None,
+                    "backupCodes": []
+                })
+
+            # Update via repository
+            result = await self.user_repository.update_user(user_id, update_data)
+
+            if result.modified_count == 0:
+                return False
+
+            action = "enabled" if enabled else "disabled"
+            logger.info(f"2FA {action} for user {user_id}")
+            return True
+
+        except UserNotFoundError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to update 2FA setting for user {user_id}: {e}")
+            raise UserServiceError(f"2FA update failed: {str(e)}")
+
     async def delete_user(self, user_id: str) -> bool:
         """
         Delete user account and associated data.

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth';
 import { 
   LockClosedIcon, 
   KeyIcon, 

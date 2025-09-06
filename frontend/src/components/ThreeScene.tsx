@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import anime from 'animejs';
 import { motion } from 'framer-motion';
 import { useTransition } from '../contexts/TransitionContext';
+import ClientOnly from './ClientOnly';
 
 // Custom Shader Material for advanced effects
 const WaveShaderMaterial = shaderMaterial(
@@ -588,21 +589,29 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
       )}
 
       {/* Three.js Canvas - Full Screen */}
-      <Canvas
-        camera={{ position: [0, 0, 8], fov: 60 }}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: transitionState.phase === 'complete'
-            ? 'linear-gradient(135deg, #1e3a8a 0%, #312e81 50%, #1e1b4b 100%)'
-            : `radial-gradient(ellipse at center, ${palette.bgStart} 0%, ${palette.bgEnd} 70%)`,
-          zIndex: 1,
-          transition: 'background 2s ease-in-out'
-        }}
-      >
+      <ClientOnly fallback={
+        <div
+          className="absolute inset-0 z-1"
+          style={{
+            background: `radial-gradient(ellipse at center, ${palette.bgStart} 0%, ${palette.bgEnd} 70%)`,
+          }}
+        />
+      }>
+        <Canvas
+          camera={{ position: [0, 0, 8], fov: 60 }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            background: transitionState.phase === 'complete'
+              ? 'linear-gradient(135deg, #1e3a8a 0%, #312e81 50%, #1e1b4b 100%)'
+              : `radial-gradient(ellipse at center, ${palette.bgStart} 0%, ${palette.bgEnd} 70%)`,
+            zIndex: 1,
+            transition: 'background 2s ease-in-out'
+          }}
+        >
         {/* Restored Proper Lighting System */}
         <ambientLight intensity={0.6} color="#ffffff" />
         <pointLight position={[10, 10, 10]} intensity={1.5} color={palette.primary} />
@@ -636,7 +645,8 @@ export const ThreeScene: React.FC<ThreeSceneProps> = ({
           minPolarAngle={Math.PI / 6}
           maxPolarAngle={Math.PI - Math.PI / 6}
         />
-      </Canvas>
+        </Canvas>
+      </ClientOnly>
 
       {/* Restored CSS title - working implementation */}
       <div className="absolute inset-0 pointer-events-none z-10">

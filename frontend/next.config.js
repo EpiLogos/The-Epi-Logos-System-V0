@@ -25,11 +25,7 @@ const nextConfig = {
   // Server external packages (moved from experimental.serverComponentsExternalPackages)
   serverExternalPackages: ['three', '@react-three/fiber'],
 
-  // Transpile workspace packages (excluding serverExternalPackages to avoid conflicts)
-  transpilePackages: [
-    '@epi-logos/shared-types',
-    '@epi-logos/ui-components'
-  ],
+
 
   // Output file tracing configuration to handle multiple lockfiles
   outputFileTracingRoot: process.cwd(),

@@ -3,7 +3,7 @@
 import React, { useRef } from 'react';
 import Link from 'next/link';
 import HexagonNavigation from '@/components/HexagonNavigation';
-import { Button } from '@epi-logos/ui-components';
+import { Button } from '@/components/ui/Button';
 import { GlowParticles } from '@/components/system/GlowParticles';
 import EpiLogo from '@/components/EpiLogo';
 

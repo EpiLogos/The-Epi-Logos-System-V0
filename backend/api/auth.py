@@ -72,6 +72,99 @@ class TwoFactorToggleRequest(BaseModel):
     enabled: bool
 
 
+@router.get("/me")
+async def get_current_user_info(
+    current_user = Depends(get_current_user)
+) -> APIResponse:
+    """
+    Get current authenticated user information.
+
+    Returns the current user's profile data excluding sensitive information.
+    """
+    try:
+        # Return user data using the public dict method
+        user_data = current_user.to_public_dict()
+
+        logger.info(f"User info retrieved for {current_user.email}")
+
+        return APIResponse(
+            success=True,
+            message="User information retrieved successfully",
+            data={"user": user_data}
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to get user info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve user information"
+        )
+
+
+class UserUpdateRequest(BaseModel):
+    """Request model for user profile updates."""
+    firstName: Optional[str] = None
+    lastName: Optional[str] = None
+    profilePicture: Optional[str] = None
+    preferences: Optional[Dict[str, Any]] = None
+
+
+@router.patch("/me")
+async def update_current_user(
+    update_data: UserUpdateRequest,
+    current_user = Depends(get_current_user),
+    user_service: UserService = Depends(get_user_service_dependency)
+) -> APIResponse:
+    """
+    Update current authenticated user information.
+
+    Updates the current user's profile data with provided fields.
+    """
+    try:
+        # Convert update data to dict, excluding None values
+        update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+
+        if not update_dict:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No update data provided"
+            )
+
+        # Update user via service
+        result = await user_service.user_repository.update_user(str(current_user.id), update_dict)
+
+        if result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No changes were made"
+            )
+
+        # Get updated user data
+        updated_user = await user_service.get_user_by_id(str(current_user.id))
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to retrieve updated user data"
+            )
+
+        logger.info(f"User profile updated for {current_user.email}")
+
+        return APIResponse(
+            success=True,
+            message="User profile updated successfully",
+            data={"user": updated_user.to_public_dict()}
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update user profile: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user profile"
+        )
+
+
 @router.get("/sessions")
 async def get_active_sessions(
     current_user = Depends(get_current_user)

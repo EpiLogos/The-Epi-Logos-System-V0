@@ -23,14 +23,14 @@ export interface LinkingResult {
     userId: string;
     email: string;
   };
-  requiresLinking?: boolean;
   message?: string;
-  redirectTo?: string;
   newUser?: {
     id: string;
     email: string;
     name: string;
     googleId: string;
+    hasPassword?: boolean;
+    isExistingUser?: boolean;
   };
 }
 
@@ -79,12 +79,28 @@ export class AccountLinkingService {
     const existingAccount = await this.findExistingAccountByEmail(googleProfile.email);
 
     if (existingAccount) {
-      // Account exists - require manual linking
+      // Account exists - automatically link and sign them in
+      // OAuth email verification is sufficient for identity confirmation
+      const linkedAccount = {
+        googleId: googleProfile.googleId,
+        userId: existingAccount.id,
+        email: googleProfile.email
+      };
+
+      // Auto-link the Google account to existing user
+      await this.saveAccountLink(linkedAccount);
+
       return {
-        success: false,
-        requiresLinking: true,
-        message: 'An account with this email already exists. Please sign in to your existing account to link your Google account.',
-        redirectTo: '/auth/link-account'
+        success: true,
+        linkedAccount,
+        newUser: {
+          id: existingAccount.id,
+          email: existingAccount.email,
+          name: googleProfile.name, // Use Google profile name
+          googleId: googleProfile.googleId,
+          hasPassword: existingAccount.hasPassword ?? true, // Existing users typically have passwords
+          isExistingUser: true
+        }
       };
     }
 
@@ -96,7 +112,9 @@ export class AccountLinkingService {
         id: googleProfile.googleId, // Will be replaced with actual user ID from backend
         email: googleProfile.email,
         name: googleProfile.name,
-        googleId: googleProfile.googleId
+        googleId: googleProfile.googleId,
+        hasPassword: false, // New OAuth users typically don't have passwords yet
+        isExistingUser: false
       }
     };
   }

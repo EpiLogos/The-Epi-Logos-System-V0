@@ -5,9 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { GlowParticles } from '@/components/system/GlowParticles';
-import { Button } from '@epi-logos/ui-components';
-import { OAuthAuthorizationService } from '@/auth/oauth/oauth-authorization-service';
-import { useAuth } from '@/auth/auth-context';
+import { Button } from '@/components/ui/Button';
+import { useAuth, useOAuth } from '@/auth';
 import HexagonNavigation from '@/components/HexagonNavigation';
 import PasswordRequirementsComponent from '@/components/auth/PasswordRequirements';
 import { TransitionBackground, usePageTransition } from '@/contexts/PageTransitionContext';
@@ -35,8 +34,7 @@ const COORDINATE_CONTEXT = {
   context: 'nara-authentication'
 };
 
-// OAuth service instance
-const oauthService = new OAuthAuthorizationService();
+// OAuth functionality now handled by unified auth hooks
 
 type AuthState = 'idle' | 'loading' | 'error' | 'success';
 type AuthMode = 'signin' | 'signup';
@@ -72,11 +70,11 @@ export default function SignInPage() {
   const router = useRouter();
   const { startTransition, completeTransition, transitionState } = usePageTransition();
   const { signIn } = useAuth();
-  
+  const { initiateOAuth, isLoading: isOAuthLoading } = useOAuth();
+
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [authState, setAuthState] = useState<AuthState>('idle');
   const [error, setError] = useState<SignInError | null>(null);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -300,30 +298,28 @@ export default function SignInPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    if (isGoogleLoading) return;
-    
-    setIsGoogleLoading(true);
+    if (isOAuthLoading) return;
+
     setAuthState('loading');
     setError(null);
 
     try {
-      const { url } = await oauthService.generateAuthorizationUrl();
-      window.location.href = url;
+      const authUrl = await initiateOAuth('google', '/account');
+      window.location.href = authUrl;
     } catch (err) {
       console.error('OAuth initiation failed:', err);
-      
-      const errorMessage = err instanceof Error 
-        ? err.message 
+
+      const errorMessage = err instanceof Error
+        ? err.message
         : 'Failed to start sign-in process';
-        
+
       setError({
         code: 'oauth_init_failed',
         message: errorMessage,
         userMessage: 'Unable to start Google sign-in. Please check your connection and try again.'
       });
-      
+
       setAuthState('error');
-      setIsGoogleLoading(false);
     }
   };
 
@@ -629,14 +625,14 @@ export default function SignInPage() {
           {/* OAuth Sign-In Button */}
           <Button
             onClick={handleGoogleSignIn}
-            disabled={isGoogleLoading || authState === 'loading'}
+            disabled={isOAuthLoading || authState === 'loading'}
             size="lg"
             className="w-full bg-white hover:bg-gray-50 text-gray-900 border-0 font-medium text-base h-12 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            whileHover={{ scale: isGoogleLoading ? 1 : 1.02 }}
-            whileTap={{ scale: isGoogleLoading ? 1 : 0.98 }}
+            whileHover={{ scale: isOAuthLoading ? 1 : 1.02 }}
+            whileTap={{ scale: isOAuthLoading ? 1 : 0.98 }}
           >
             <div className="flex items-center justify-center space-x-3">
-              {isGoogleLoading ? (
+              {isOAuthLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
                   <span>Connecting to Google...</span>

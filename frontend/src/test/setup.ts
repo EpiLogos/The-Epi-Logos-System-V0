@@ -1,24 +1,23 @@
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
 
 // Mock Next.js router
-vi.mock('next/router', () => ({
+jest.mock('next/router', () => ({
   useRouter() {
     return {
       route: '/',
       pathname: '/',
       query: {},
       asPath: '/',
-      push: vi.fn(),
-      pop: vi.fn(),
-      reload: vi.fn(),
-      back: vi.fn(),
-      prefetch: vi.fn().mockResolvedValue(undefined),
-      beforePopState: vi.fn(),
+      push: jest.fn(),
+      pop: jest.fn(),
+      reload: jest.fn(),
+      back: jest.fn(),
+      prefetch: jest.fn().mockResolvedValue(undefined),
+      beforePopState: jest.fn(),
       events: {
-        on: vi.fn(),
-        off: vi.fn(),
-        emit: vi.fn(),
+        on: jest.fn(),
+        off: jest.fn(),
+        emit: jest.fn(),
       },
       isFallback: false,
     };
@@ -26,15 +25,15 @@ vi.mock('next/router', () => ({
 }));
 
 // Mock Next.js navigation
-vi.mock('next/navigation', () => ({
+jest.mock('next/navigation', () => ({
   useRouter() {
     return {
-      push: vi.fn(),
-      replace: vi.fn(),
-      prefetch: vi.fn(),
-      back: vi.fn(),
-      forward: vi.fn(),
-      refresh: vi.fn(),
+      push: jest.fn(),
+      replace: jest.fn(),
+      prefetch: jest.fn(),
+      back: jest.fn(),
+      forward: jest.fn(),
+      refresh: jest.fn(),
     };
   },
   useSearchParams() {

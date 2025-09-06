@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { GlowParticles } from '@/components/system/GlowParticles';
-import { Button } from '@epi-logos/ui-components';
+import { Button } from '@/components/ui/Button';
 import { AccountLinkingService } from '@/auth/oauth/account-linking-service';
 import HexGridLoader from '@/components/HexGridLoader';
 

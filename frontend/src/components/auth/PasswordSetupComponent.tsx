@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { validatePassword, DEFAULT_PASSWORD_REQUIREMENTS } from '@/utils/passwordValidation';
 import PasswordRequirementsComponent from './PasswordRequirements';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth';
 
 interface PasswordSetupComponentProps {
   onSuccess?: () => void;

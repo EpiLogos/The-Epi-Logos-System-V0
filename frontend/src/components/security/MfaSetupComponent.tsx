@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useAuth } from '@/auth/auth-context';
+import { useAuth } from '@/auth';
 import { 
   ShieldCheckIcon, 
   KeyIcon, 
@@ -23,7 +23,7 @@ interface MfaSetupData {
 }
 
 export default function MfaSetupComponent({ onSuccess }: MfaSetupComponentProps) {
-  const { getAuthHeader } = useAuth();
+  const { getAuthHeader, refreshProfile, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [setupData, setSetupData] = useState<MfaSetupData | null>(null);
@@ -45,7 +45,7 @@ export default function MfaSetupComponent({ onSuccess }: MfaSetupComponentProps)
           'Authorization': authHeader,
         },
         body: JSON.stringify({
-          user_email: 'user@example.com' // This would come from auth context
+          user_email: user?.email || 'unknown@example.com'
         }),
       });
 
@@ -99,6 +99,13 @@ export default function MfaSetupComponent({ onSuccess }: MfaSetupComponentProps)
 
       const result = await response.json();
       if (result.success) {
+        // Refresh user data to reflect MFA setup
+        try {
+          await refreshProfile();
+        } catch (refreshError) {
+          console.warn('Failed to refresh user profile after MFA setup:', refreshError);
+        }
+
         setStep('complete');
         if (onSuccess) {
           onSuccess();
