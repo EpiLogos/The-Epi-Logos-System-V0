@@ -5,7 +5,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+// Jest globals available
 import BillingHistory from '../BillingHistory';
 
 // Mock billing data
@@ -50,11 +50,11 @@ const mockProps = {
 };
 
 // Mock fetch for API calls
-global.fetch = vi.fn();
+global.fetch = jest.fn();
 
 describe('BillingHistory Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     (fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({

@@ -1,42 +1,42 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { useRouter } from 'next/navigation';
 import SprintTestingPage from '../page';
 
 // Mock Next.js router
-vi.mock('next/navigation', () => ({
-  useRouter: vi.fn(),
-  useParams: vi.fn()
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
+  useParams: jest.fn()
 }));
 
 // Mock coordinate resolution service
-vi.mock('@/lib/coordinateService', () => ({
-  resolveCoordinate: vi.fn(),
-  testCoordinateResolution: vi.fn()
+jest.mock('@/lib/coordinateService', () => ({
+  resolveCoordinate: jest.fn(),
+  testCoordinateResolution: jest.fn()
 }));
 
 // Mock authentication service
-vi.mock('@/lib/authService', () => ({
-  testUserRegistration: vi.fn(),
-  testOAuthFlow: vi.fn(),
-  validateJWTTokens: vi.fn()
+jest.mock('@/lib/authService', () => ({
+  testUserRegistration: jest.fn(),
+  testOAuthFlow: jest.fn(),
+  validateJWTTokens: jest.fn()
 }));
 
 describe('SprintTestingPage', () => {
   const mockRouter = {
-    push: vi.fn(),
-    back: vi.fn()
+    push: jest.fn(),
+    back: jest.fn()
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(useRouter).mockReturnValue(mockRouter);
+    jest.clearAllMocks();
+    jest.mocked(useRouter).mockReturnValue(mockRouter);
   });
 
   describe('Sprint 1 Testing Context', () => {
     beforeEach(() => {
-      vi.mocked(require('next/navigation').useParams).mockReturnValue({ sprint: '1' });
+      jest.mocked(require('next/navigation').useParams).mockReturnValue({ sprint: '1' });
     });
 
     it('should render Sprint 1 testing interface', () => {
@@ -60,13 +60,13 @@ describe('SprintTestingPage', () => {
     });
 
     it('should execute coordinate resolution test when button clicked', async () => {
-      const mockResolve = vi.fn().mockResolvedValue({
+      const mockResolve = jest.fn().mockResolvedValue({
         coordinate: '#1',
         name: 'Test Node',
         subsystem: 1,
         responseTime: 45
       });
-      vi.mocked(require('@/lib/coordinateService').resolveCoordinate).mockImplementation(mockResolve);
+      jest.mocked(require('@/lib/coordinateService').resolveCoordinate).mockImplementation(mockResolve);
 
       render(<SprintTestingPage />);
       
@@ -82,7 +82,7 @@ describe('SprintTestingPage', () => {
     });
 
     it('should display test results with response time', async () => {
-      vi.mocked(require('@/lib/coordinateService').resolveCoordinate).mockResolvedValue({
+      jest.mocked(require('@/lib/coordinateService').resolveCoordinate).mockResolvedValue({
         coordinate: '#1',
         name: 'Test Node',
         subsystem: 1,
@@ -104,7 +104,7 @@ describe('SprintTestingPage', () => {
 
   describe('Sprint 2 Testing Context', () => {
     beforeEach(() => {
-      vi.mocked(require('next/navigation').useParams).mockReturnValue({ sprint: '2' });
+      jest.mocked(require('next/navigation').useParams).mockReturnValue({ sprint: '2' });
     });
 
     it('should render Sprint 2 testing interface', () => {
@@ -128,12 +128,12 @@ describe('SprintTestingPage', () => {
     });
 
     it('should test user registration flow', async () => {
-      const mockRegistration = vi.fn().mockResolvedValue({
+      const mockRegistration = jest.fn().mockResolvedValue({
         success: true,
         userId: 'test-user-123',
         token: 'jwt-token-456'
       });
-      vi.mocked(require('@/lib/authService').testUserRegistration).mockImplementation(mockRegistration);
+      jest.mocked(require('@/lib/authService').testUserRegistration).mockImplementation(mockRegistration);
 
       render(<SprintTestingPage />);
       

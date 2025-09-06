@@ -6,11 +6,10 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
 import AccountPage from '../page';
 
 // Mock OAuth Context
-vi.mock('@/contexts/OAuthContext', () => ({
+jest.mock('@/contexts/OAuthContext', () => ({
   useOAuth: () => ({
     isAuthenticated: true,
     isLoading: false,
@@ -38,19 +37,19 @@ vi.mock('@/contexts/OAuthContext', () => ({
 }));
 
 // Mock Next.js router
-vi.mock('next/navigation', () => ({
+jest.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    back: vi.fn(),
+    push: jest.fn(),
+    replace: jest.fn(),
+    back: jest.fn(),
   }),
   useSearchParams: () => ({
-    get: vi.fn(),
+    get: jest.fn(),
   }),
 }));
 
 // Mock HexagonNavigation component
-vi.mock('@/components/HexagonNavigation', () => ({
+jest.mock('@/components/HexagonNavigation', () => ({
   default: ({ preset, className, children }: any) => (
     <div data-testid="hexagon-nav" data-preset={preset} className={className}>
       {children}
@@ -59,7 +58,7 @@ vi.mock('@/components/HexagonNavigation', () => ({
 }));
 
 // Mock account components
-vi.mock('@/components/account/UserProfile', () => ({
+jest.mock('@/components/account/UserProfile', () => ({
   default: ({ user, onSave, onCancel }: any) => (
     <div data-testid="user-profile">
       <h2>User Profile</h2>
@@ -70,7 +69,7 @@ vi.mock('@/components/account/UserProfile', () => ({
   ),
 }));
 
-vi.mock('@/components/account/SubscriptionManager', () => ({
+jest.mock('@/components/account/SubscriptionManager', () => ({
   default: ({ subscription, onUpgrade, onManage, onCancel }: any) => (
     <div data-testid="subscription-manager">
       <h2>Subscription Management</h2>
@@ -82,7 +81,7 @@ vi.mock('@/components/account/SubscriptionManager', () => ({
   ),
 }));
 
-vi.mock('@/components/account/BillingHistory', () => ({
+jest.mock('@/components/account/BillingHistory', () => ({
   default: ({ userId }: any) => (
     <div data-testid="billing-history">
       <h2>Billing History</h2>
@@ -91,7 +90,7 @@ vi.mock('@/components/account/BillingHistory', () => ({
   ),
 }));
 
-vi.mock('@/components/account/AccountSettings', () => ({
+jest.mock('@/components/account/AccountSettings', () => ({
   default: ({ user, onSave, onDeleteAccount, onExportData }: any) => (
     <div data-testid="account-settings">
       <h2>Account Settings</h2>
@@ -103,7 +102,7 @@ vi.mock('@/components/account/AccountSettings', () => ({
   ),
 }));
 
-vi.mock('@/components/account/SessionManager', () => ({
+jest.mock('@/components/account/SessionManager', () => ({
   default: ({ sessions, onTerminateSession, onRefresh }: any) => (
     <div data-testid="session-manager">
       <h2>Session Management</h2>
@@ -115,11 +114,11 @@ vi.mock('@/components/account/SessionManager', () => ({
 }));
 
 // Mock API calls
-global.fetch = vi.fn();
+global.fetch = jest.fn();
 
 describe('Account Page', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     (fetch as any).mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ success: true }),
@@ -215,11 +214,11 @@ describe('Account Page', () => {
     });
 
     it('should update URL when tab changes', async () => {
-      const mockPush = vi.fn();
-      vi.mocked(require('next/navigation').useRouter).mockReturnValue({
+      const mockPush = jest.fn();
+      jest.mocked(require('next/navigation').useRouter).mockReturnValue({
         push: mockPush,
-        replace: vi.fn(),
-        back: vi.fn(),
+        replace: jest.fn(),
+        back: jest.fn(),
       });
 
       const user = userEvent.setup();
@@ -283,7 +282,7 @@ describe('Account Page', () => {
 
   describe('Data Loading and Error Handling', () => {
     it('should show loading states during data fetching', async () => {
-      const slowFetch = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      const slowFetch = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
       global.fetch = slowFetch;
 
       render(<AccountPage />);
@@ -445,7 +444,7 @@ describe('Account Page', () => {
 
   describe('URL State Management', () => {
     it('should load correct tab from URL parameter', () => {
-      vi.mocked(require('next/navigation').useSearchParams).mockReturnValue({
+      jest.mocked(require('next/navigation').useSearchParams).mockReturnValue({
         get: (key: string) => key === 'tab' ? 'billing' : null,
       });
 
@@ -456,7 +455,7 @@ describe('Account Page', () => {
     });
 
     it('should default to profile tab when no URL parameter', () => {
-      vi.mocked(require('next/navigation').useSearchParams).mockReturnValue({
+      jest.mocked(require('next/navigation').useSearchParams).mockReturnValue({
         get: () => null,
       });
 
@@ -467,7 +466,7 @@ describe('Account Page', () => {
     });
 
     it('should handle invalid tab parameter gracefully', () => {
-      vi.mocked(require('next/navigation').useSearchParams).mockReturnValue({
+      jest.mocked(require('next/navigation').useSearchParams).mockReturnValue({
         get: (key: string) => key === 'tab' ? 'invalid-tab' : null,
       });
 

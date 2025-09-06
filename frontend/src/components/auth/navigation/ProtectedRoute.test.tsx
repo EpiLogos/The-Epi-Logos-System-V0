@@ -4,7 +4,7 @@
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
-import { jest } from '@jest/globals';
+// Jest globals available
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -23,19 +23,11 @@ const mockAuthState = {
   isLoading: false,
 };
 
-jest.mock('../../../contexts/AuthContext', () => ({
+jest.mock('@/auth', () => ({
   useAuth: () => mockAuthState,
 }));
 
-// Mock OAuth context
-const mockInitiateOAuth = jest.fn();
-jest.mock('../../../contexts/OAuthContext', () => ({
-  useOAuth: () => ({
-    initiateOAuthFlow: mockInitiateOAuth,
-    isLoading: false,
-    error: null,
-  }),
-}));
+// OAuth functionality is now part of unified auth context - no separate mock needed
 
 // Test component that would be protected
 const TestSubsystemComponent = ({ subsystem }: { subsystem: string }) => (

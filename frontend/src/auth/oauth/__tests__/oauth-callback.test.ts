@@ -3,7 +3,7 @@
  * Tests for OAuth callback handling and token exchange (AC: #3, #8, #11, #12)
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach } // Jest globals available;
 import { OAuthCallbackHandler } from '../oauth-callback-handler';
 import { setupOAuthTests, createMockTokenResponse, createMockIdToken } from './test-setup';
 
@@ -63,7 +63,7 @@ describe('OAuthCallbackHandler', () => {
     };
 
     // Mock invalid nonce in ID token
-    vi.mocked(handler.exchangeCodeForTokens).mockResolvedValue({
+    jest.mocked(handler.exchangeCodeForTokens).mockResolvedValue({
       access_token: 'access_123',
       refresh_token: 'refresh_123',
       id_token: 'header.' + btoa(JSON.stringify({ nonce: 'wrong_nonce' })) + '.signature'
@@ -80,7 +80,7 @@ describe('OAuthCallbackHandler', () => {
     };
 
     // Mock Google API returning invalid_grant error
-    vi.mocked(handler.exchangeCodeForTokens).mockRejectedValue({
+    jest.mocked(handler.exchangeCodeForTokens).mockRejectedValue({
       error: 'invalid_grant',
       error_description: 'Token has been revoked'
     });

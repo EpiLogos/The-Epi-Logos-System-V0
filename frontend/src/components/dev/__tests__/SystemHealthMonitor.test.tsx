@@ -1,12 +1,12 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+
 import SystemHealthMonitor from '../SystemHealthMonitor';
 
 // Mock the service health module
-vi.mock('@/lib/serviceHealth', () => ({
-  checkSystemHealth: vi.fn(),
-  getServiceMetrics: vi.fn()
+jest.mock('@/lib/serviceHealth', () => ({
+  checkSystemHealth: jest.fn(),
+  getServiceMetrics: jest.fn()
 }));
 
 describe('SystemHealthMonitor', () => {
@@ -53,7 +53,7 @@ describe('SystemHealthMonitor', () => {
   };
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   it('should display system health overview', () => {
@@ -62,7 +62,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should show backend service status', async () => {
-    vi.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -72,7 +72,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should display database health indicators', async () => {
-    vi.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -84,7 +84,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should show integration service metrics', async () => {
-    vi.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -96,7 +96,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should display response time metrics', async () => {
-    vi.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -107,7 +107,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should show warning status for degraded services', async () => {
-    vi.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -117,8 +117,8 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should refresh health data automatically', async () => {
-    const mockCheck = vi.fn().mockResolvedValue(mockHealthData);
-    vi.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockImplementation(mockCheck);
+    const mockCheck = jest.fn().mockResolvedValue(mockHealthData);
+    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockImplementation(mockCheck);
     
     render(<SystemHealthMonitor refreshInterval={100} />);
     
@@ -135,7 +135,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should handle health check errors gracefully', async () => {
-    vi.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockRejectedValue(new Error('Network error'));
+    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockRejectedValue(new Error('Network error'));
     
     render(<SystemHealthMonitor />);
     

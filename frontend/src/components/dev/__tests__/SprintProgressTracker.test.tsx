@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect } // Jest globals available;
 import SprintProgressTracker from '../SprintProgressTracker';
 
 describe('SprintProgressTracker', () => {

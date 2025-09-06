@@ -3,7 +3,7 @@
  * Tests for Google OAuth 2.0 configuration and setup (AC: #1, #11)
  */
 
-import { describe, test, expect, vi } from 'vitest';
+import { describe, test, expect, vi } // Jest globals available;
 import { GoogleOAuthConfig, generatePKCE, generateNonce, validateNonce } from '../google-oauth-config';
 
 describe('GoogleOAuthConfig', () => {

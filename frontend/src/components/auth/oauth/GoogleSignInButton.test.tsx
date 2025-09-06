@@ -4,27 +4,27 @@
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+// Jest globals available
 import { GoogleSignInButton } from './GoogleSignInButton';
 
 // Mock next/navigation
-const mockPush = vi.fn();
-vi.mock('next/navigation', () => ({
+const mockPush = jest.fn();
+jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
 }));
 
 // Mock OAuth context
-const mockInitiateOAuth = vi.fn();
-const mockClearError = vi.fn();
+const mockInitiateOAuth = jest.fn();
+const mockClearError = jest.fn();
 const mockOAuthState = {
   isLoading: false,
   error: null,
   isAuthenticated: false,
 };
 
-vi.mock('../../../contexts/OAuthContext', () => ({
+jest.mock('../../../contexts/OAuthContext', () => ({
   useOAuth: () => ({
     initiateOAuthFlow: mockInitiateOAuth,
     clearError: mockClearError,
@@ -34,7 +34,7 @@ vi.mock('../../../contexts/OAuthContext', () => ({
 
 describe('GoogleSignInButton', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('Basic Rendering', () => {
@@ -139,7 +139,7 @@ describe('GoogleSignInButton', () => {
   describe('Loading States', () => {
     test('shows loading state during OAuth flow', () => {
       // Mock loading state
-      vi.mocked(mockOAuthState).isLoading = true;
+      jest.mocked(mockOAuthState).isLoading = true;
       
       render(<GoogleSignInButton />);
       
@@ -149,7 +149,7 @@ describe('GoogleSignInButton', () => {
     });
 
     test('shows loading spinner during OAuth', () => {
-      vi.mocked(mockOAuthState).isLoading = true;
+      jest.mocked(mockOAuthState).isLoading = true;
       
       render(<GoogleSignInButton />);
       
@@ -158,7 +158,7 @@ describe('GoogleSignInButton', () => {
     });
 
     test('disables button during loading', () => {
-      vi.mocked(mockOAuthState).isLoading = true;
+      jest.mocked(mockOAuthState).isLoading = true;
       
       render(<GoogleSignInButton />);
       
@@ -170,7 +170,7 @@ describe('GoogleSignInButton', () => {
   describe('Error Handling', () => {
     test('displays OAuth error messages', () => {
       const errorMessage = 'OAuth authorization failed';
-      vi.mocked(mockOAuthState).error = errorMessage;
+      jest.mocked(mockOAuthState).error = errorMessage;
       
       render(<GoogleSignInButton />);
       
@@ -178,7 +178,7 @@ describe('GoogleSignInButton', () => {
     });
 
     test('shows retry button on error', () => {
-      vi.mocked(mockOAuthState).error = 'OAuth failed';
+      jest.mocked(mockOAuthState).error = 'OAuth failed';
       
       render(<GoogleSignInButton />);
       
@@ -187,8 +187,8 @@ describe('GoogleSignInButton', () => {
     });
 
     test('clears error on retry attempt', async () => {
-      const mockClearError = vi.fn();
-      vi.mocked(mockOAuthState).error = 'OAuth failed';
+      const mockClearError = jest.fn();
+      jest.mocked(mockOAuthState).error = 'OAuth failed';
       
       // Mock clearError function
       jest.mock('../../../contexts/OAuthContext', () => ({
@@ -310,7 +310,7 @@ describe('GoogleSignInButton', () => {
 
   describe('Integration with Authentication State', () => {
     test('hides button when user is authenticated', () => {
-      vi.mocked(mockOAuthState).isAuthenticated = true;
+      jest.mocked(mockOAuthState).isAuthenticated = true;
       
       render(<GoogleSignInButton />);
       
@@ -318,7 +318,7 @@ describe('GoogleSignInButton', () => {
     });
 
     test('shows signed-in state when authenticated', () => {
-      vi.mocked(mockOAuthState).isAuthenticated = true;
+      jest.mocked(mockOAuthState).isAuthenticated = true;
       
       render(<GoogleSignInButton />);
       

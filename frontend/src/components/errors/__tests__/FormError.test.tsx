@@ -3,7 +3,7 @@
  * Tests accessibility, rendering, and error display functionality
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } // Jest globals available;
 import { render, screen } from '@testing-library/react';
 import { FormError } from '../FormError';
 import { createFormError } from '@/utils/errors';

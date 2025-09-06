@@ -3,7 +3,7 @@
  * Tests for global navigation with authentication state (AC: #14, #15, #16)
  */
 
-import { describe, test, expect, vi } from 'vitest';
+import { describe, test, expect, vi } // Jest globals available;
 import { render, screen, fireEvent } from '@testing-library/react';
 import { HexagonNavigation } from '../hexagon-navigation';
 
@@ -57,8 +57,8 @@ describe('HexagonNavigation', () => {
       picture: 'https://example.com/avatar.jpg'
     };
 
-    const mockNavigate = vi.fn();
-    vi.mock('next/navigation', () => ({
+    const mockNavigate = jest.fn();
+    jest.mock('next/navigation', () => ({
       useRouter: () => ({ push: mockNavigate })
     }));
 
@@ -71,7 +71,7 @@ describe('HexagonNavigation', () => {
   });
 
   test('should integrate with scene page enter experience flow', () => {
-    const mockOnEnterExperience = vi.fn();
+    const mockOnEnterExperience = jest.fn();
     
     render(
       <HexagonNavigation 

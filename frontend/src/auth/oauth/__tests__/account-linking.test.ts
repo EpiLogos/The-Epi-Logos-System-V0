@@ -3,7 +3,7 @@
  * Tests for automatic account linking flow for OAuth sign-in (AC: #5, #13)
  */
 
-import { describe, test, expect, vi, beforeEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach } // Jest globals available;
 import { AccountLinkingService } from '../account-linking-service';
 import { setupOAuthTests, createMockGoogleProfile } from './test-setup';
 
@@ -16,7 +16,7 @@ describe('AccountLinkingService', () => {
     linkingService = new AccountLinkingService();
     
     // Reset all mocks
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   test('should automatically sign in existing user with same email', async () => {
@@ -28,8 +28,8 @@ describe('AccountLinkingService', () => {
     };
 
     // Mock existing account found
-    vi.spyOn(linkingService, 'findExistingAccountByEmail').mockResolvedValue(existingUser);
-    vi.spyOn(linkingService, 'saveAccountLink').mockResolvedValue(undefined);
+    jest.spyOn(linkingService, 'findExistingAccountByEmail').mockResolvedValue(existingUser);
+    jest.spyOn(linkingService, 'saveAccountLink').mockResolvedValue(undefined);
 
     const result = await linkingService.handleOAuthSignIn(googleProfile);
     
@@ -47,7 +47,7 @@ describe('AccountLinkingService', () => {
     };
 
     // Mock no existing account found
-    vi.spyOn(linkingService, 'findExistingAccountByEmail').mockResolvedValue(null);
+    jest.spyOn(linkingService, 'findExistingAccountByEmail').mockResolvedValue(null);
 
     const result = await linkingService.handleOAuthSignIn(googleProfile);
     
@@ -65,7 +65,7 @@ describe('AccountLinkingService', () => {
     };
 
     // Mock existing account with same email
-    vi.spyOn(linkingService, 'findExistingAccountByEmail').mockResolvedValue({
+    jest.spyOn(linkingService, 'findExistingAccountByEmail').mockResolvedValue({
       id: 'existing123',
       email: 'existing@example.com'
     });
@@ -85,8 +85,8 @@ describe('AccountLinkingService', () => {
     };
 
     // Mock no existing account
-    vi.spyOn(linkingService, 'findExistingAccountByEmail').mockResolvedValue(null);
-    vi.spyOn(linkingService, 'createNewUser').mockResolvedValue(undefined);
+    jest.spyOn(linkingService, 'findExistingAccountByEmail').mockResolvedValue(null);
+    jest.spyOn(linkingService, 'createNewUser').mockResolvedValue(undefined);
 
     const result = await linkingService.handleOAuthSignIn(googleProfile);
     
@@ -104,8 +104,8 @@ describe('AccountLinkingService', () => {
     };
 
     // Mock failed ownership validation
-    vi.spyOn(linkingService, 'verifyReAuthentication').mockResolvedValue(true);
-    vi.spyOn(linkingService, 'validateAccountOwnership').mockResolvedValue(false);
+    jest.spyOn(linkingService, 'verifyReAuthentication').mockResolvedValue(true);
+    jest.spyOn(linkingService, 'validateAccountOwnership').mockResolvedValue(false);
 
     await expect(linkingService.linkGoogleAccount(existingUserId, googleProfile, true))
       .rejects.toThrow('Account ownership validation failed');

@@ -7,7 +7,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { vi } from 'vitest';
+// Jest globals available
 
 // Import components (will fail until implemented)
 import UserProfile from '../UserProfile';
@@ -84,15 +84,15 @@ const mockSessions = [
 const mockUserProfileProps = {
   user: mockUser,
   isEditing: false,
-  onSave: vi.fn(),
-  onCancel: vi.fn(),
+  onSave: jest.fn(),
+  onCancel: jest.fn(),
 };
 
 const mockSubscriptionProps = {
   subscription: mockSubscription,
-  onUpgrade: vi.fn(),
-  onManage: vi.fn(),
-  onCancel: vi.fn(),
+  onUpgrade: jest.fn(),
+  onManage: jest.fn(),
+  onCancel: jest.fn(),
 };
 
 const mockBillingProps = {
@@ -103,27 +103,27 @@ const mockBillingProps = {
 
 const mockSettingsProps = {
   user: mockUser,
-  onSave: vi.fn(),
-  onDeleteAccount: vi.fn(),
-  onExportData: vi.fn(),
-  onToggle2FA: vi.fn(),
+  onSave: jest.fn(),
+  onDeleteAccount: jest.fn(),
+  onExportData: jest.fn(),
+  onToggle2FA: jest.fn(),
 };
 
 const mockSessionProps = {
   sessions: mockSessions,
-  onTerminateSession: vi.fn(),
-  onTerminateAllSessions: vi.fn(),
-  onRefresh: vi.fn(),
+  onTerminateSession: jest.fn(),
+  onTerminateAllSessions: jest.fn(),
+  onRefresh: jest.fn(),
   currentSessionId: 'session-123',
 };
 
 describe('Account Management Components - Accessibility', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
     // Mock window.open for BillingHistory component
-    global.open = vi.fn();
+    global.open = jest.fn();
     // Mock fetch for components that make API calls
-    global.fetch = vi.fn().mockResolvedValue({
+    global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ history: mockBillingHistory, totalCount: 1 }),
     });
@@ -270,7 +270,7 @@ describe('Account Management Components - Accessibility', () => {
 
     it('should provide accessible pagination controls', async () => {
       // Mock pagination data
-      global.fetch = vi.fn().mockResolvedValue({
+      global.fetch = jest.fn().mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({
           history: mockBillingHistory,
@@ -293,7 +293,7 @@ describe('Account Management Components - Accessibility', () => {
     });
 
     it('should announce loading and error states', async () => {
-      global.fetch = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      global.fetch = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
       
       render(<BillingHistory {...mockBillingProps} />);
       
@@ -577,15 +577,15 @@ describe('Account Management Components - Accessibility', () => {
       // Mock Windows High Contrast mode
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
-        value: vi.fn().mockImplementation(query => ({
+        value: jest.fn().mockImplementation(query => ({
           matches: query === '(prefers-contrast: high)',
           media: query,
           onchange: null,
-          addListener: vi.fn(),
-          removeListener: vi.fn(),
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-          dispatchEvent: vi.fn(),
+          addListener: jest.fn(),
+          removeListener: jest.fn(),
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+          dispatchEvent: jest.fn(),
         })),
       });
     });
@@ -613,15 +613,15 @@ describe('Account Management Components - Accessibility', () => {
     beforeEach(() => {
       Object.defineProperty(window, 'matchMedia', {
         writable: true,
-        value: vi.fn().mockImplementation(query => ({
+        value: jest.fn().mockImplementation(query => ({
           matches: query === '(prefers-reduced-motion: reduce)',
           media: query,
           onchange: null,
-          addListener: vi.fn(),
-          removeListener: vi.fn(),
-          addEventListener: vi.fn(),
-          removeEventListener: vi.fn(),
-          dispatchEvent: vi.fn(),
+          addListener: jest.fn(),
+          removeListener: jest.fn(),
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+          dispatchEvent: jest.fn(),
         })),
       });
     });

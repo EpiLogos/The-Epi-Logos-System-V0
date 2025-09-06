@@ -5,7 +5,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+// Jest globals available
 import AccountSettings from '../AccountSettings';
 
 // Mock user data
@@ -28,15 +28,15 @@ const mockUser = {
 
 const mockProps = {
   user: mockUser,
-  onSave: vi.fn(),
-  onDeleteAccount: vi.fn(),
-  onExportData: vi.fn(),
-  onToggle2FA: vi.fn(),
+  onSave: jest.fn(),
+  onDeleteAccount: jest.fn(),
+  onExportData: jest.fn(),
+  onToggle2FA: jest.fn(),
 };
 
 describe('AccountSettings Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('Preferences Section', () => {
@@ -332,7 +332,7 @@ describe('AccountSettings Component', () => {
 
   describe('Loading States', () => {
     it('should show loading state during save operation', async () => {
-      const slowOnSave = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      const slowOnSave = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
       const props = { ...mockProps, onSave: slowOnSave };
       
       const user = userEvent.setup();
@@ -346,7 +346,7 @@ describe('AccountSettings Component', () => {
     });
 
     it('should show loading state during data export', async () => {
-      const slowOnExport = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      const slowOnExport = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
       const props = { ...mockProps, onExportData: slowOnExport };
       
       const user = userEvent.setup();
@@ -396,7 +396,7 @@ describe('AccountSettings Component', () => {
 
   describe('Error Handling', () => {
     it('should display error message when save fails', async () => {
-      const failingOnSave = vi.fn().mockRejectedValue(new Error('Save failed'));
+      const failingOnSave = jest.fn().mockRejectedValue(new Error('Save failed'));
       const props = { ...mockProps, onSave: failingOnSave };
       
       const user = userEvent.setup();
@@ -412,7 +412,7 @@ describe('AccountSettings Component', () => {
     });
 
     it('should retry save when retry button is clicked', async () => {
-      const failingOnSave = vi.fn()
+      const failingOnSave = jest.fn()
         .mockRejectedValueOnce(new Error('Save failed'))
         .mockResolvedValueOnce(undefined);
       const props = { ...mockProps, onSave: failingOnSave };

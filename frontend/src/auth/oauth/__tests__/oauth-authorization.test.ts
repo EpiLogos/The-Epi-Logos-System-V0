@@ -3,7 +3,7 @@
  * Tests for OAuth authorization URL generation with PKCE and nonce (AC: #1, #2, #11)
  */
 
-import { describe, test, expect, vi } from 'vitest';
+import { describe, test, expect, vi } // Jest globals available;
 import { OAuthAuthorizationService } from '../oauth-authorization-service';
 
 describe('OAuthAuthorizationService', () => {

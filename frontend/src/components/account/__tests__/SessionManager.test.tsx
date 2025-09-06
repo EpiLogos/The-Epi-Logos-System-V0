@@ -5,7 +5,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+// Jest globals available
 import SessionManager from '../SessionManager';
 
 // Mock session data
@@ -56,15 +56,15 @@ const mockActiveSessions = [
 
 const mockProps = {
   sessions: mockActiveSessions,
-  onTerminateSession: vi.fn(),
-  onTerminateAllSessions: vi.fn(),
-  onRefresh: vi.fn(),
+  onTerminateSession: jest.fn(),
+  onTerminateAllSessions: jest.fn(),
+  onRefresh: jest.fn(),
   currentSessionId: 'session-123',
 };
 
 describe('SessionManager Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('Session Display', () => {
@@ -271,7 +271,7 @@ describe('SessionManager Component', () => {
 
   describe('Loading States', () => {
     it('should show loading state during session termination', async () => {
-      const slowTerminate = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      const slowTerminate = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
       const props = { ...mockProps, onTerminateSession: slowTerminate };
       
       const user = userEvent.setup();
@@ -287,7 +287,7 @@ describe('SessionManager Component', () => {
     });
 
     it('should show loading state during refresh', async () => {
-      const slowRefresh = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      const slowRefresh = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
       const props = { ...mockProps, onRefresh: slowRefresh };
       
       const user = userEvent.setup();
@@ -303,7 +303,7 @@ describe('SessionManager Component', () => {
 
   describe('Error Handling', () => {
     it('should display error message when session termination fails', async () => {
-      const failingTerminate = vi.fn().mockRejectedValue(new Error('Termination failed'));
+      const failingTerminate = jest.fn().mockRejectedValue(new Error('Termination failed'));
       const props = { ...mockProps, onTerminateSession: failingTerminate };
       
       const user = userEvent.setup();
@@ -322,7 +322,7 @@ describe('SessionManager Component', () => {
     });
 
     it('should retry termination when retry button is clicked', async () => {
-      const failingTerminate = vi.fn()
+      const failingTerminate = jest.fn()
         .mockRejectedValueOnce(new Error('Termination failed'))
         .mockResolvedValueOnce(undefined);
       const props = { ...mockProps, onTerminateSession: failingTerminate };

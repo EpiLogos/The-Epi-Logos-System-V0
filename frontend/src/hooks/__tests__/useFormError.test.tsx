@@ -3,7 +3,7 @@
  * Tests form error state management functionality
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } // Jest globals available;
 import { renderHook, act } from '@testing-library/react';
 import { useFormError } from '../useFormError';
 

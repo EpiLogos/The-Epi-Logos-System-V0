@@ -3,7 +3,7 @@
  * Tests error creation, classification, and utility functions
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } // Jest globals available;
 import {
   generateErrorId,
   generateSupportId,
@@ -195,11 +195,11 @@ describe('Error Utilities', () => {
 
   describe('logError', () => {
     beforeEach(() => {
-      vi.clearAllMocks();
+      jest.clearAllMocks();
     });
 
     it('logs error in development mode', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
@@ -213,7 +213,7 @@ describe('Error Utilities', () => {
     });
 
     it('sanitizes sensitive context data', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
@@ -236,7 +236,7 @@ describe('Error Utilities', () => {
     });
 
     it('handles nested context sanitization', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
@@ -263,7 +263,7 @@ describe('Error Utilities', () => {
     });
 
     it('does not log sensitive information directly from error', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 

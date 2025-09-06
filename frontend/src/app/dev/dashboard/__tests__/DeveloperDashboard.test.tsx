@@ -1,17 +1,17 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import DeveloperDashboard from '../page';
 
 // Mock the system health service
-vi.mock('@/lib/serviceHealth', () => ({
-  checkSystemHealth: vi.fn(),
-  getSprintStatus: vi.fn(),
-  getStoryProgress: vi.fn()
+jest.mock('@/lib/serviceHealth', () => ({
+  checkSystemHealth: jest.fn(),
+  getSprintStatus: jest.fn(),
+  getStoryProgress: jest.fn()
 }));
 
 // Mock HexagonNavigation component
-vi.mock('@/components/HexagonNavigation', () => ({
+jest.mock('@/components/HexagonNavigation', () => ({
   default: ({ onClick, children }: { onClick?: () => void; children?: React.ReactNode }) => (
     <div data-testid="hexagon-nav" onClick={onClick}>
       {children || 'HexagonNavigation'}
@@ -21,7 +21,7 @@ vi.mock('@/components/HexagonNavigation', () => ({
 
 describe('DeveloperDashboard', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('Page Structure', () => {
@@ -108,13 +108,13 @@ describe('DeveloperDashboard', () => {
 
   describe('Real-time Updates', () => {
     it('should refresh system health data periodically', async () => {
-      const mockCheckSystemHealth = vi.fn().mockResolvedValue({
+      const mockCheckSystemHealth = jest.fn().mockResolvedValue({
         backend: 'healthy',
         database: 'healthy',
         integrations: 'healthy'
       });
 
-      vi.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockImplementation(mockCheckSystemHealth);
+      jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockImplementation(mockCheckSystemHealth);
 
       render(<DeveloperDashboard />);
       
@@ -124,12 +124,12 @@ describe('DeveloperDashboard', () => {
     });
 
     it('should update sprint progress in real-time', async () => {
-      const mockGetSprintStatus = vi.fn().mockResolvedValue({
+      const mockGetSprintStatus = jest.fn().mockResolvedValue({
         sprint1: 'complete',
         sprint2: 'in_progress'
       });
 
-      vi.mocked(require('@/lib/serviceHealth').getSprintStatus).mockImplementation(mockGetSprintStatus);
+      jest.mocked(require('@/lib/serviceHealth').getSprintStatus).mockImplementation(mockGetSprintStatus);
 
       render(<DeveloperDashboard />);
       

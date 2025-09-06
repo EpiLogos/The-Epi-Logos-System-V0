@@ -3,7 +3,7 @@
  * Tests toast functionality, dismissal, and retry actions
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } // Jest globals available;
 import { render, screen, fireEvent } from '@testing-library/react';
 import * as Toast from '@radix-ui/react-toast';
 import { ErrorToast } from '../ErrorToast';
@@ -19,8 +19,8 @@ const ToastWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => 
 
 describe('ErrorToast Component', () => {
   const mockError = createAPIError('Failed to save changes', 500, '/api/save', true);
-  const mockOnDismiss = vi.fn();
-  const mockOnRetry = vi.fn();
+  const mockOnDismiss = jest.fn();
+  const mockOnRetry = jest.fn();
 
   beforeEach(() => {
     mockOnDismiss.mockClear();

@@ -5,7 +5,7 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+// Jest globals available
 import SubscriptionManager from '../SubscriptionManager';
 
 // Mock subscription data
@@ -32,14 +32,14 @@ const mockPatronSubscription = {
 
 const mockProps = {
   subscription: mockFreeSubscription,
-  onUpgrade: vi.fn(),
-  onManage: vi.fn(),
-  onCancel: vi.fn(),
+  onUpgrade: jest.fn(),
+  onManage: jest.fn(),
+  onCancel: jest.fn(),
 };
 
 describe('SubscriptionManager Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('Free Tier Display', () => {
@@ -234,7 +234,7 @@ describe('SubscriptionManager Component', () => {
 
   describe('Loading States', () => {
     it('should show loading state during upgrade process', async () => {
-      const slowOnUpgrade = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      const slowOnUpgrade = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
       const props = { ...mockProps, onUpgrade: slowOnUpgrade };
       
       const user = userEvent.setup();

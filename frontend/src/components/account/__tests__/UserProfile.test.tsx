@@ -5,11 +5,11 @@
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { vi } from 'vitest';
+// Jest globals available
 import UserProfile from '../UserProfile';
 
 // Mock the OAuth context
-vi.mock('@/contexts/OAuthContext', () => ({
+jest.mock('@/contexts/OAuthContext', () => ({
   useOAuth: () => ({
     isAuthenticated: true,
     isLoading: false,
@@ -35,13 +35,13 @@ const mockUser = {
 const mockProps = {
   user: mockUser,
   isEditing: false,
-  onSave: vi.fn(),
-  onCancel: vi.fn(),
+  onSave: jest.fn(),
+  onCancel: jest.fn(),
 };
 
 describe('UserProfile Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    jest.clearAllMocks();
   });
 
   describe('Display Mode', () => {
@@ -187,7 +187,7 @@ describe('UserProfile Component', () => {
 
   describe('Loading States', () => {
     it('should show loading state during save operation', async () => {
-      const slowOnSave = vi.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
+      const slowOnSave = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
       const props = { ...mockProps, isEditing: true, onSave: slowOnSave };
       
       const user = userEvent.setup();
