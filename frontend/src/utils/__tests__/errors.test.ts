@@ -3,7 +3,7 @@
  * Tests error creation, classification, and utility functions
  */
 
-import { describe, it, expect, vi } // Jest globals available;
+import { describe, it, expect, vi } from '@jest/globals';
 import {
   generateErrorId,
   generateSupportId,
@@ -160,7 +160,7 @@ describe('Error Utilities', () => {
 
       expect(classification).toMatchObject({
         severity: 'medium',
-        userMessage: 'You don\\'t have permission to perform this action.',
+        userMessage: "You don't have permission to perform this action.",
         canRecover: true
       });
       expect(classification.suggestedActions[0].type).toBe('dismiss');
@@ -173,7 +173,7 @@ describe('Error Utilities', () => {
 
       expect(classification).toMatchObject({
         severity: 'medium',
-        userMessage: 'You\\'re offline. Some features may not work until you reconnect.',
+        userMessage: "You're offline. Some features may not work until you reconnect.",
         canRecover: true
       });
       expect(classification.suggestedActions[0].type).toBe('retry');
