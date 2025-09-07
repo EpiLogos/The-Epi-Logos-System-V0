@@ -7,19 +7,22 @@ with proper namespace isolation and multi-tenant support.
 """
 
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional, Tuple
 
 from graphiti_core import Graphiti
-from graphiti_core.search import SearchConfig, HybridSearchInput, SearchMethod
+from graphiti_core.search.search_config import SearchConfig, CommunitySearchMethod
 
-from ..database.neo4j_client import Neo4jClient
+from ...database.neo4j_client import Neo4jClient
 from .models import (
     Episode, Community, EpisodeType,
     EpisodeRequest, EpisodeResponse,
     CommunityRequest, CommunityResponse,
-    SearchRequest, SearchResponse
+    SearchRequest, SearchResponse,
+    QuaternalUnit, QuaternalType, QuaternalStatus,
+    QuaternalEntity, SourceReference, CrossCoordinateLink
 )
 
 
@@ -39,16 +42,50 @@ class GraphitiService:
         self.neo4j_client = neo4j_client
         self.workspace_id = workspace_id
         
-        # Initialize Graphiti with shared Neo4j connection
-        self.graphiti = Graphiti(
-            neo4j_client.uri,
-            neo4j_client.username,
-            neo4j_client.password,
-            neo4j_client.database
+        # Initialize Graphiti with shared Neo4j connection and Gemini clients
+        import os
+        from graphiti_core.llm_client.gemini_client import GeminiClient, LLMConfig
+        from graphiti_core.embedder.gemini import GeminiEmbedder, GeminiEmbedderConfig
+        from graphiti_core.cross_encoder.gemini_reranker_client import GeminiRerankerClient
+        
+        # Get Gemini API key from environment
+        gemini_api_key = os.getenv("GEMINI_API_KEY")
+        if not gemini_api_key:
+            raise ValueError("GEMINI_API_KEY environment variable is required for Graphiti")
+        
+        # Create Gemini LLM client
+        llm_client = GeminiClient(
+            config=LLMConfig(
+                api_key=gemini_api_key,
+                model="gemini-2.5-flash"
+            )
         )
         
-        # Set workspace for isolation
-        self.graphiti.set_workspace(workspace_id)
+        # Create Gemini embedder
+        embedder = GeminiEmbedder(
+            config=GeminiEmbedderConfig(
+                api_key=gemini_api_key,
+                embedding_model="embedding-001"
+            )
+        )
+        
+        # Create Gemini reranker/cross-encoder
+        cross_encoder = GeminiRerankerClient(
+            config=LLMConfig(
+                api_key=gemini_api_key,
+                model="gemini-2.5-flash"
+            )
+        )
+        
+        # Initialize Graphiti with Gemini clients and Neo4j connection
+        self.graphiti = Graphiti(
+            uri=neo4j_client.uri,
+            user=neo4j_client.username,
+            password=neo4j_client.password,
+            llm_client=llm_client,
+            embedder=embedder,
+            cross_encoder=cross_encoder
+        )
         
         logger.info(f"Initialized Graphiti service with workspace: {workspace_id}")
     
@@ -66,6 +103,7 @@ class GraphitiService:
             await self.graphiti.add_episode(
                 name=f"{request.episode_type.value}_{episode_id[:8]}",
                 episode_body=request.content,
+                source_description=f"Episode from {request.episode_type.value}",
                 reference_time=occurred_at
             )
             
@@ -141,28 +179,25 @@ class GraphitiService:
             communities = []
             
             if request.query:
-                # Use Graphiti's hybrid search capabilities
-                search_config = SearchConfig(
-                    search_method=SearchMethod.HYBRID,
-                    limit=request.limit
-                )
-                
-                search_input = HybridSearchInput(
-                    query=request.query,
-                    # Configure search based on filters
-                    search_config=search_config
-                )
-                
-                # Perform the search
-                search_results = await self.graphiti.search(search_input)
-                
-                # Convert results to our Episode models
-                for result in search_results:
-                    episode_data = await self._convert_search_result_to_episode(
-                        result, request.group_id
+                # Use Graphiti's search capabilities
+                try:
+                    search_results = await self.graphiti.search(
+                        query=request.query,
+                        search_type="episodes",
+                        limit=request.limit
                     )
-                    if episode_data:
-                        episodes.append(episode_data)
+                    
+                    # Convert results to our Episode models
+                    for result in search_results:
+                        episode_data = await self._convert_search_result_to_episode(
+                            result, request.group_id
+                        )
+                        if episode_data:
+                            episodes.append(episode_data)
+                except Exception as e:
+                    logger.warning(f"Search failed, falling back to direct query: {e}")
+                    # Fall back to direct Neo4j query if search fails
+                    episodes = []
             
             # Apply additional filters via Neo4j query
             filtered_episodes = await self._filter_episodes_by_metadata(
@@ -441,6 +476,424 @@ class GraphitiService:
         except Exception as e:
             logger.error(f"Error getting agent ruminations: {e}")
             return []
+    
+    # QuaternalUnit CRUD Operations
+    
+    async def create_quaternal_unit(
+        self, 
+        group_id: str,
+        quaternal_type: QuaternalType,
+        bimba_coordinate: str,
+        summary: str,
+        entities: List[QuaternalEntity] = None,
+        source_references: List[SourceReference] = None,
+        workspace_id: str = "default"
+    ) -> Optional[QuaternalUnit]:
+        """Create a new QuaternalUnit with QL structure validation."""
+        try:
+            qu_id = str(uuid.uuid4())
+            entities = entities or []
+            source_references = source_references or []
+            
+            # Create QuaternalUnit node with proper namespace labeling
+            create_query = """
+            CREATE (qu:QuaternalUnit:Graphiti {
+                id: $id,
+                group_id: $group_id,
+                workspace_id: $workspace_id,
+                quaternal_type: $quaternal_type,
+                status: $status,
+                bimba_coordinate: $bimba_coordinate,
+                summary: $summary,
+                created_at: $created_at,
+                updated_at: $updated_at,
+                confidence_score: $confidence_score,
+                completeness_score: $completeness_score,
+                coherence_score: $coherence_score
+            })
+            RETURN qu
+            """
+            
+            now = datetime.utcnow()
+            records, _, _ = await self.neo4j_client.execute_query(create_query, {
+                "id": qu_id,
+                "group_id": group_id,
+                "workspace_id": workspace_id,
+                "quaternal_type": quaternal_type.value,
+                "status": QuaternalStatus.POTENTIAL.value,
+                "bimba_coordinate": bimba_coordinate,
+                "summary": summary,
+                "created_at": now.isoformat(),
+                "updated_at": now.isoformat(),
+                "confidence_score": 0.5,
+                "completeness_score": 0.0,
+                "coherence_score": 0.0
+            })
+            
+            if not records:
+                logger.error(f"Failed to create QuaternalUnit {qu_id}")
+                return None
+            
+            # Create entity relationships if provided
+            if entities:
+                await self._create_quaternal_entities(qu_id, entities)
+            
+            # Create source reference relationships if provided
+            if source_references:
+                await self._create_source_references(qu_id, source_references)
+            
+            return await self.get_quaternal_unit(group_id, qu_id)
+            
+        except Exception as e:
+            logger.error(f"Error creating QuaternalUnit: {e}")
+            return None
+    
+    async def get_quaternal_unit(self, group_id: str, qu_id: str) -> Optional[QuaternalUnit]:
+        """Retrieve a QuaternalUnit by ID with all relationships."""
+        try:
+            query = """
+            MATCH (qu:QuaternalUnit:Graphiti)
+            WHERE qu.id = $qu_id AND qu.group_id = $group_id
+            
+            OPTIONAL MATCH (qu)-[:HAS_ENTITY]->(e:QuaternalEntity:Graphiti)
+            OPTIONAL MATCH (qu)-[:HAS_SOURCE]->(sr:SourceReference:Graphiti)
+            OPTIONAL MATCH (qu)-[:CROSS_COORDINATE_LINK]->(ccl:CrossCoordinateLink:Graphiti)
+            
+            RETURN qu, 
+                   collect(DISTINCT e) AS entities,
+                   collect(DISTINCT sr) AS source_refs,
+                   collect(DISTINCT ccl) AS cross_links
+            """
+            
+            records, _, _ = await self.neo4j_client.execute_query(query, {
+                "qu_id": qu_id,
+                "group_id": group_id
+            })
+            
+            if not records:
+                return None
+            
+            record = records[0]
+            qu_data = dict(record["qu"])
+            
+            # Parse entities
+            entities = []
+            for entity_data in record["entities"]:
+                if entity_data:
+                    entities.append(QuaternalEntity(
+                        name=entity_data["name"],
+                        ql_position=entity_data["ql_position"],
+                        summary=entity_data.get("summary"),
+                        entity_id=entity_data.get("entity_id"),
+                        confidence=entity_data.get("confidence", 1.0)
+                    ))
+            
+            # Parse source references
+            source_refs = []
+            for sr_data in record["source_refs"]:
+                if sr_data:
+                    source_refs.append(SourceReference(
+                        source_type=sr_data["source_type"],
+                        source_id=sr_data["source_id"],
+                        confidence=sr_data.get("confidence", 1.0),
+                        excerpt=sr_data.get("excerpt")
+                    ))
+            
+            # Parse cross-coordinate links
+            cross_links = []
+            for ccl_data in record["cross_links"]:
+                if ccl_data:
+                    cross_links.append(CrossCoordinateLink(
+                        target_qu_id=ccl_data["target_qu_id"],
+                        target_coordinate=ccl_data["target_coordinate"],
+                        relationship_type=ccl_data["relationship_type"],
+                        strength=ccl_data.get("strength", 0.5),
+                        created_at=datetime.fromisoformat(ccl_data["created_at"])
+                    ))
+            
+            return QuaternalUnit(
+                id=qu_data["id"],
+                group_id=qu_data["group_id"],
+                quaternal_type=QuaternalType(qu_data["quaternal_type"]),
+                status=QuaternalStatus(qu_data["status"]),
+                bimba_coordinate=qu_data["bimba_coordinate"],
+                summary=qu_data["summary"],
+                entities=entities,
+                source_references=source_refs,
+                cross_coordinate_links=cross_links,
+                created_at=datetime.fromisoformat(qu_data["created_at"]),
+                updated_at=datetime.fromisoformat(qu_data["updated_at"]),
+                validated_at=datetime.fromisoformat(qu_data["validated_at"]) if qu_data.get("validated_at") else None,
+                confidence_score=qu_data.get("confidence_score", 0.5),
+                completeness_score=qu_data.get("completeness_score", 0.0),
+                coherence_score=qu_data.get("coherence_score", 0.0)
+            )
+            
+        except Exception as e:
+            logger.error(f"Error getting QuaternalUnit {qu_id}: {e}")
+            return None
+    
+    async def update_quaternal_unit(
+        self,
+        group_id: str,
+        qu_id: str,
+        summary: str = None,
+        entities: List[QuaternalEntity] = None,
+        status: QuaternalStatus = None,
+        confidence_score: float = None
+    ) -> Optional[QuaternalUnit]:
+        """Update a QuaternalUnit with new information."""
+        try:
+            # Build dynamic update query
+            update_fields = []
+            params = {"qu_id": qu_id, "group_id": group_id, "updated_at": datetime.utcnow().isoformat()}
+            
+            if summary:
+                update_fields.append("qu.summary = $summary")
+                params["summary"] = summary
+            
+            if status:
+                update_fields.append("qu.status = $status")
+                params["status"] = status.value
+                if status == QuaternalStatus.VALIDATED:
+                    update_fields.append("qu.validated_at = $validated_at")
+                    params["validated_at"] = datetime.utcnow().isoformat()
+            
+            if confidence_score is not None:
+                update_fields.append("qu.confidence_score = $confidence_score")
+                params["confidence_score"] = confidence_score
+            
+            if update_fields:
+                update_fields.append("qu.updated_at = $updated_at")
+                
+                query = f"""
+                MATCH (qu:QuaternalUnit:Graphiti)
+                WHERE qu.id = $qu_id AND qu.group_id = $group_id
+                SET {', '.join(update_fields)}
+                RETURN qu
+                """
+                
+                await self.neo4j_client.execute_query(query, params)
+            
+            # Update entities if provided
+            if entities is not None:
+                await self._replace_quaternal_entities(qu_id, entities)
+            
+            return await self.get_quaternal_unit(group_id, qu_id)
+            
+        except Exception as e:
+            logger.error(f"Error updating QuaternalUnit {qu_id}: {e}")
+            return None
+    
+    async def find_quaternal_units(
+        self,
+        group_id: str,
+        workspace_id: str = "default",
+        quaternal_type: QuaternalType = None,
+        status: QuaternalStatus = None,
+        bimba_coordinate: str = None,
+        min_confidence: float = None,
+        min_completeness: float = None,
+        limit: int = 10
+    ) -> List[QuaternalUnit]:
+        """Search for QuaternalUnits with filtering."""
+        try:
+            # Build dynamic where clause
+            where_conditions = ["qu.group_id = $group_id", "qu.workspace_id = $workspace_id"]
+            params = {"group_id": group_id, "workspace_id": workspace_id, "limit": limit}
+            
+            if quaternal_type:
+                where_conditions.append("qu.quaternal_type = $quaternal_type")
+                params["quaternal_type"] = quaternal_type.value
+            
+            if status:
+                where_conditions.append("qu.status = $status")
+                params["status"] = status.value
+            
+            if bimba_coordinate:
+                where_conditions.append("qu.bimba_coordinate = $bimba_coordinate")
+                params["bimba_coordinate"] = bimba_coordinate
+            
+            if min_confidence is not None:
+                where_conditions.append("qu.confidence_score >= $min_confidence")
+                params["min_confidence"] = min_confidence
+            
+            if min_completeness is not None:
+                where_conditions.append("qu.completeness_score >= $min_completeness")
+                params["min_completeness"] = min_completeness
+            
+            query = f"""
+            MATCH (qu:QuaternalUnit:Graphiti)
+            WHERE {' AND '.join(where_conditions)}
+            RETURN qu
+            ORDER BY qu.updated_at DESC
+            LIMIT $limit
+            """
+            
+            records, _, _ = await self.neo4j_client.execute_query(query, params)
+            
+            results = []
+            for record in records:
+                qu_data = dict(record["qu"])
+                # Get full QuaternalUnit with relationships
+                full_qu = await self.get_quaternal_unit(group_id, qu_data["id"])
+                if full_qu:
+                    results.append(full_qu)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error finding QuaternalUnits: {e}")
+            return []
+    
+    async def delete_quaternal_unit(self, group_id: str, qu_id: str) -> bool:
+        """Delete a QuaternalUnit and all its relationships."""
+        try:
+            query = """
+            MATCH (qu:QuaternalUnit:Graphiti)
+            WHERE qu.id = $qu_id AND qu.group_id = $group_id
+            
+            // Delete all relationships and connected nodes
+            OPTIONAL MATCH (qu)-[r1]->(e:QuaternalEntity:Graphiti)
+            OPTIONAL MATCH (qu)-[r2]->(sr:SourceReference:Graphiti)
+            OPTIONAL MATCH (qu)-[r3]->(ccl:CrossCoordinateLink:Graphiti)
+            
+            DELETE r1, r2, r3, e, sr, ccl, qu
+            RETURN count(qu) as deleted
+            """
+            
+            records, _, _ = await self.neo4j_client.execute_query(query, {
+                "qu_id": qu_id,
+                "group_id": group_id
+            })
+            
+            return len(records) > 0 and records[0]["deleted"] > 0
+            
+        except Exception as e:
+            logger.error(f"Error deleting QuaternalUnit {qu_id}: {e}")
+            return False
+    
+    # Helper methods for QuaternalUnit relationships
+    
+    async def _create_quaternal_entities(self, qu_id: str, entities: List[QuaternalEntity]) -> bool:
+        """Create entity nodes and relationships for a QuaternalUnit."""
+        try:
+            for entity in entities:
+                entity_query = """
+                MATCH (qu:QuaternalUnit:Graphiti {id: $qu_id})
+                CREATE (e:QuaternalEntity:Graphiti {
+                    name: $name,
+                    summary: $summary,
+                    ql_position: $ql_position,
+                    entity_id: $entity_id,
+                    confidence: $confidence
+                })
+                CREATE (qu)-[:HAS_ENTITY]->(e)
+                """
+                
+                await self.neo4j_client.execute_query(entity_query, {
+                    "qu_id": qu_id,
+                    "name": entity.name,
+                    "summary": entity.summary,
+                    "ql_position": entity.ql_position,
+                    "entity_id": entity.entity_id or str(uuid.uuid4()),
+                    "confidence": entity.confidence
+                })
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error creating QuaternalEntity relationships: {e}")
+            return False
+    
+    async def _create_source_references(self, qu_id: str, source_refs: List[SourceReference]) -> bool:
+        """Create source reference nodes and relationships for a QuaternalUnit."""
+        try:
+            for source_ref in source_refs:
+                source_query = """
+                MATCH (qu:QuaternalUnit:Graphiti {id: $qu_id})
+                CREATE (sr:SourceReference:Graphiti {
+                    source_type: $source_type,
+                    source_id: $source_id,
+                    confidence: $confidence,
+                    excerpt: $excerpt
+                })
+                CREATE (qu)-[:HAS_SOURCE]->(sr)
+                """
+                
+                await self.neo4j_client.execute_query(source_query, {
+                    "qu_id": qu_id,
+                    "source_type": source_ref.source_type,
+                    "source_id": source_ref.source_id,
+                    "confidence": source_ref.confidence,
+                    "excerpt": source_ref.excerpt
+                })
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error creating SourceReference relationships: {e}")
+            return False
+    
+    async def _replace_quaternal_entities(self, qu_id: str, entities: List[QuaternalEntity]) -> bool:
+        """Replace all entities for a QuaternalUnit."""
+        try:
+            # Delete existing entities
+            delete_query = """
+            MATCH (qu:QuaternalUnit:Graphiti {id: $qu_id})-[r:HAS_ENTITY]->(e:QuaternalEntity:Graphiti)
+            DELETE r, e
+            """
+            await self.neo4j_client.execute_query(delete_query, {"qu_id": qu_id})
+            
+            # Create new entities
+            return await self._create_quaternal_entities(qu_id, entities)
+            
+        except Exception as e:
+            logger.error(f"Error replacing QuaternalEntity relationships: {e}")
+            return False
+    
+    async def create_cross_coordinate_link(
+        self,
+        group_id: str,
+        source_qu_id: str,
+        target_qu_id: str,
+        target_coordinate: str,
+        relationship_type: str,
+        strength: float = 0.5
+    ) -> bool:
+        """Create a cross-coordinate link between QuaternalUnits."""
+        try:
+            query = """
+            MATCH (source_qu:QuaternalUnit:Graphiti {id: $source_qu_id, group_id: $group_id})
+            MATCH (target_qu:QuaternalUnit:Graphiti {id: $target_qu_id, group_id: $group_id})
+            
+            CREATE (ccl:CrossCoordinateLink:Graphiti {
+                target_qu_id: $target_qu_id,
+                target_coordinate: $target_coordinate,
+                relationship_type: $relationship_type,
+                strength: $strength,
+                created_at: $created_at
+            })
+            
+            CREATE (source_qu)-[:CROSS_COORDINATE_LINK]->(ccl)
+            RETURN ccl
+            """
+            
+            records, _, _ = await self.neo4j_client.execute_query(query, {
+                "source_qu_id": source_qu_id,
+                "target_qu_id": target_qu_id,
+                "target_coordinate": target_coordinate,
+                "relationship_type": relationship_type,
+                "strength": strength,
+                "group_id": group_id,
+                "created_at": datetime.utcnow().isoformat()
+            })
+            
+            return len(records) > 0
+            
+        except Exception as e:
+            logger.error(f"Error creating cross-coordinate link: {e}")
+            return False
     
     async def close(self):
         """Close Graphiti service and connections."""

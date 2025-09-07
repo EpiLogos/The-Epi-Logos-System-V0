@@ -14,14 +14,12 @@ from .persona_manager import PersonaManager
 from .session import SessionManager
 from .context_package import ContextPackageBuilder
 from .bimba_client import BimbaGraphQLClient
-from .conversation import ConversationManager
 
 __all__ = [
     "PersonaManager", 
     "SessionManager",
     "ContextPackageBuilder", 
-    "BimbaGraphQLClient",
-    "ConversationManager"
+    "BimbaGraphQLClient"
 ]
 
 def get_unified_orchestrator():

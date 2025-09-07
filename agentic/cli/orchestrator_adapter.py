@@ -1,27 +1,18 @@
 import asyncio
+import json
 import os
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Iterable, List, Optional, Tuple
 
 import importlib
+from uuid import uuid4
 
+from .agui_payload import build_run_agent_input
+from .diagnostics import DiagnosticsRecorder
+import logging
 
-@dataclass
-class ModelInfo:
-    name: str
-    provider: str
-    description: str = ""
-
-
-def _split_provider_model(name: str) -> Tuple[str, str]:
-    if ":" in name:
-        p, m = name.split(":", 1)
-        return p, m
-    # Default to pydantic-ai style openai:*
-    return "openai", name
-
+logger = logging.getLogger(__name__)
 
 class OrchestratorAdapter:
     """Tiny adapter that normalizes interactions with UnifiedOrchestrator.
@@ -34,20 +25,16 @@ class OrchestratorAdapter:
     - Streaming emulation for non-streaming underlying calls
     """
 
-    # Curated registry; keep small and editable via env overrides
-    DEFAULT_MODELS: List[ModelInfo] = [
-        ModelInfo("openai:gpt-4o", "openai", "OpenAI Omni general model"),
-        ModelInfo("openai:gpt-4.1", "openai", "OpenAI GPT-4.1"),
-        ModelInfo("anthropic:claude-3-5-sonnet-20240620", "anthropic", "Claude 3.5 Sonnet"),
-        ModelInfo("gemini:gemini-2.5-pro", "gemini", "Google Gemini 2.5 Pro"),
-        ModelInfo("deepseek:deepseek-chat", "deepseek", "DeepSeek chat model"),
-    ]
+    # Thin client; no local model registry
 
     def __init__(self,
                  model: str,
                  user_id: str = "cli-user",
                  persona_key: Optional[str] = None,
-                 system_override: str = "") -> None:
+                 system_override: str = "",
+                 diagnostics: Optional[DiagnosticsRecorder] = None,
+                 trace_id_override: Optional[str] = None,
+                 ) -> None:
         self.user_id = user_id
         self.model = model
         self.session_id: Optional[str] = None
@@ -58,6 +45,10 @@ class OrchestratorAdapter:
         self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         self.mongodb_url = os.getenv("MONGODB_URL", os.getenv("MONGODB_URI", "mongodb://localhost:27017"))
         self.graphql_endpoint = os.getenv("GRAPHQL_ENDPOINT", "http://localhost:8000/graphql")
+
+        # Diagnostics
+        self.diag = diagnostics or DiagnosticsRecorder()
+        self.trace_id_override = trace_id_override
 
         # Lazy-init orchestrator instance
         self._orch = None
@@ -75,20 +66,9 @@ class OrchestratorAdapter:
             )
         return self._orch
 
-    # --- Models ---
-    @classmethod
-    def list_models(cls) -> List[ModelInfo]:
-        # Allow env override (comma-separated provider:model)
-        extra = os.getenv("AGENTIC_EXTRA_MODELS", "").strip()
-        models = list(cls.DEFAULT_MODELS)
-        if extra:
-            for token in extra.split(","):
-                name = token.strip()
-                if not name:
-                    continue
-                provider, _ = _split_provider_model(name)
-                models.append(ModelInfo(name=name, provider=provider, description="custom"))
-        return models
+    # --- Capabilities ---
+    async def get_capabilities(self) -> Dict[str, Any]:
+        return self.orch.get_capabilities()
 
     # --- Personas ---
     async def list_orchestrator_personas(self) -> List[str]:
@@ -99,45 +79,26 @@ class OrchestratorAdapter:
 
     # --- Session ---
     async def start_session(self) -> str:
-        # Create a no-op request to get a session_id, or create via SessionManager
+        # Create a session by sending a no-op start message
         core_mod = importlib.import_module('agentic.orchestrator.core')
         OrchestratorRequest = getattr(core_mod, 'OrchestratorRequest')
 
         req = OrchestratorRequest(
             user_id=self.user_id,
             message="/start",
-            requested_persona=None,
         )
         resp = await self.orch.process_request(req)
         self.session_id = resp.session_id
-        # If system override provided, make it effective by patching persona prompt
-        await self._apply_sys_override(self.persona_key, self.system_override)
+        # Apply system override via official method if provided
+        if self.system_override:
+            await self.orch.update_session_instructions(self.session_id, self.system_override)
         return self.session_id
-
-    async def _apply_sys_override(self, persona_key: str, sys_text: str) -> None:
-        if not sys_text:
-            return
-        try:
-            pm = self.orch.persona_manager
-            cfg = pm.get_persona_config(persona_key)
-            if cfg is None:
-                # fallback to system persona
-                cfg = pm.get_persona_config("system")
-                persona_key = "system"
-            if cfg is None:
-                return
-            base = cfg.system_prompt or ""
-            merged = base.rstrip() + "\n\nAdditional system instruction (live):\n" + sys_text.strip()
-            cfg.system_prompt = merged
-            self.persona_key = persona_key
-        except Exception:
-            pass
 
     async def switch_persona(self, persona_key: str) -> bool:
         core_mod = importlib.import_module('agentic.orchestrator.core')
         PersonaType = getattr(core_mod, 'PersonaType')
 
-        # Only switch if persona exists in orchestrator; else keep SYSTEM and apply sys injection
+        # Only switch if persona exists in orchestrator
         personas = await self.list_orchestrator_personas()
         if persona_key in personas:
             if not self.session_id:
@@ -146,17 +107,18 @@ class OrchestratorAdapter:
             if ok:
                 self.persona_key = persona_key
             return ok
-        else:
-            # treat as CLI-only persona by applying sys injection
-            self.persona_key = "system"
-            return True
+        return False
 
-    async def switch_model(self, model: str) -> None:
-        # Recreate orchestrator with new model; re-apply sys override
-        self.model = model
-        self._orch = None
-        # On next access, orch is recreated
-        await self._apply_sys_override(self.persona_key, self.system_override)
+    async def update_model_in_session(self, model: str) -> bool:
+        if not self.session_id:
+            await self.start_session()
+        return await self.orch.update_session_model(self.session_id, model)
+
+    async def update_sys_override(self, text: Optional[str]) -> bool:
+        if not self.session_id:
+            await self.start_session()
+        self.system_override = text or ""
+        return await self.orch.update_session_instructions(self.session_id, text)
 
     async def clear(self) -> None:
         # Clear session context by creating a new session id
@@ -164,36 +126,175 @@ class OrchestratorAdapter:
 
     # --- Messaging ---
     async def send_message(self, text: str, stream: bool = True) -> Tuple[Iterable[str], Dict[str, Any]]:
-        """Send a message; returns a token iterator (emulated) and metadata."""
+        """Send a message; returns AG-UI event stream or fallback to non-streaming."""
         core_mod = importlib.import_module('agentic.orchestrator.core')
         OrchestratorRequest = getattr(core_mod, 'OrchestratorRequest')
 
         if not self.session_id:
             await self.start_session()
 
-        # Ensure override is applied for the current persona key
-        await self._apply_sys_override(self.persona_key, self.system_override)
-
         req = OrchestratorRequest(
             user_id=self.user_id,
             session_id=self.session_id,
             message=text,
-            requested_persona=None,  # persona determined internally unless specified
+            requested_persona=None,
         )
 
         start = datetime.now(timezone.utc)
+
+        if stream:
+            # Use AG-UI streaming if available
+            try:
+                stream_iter, meta = await self._stream_ag_ui_events(req, start)
+
+                async def _guarded_stream() -> AsyncGenerator[str, None]:
+                    had_output = False
+                    async for chunk in stream_iter:
+                        had_output = True
+                        self.diag.record_chunk(chunk)
+                        yield chunk
+                    if not had_output:
+                        # No output from stream; fallback to non-streaming
+                        fb_iter, _ = await self._fallback_non_streaming(req, start)
+                        async for c in fb_iter:
+                            self.diag.record_chunk(c)
+                            yield c
+                return _guarded_stream(), meta
+            except Exception as e:
+                # Fallback to non-streaming if AG-UI fails at setup
+                print(f"AG-UI streaming failed, falling back to non-streaming: {e}")
+                return await self._fallback_non_streaming(req, start)
+        else:
+            # Non-streaming mode
+            return await self._fallback_non_streaming(req, start)
+
+    async def _stream_ag_ui_events(self, req, start_time) -> Tuple[AsyncGenerator[str, None], Dict[str, Any]]:
+        """Stream real AG-UI events from the orchestrator."""
+        collected_text = []
+        error_msg = None
+        success = True
+        active_persona = None
+        trace_id = self.trace_id_override or str(uuid4())
+
+        async def _ag_ui_streamer() -> AsyncGenerator[str, None]:
+            nonlocal collected_text, error_msg, success, active_persona
+
+            try:
+                # Build canonical AG-UI payload and stream from orchestrator
+                thread_id = self.session_id or str(uuid4())
+                # Ask orchestrator for session status to populate model hint
+                status = await self.orch.get_session_status(self.session_id) if self.session_id else None
+                model_hint = status.get("model_name") if status else None
+                agui = build_run_agent_input(
+                    thread_id=thread_id,
+                    user_text=req.message,
+                    persona=self.persona_key,
+                    system_override=self.system_override or None,
+                    tools=[],
+                    state={},
+                    forwarded_props={"model": model_hint},
+                )
+                # Diagnostics
+                self.diag.dump_payload_shape(trace_id=trace_id, kind="agui.run_input", payload=agui)
+                self.diag.start_turn(trace_id=trace_id, session_id=self.session_id, model=model_hint, persona_key=self.persona_key)
+
+                stream_gen = self.orch.process_ag_ui_input_stream(agui)
+
+                async def next_event_with_timeout():
+                    # Timeout protects against silent hangs
+                    return await asyncio.wait_for(stream_gen.__anext__(), timeout=5.0)
+
+                while True:
+                    try:
+                        event_str = await next_event_with_timeout()
+                    except StopAsyncIteration:
+                        break
+                    
+                    # Parse AG-UI event - enhanced SSE parsing
+                    if event_str.startswith('data: '):
+                        try:
+                            event_data = json.loads(event_str[6:].rstrip('\n'))
+                            event_type = event_data.get('type', '')
+
+                            # Extract text content from AG-UI events
+                            if event_type == 'text_message_content':
+                                content = event_data.get('content', '')
+                                if content:
+                                    self.diag.record_first_token()
+                                    collected_text.append(content)
+                                    yield content
+                            elif event_type == 'run_error':
+                                error_msg = event_data.get('message', 'Unknown error')
+                                success = False
+                                yield f"Error: {error_msg}"
+                                break
+                            elif event_type == 'run_started':
+                                # Extract persona info if available
+                                active_persona = event_data.get('persona', active_persona)
+                            elif event_type == 'run_finished':
+                                # Mark completion
+                                success = True
+
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"Failed to parse AG-UI event: {e}")
+                            continue
+                        except Exception as e:
+                            logger.warning(f"Error processing AG-UI event: {e}")
+                            continue
+                    elif event_str.startswith('event: '):
+                        # ✅ Handle SSE event type metadata
+                        event_type = event_str[7:].rstrip('\n')
+                        logger.debug(f"AG-UI event type: {event_type}")
+                        continue
+                    elif event_str.startswith('id: '):
+                        # ✅ Handle SSE event ID
+                        event_id = event_str[4:].rstrip('\n')
+                        logger.debug(f"AG-UI event ID: {event_id}")
+                        continue
+                    elif event_str.strip() == '':
+                        # ✅ Handle SSE event separators
+                        continue
+                # End of stream
+
+            except Exception as e:
+                error_msg = str(e)
+                success = False
+                yield f"Error: {e}"
+
+            # ✅ Capture end time AFTER streaming completes
+            finally:
+                nonlocal end_time
+                end_time = datetime.now(timezone.utc)
+                self.diag.end_turn()
+
+        # Initialize end_time in case streaming never starts
+        end_time = start_time
+
+        # Query session status for current model
+        status = await self.orch.get_session_status(self.session_id)
+        meta = {
+            "success": success,
+            "model": status.get("model_name") if status else None,
+            "persona": self.persona_key,
+            "active_persona": active_persona,
+            "latency_ms": int((end_time - start_time).total_seconds() * 1000),
+            "first_token_ms": self.diag.turn.first_token_ms if self.diag.turn else None,
+            "error": error_msg,
+            "streaming_mode": "ag_ui"
+        }
+
+        return _ag_ui_streamer(), meta
+
+    async def _fallback_non_streaming(self, req, start_time) -> Tuple[AsyncGenerator[str, None], Dict[str, Any]]:
+        """Fallback to non-streaming mode using original process_request."""
         resp = await self.orch.process_request(req)
-        end = datetime.now(timezone.utc)
+        end_time = datetime.now(timezone.utc)
 
         self.session_id = resp.session_id
-
         final_text = resp.response or ""
 
-        async def _streamer() -> AsyncGenerator[str, None]:
-            if not stream:
-                yield final_text
-                return
-            # Emulate streaming by yielding small chunks
+        async def _fallback_streamer() -> AsyncGenerator[str, None]:
+            # Emulate streaming by yielding small chunks for compatibility
             chunk = []
             for token in final_text.split():
                 chunk.append(token)
@@ -204,12 +305,15 @@ class OrchestratorAdapter:
             if chunk:
                 yield " ".join(chunk)
 
+        # Query session status for current model
+        status = await self.orch.get_session_status(self.session_id)
         meta = {
             "success": resp.success,
-            "model": self.model,
+            "model": status.get("model_name") if status else None,
             "persona": self.persona_key,
             "active_persona": getattr(resp, "active_persona", None),
-            "latency_ms": int((end - start).total_seconds() * 1000),
+            "latency_ms": int((end_time - start_time).total_seconds() * 1000),
             "error": resp.error,
+            "streaming_mode": "fallback"
         }
-        return _streamer(), meta
+        return _fallback_streamer(), meta

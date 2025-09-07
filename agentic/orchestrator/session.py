@@ -31,6 +31,8 @@ class OrchestratorSession(BaseModel):
     user_id: str
     active_persona: Optional[str] = None
     conversation_id: str
+    # Session-scoped model selection
+    model_name: Optional[str] = None
     context: Dict[str, Any] = Field(default_factory=dict)
     bimba_context: List[str] = Field(default_factory=list)
     last_activity: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

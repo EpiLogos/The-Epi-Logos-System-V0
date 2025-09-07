@@ -1,7 +1,10 @@
 # Pydantic AI and agentic framework dependencies
 pydantic>=2.11.2,<3.0.0
-pydantic-ai==0.0.14
+pydantic-ai==1.0.1
 pydantic-settings==2.7.1
+
+# AG-UI Protocol for agent-user interaction
+ag-ui-protocol==0.1.8
 
 # FastAPI for agentic API endpoints
 fastapi==0.116.1
@@ -31,6 +34,9 @@ graphiti-core==0.3.6
 # HTTP client and utilities
 httpx==0.28.1
 aiofiles==24.1.0
+
+# CLI framework
+typer==0.15.1
 
 # Data processing
 numpy==2.2.1

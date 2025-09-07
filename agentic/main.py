@@ -30,6 +30,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Optional JSON logging middleware for diagnostics
+if os.getenv("AGENTIC_DEBUG") == "1" or os.getenv("AGENTIC_TRACE") == "1":
+    try:
+        from .server.middleware.logging import JSONLoggingMiddleware
+
+        app.add_middleware(JSONLoggingMiddleware)  # type: ignore
+    except Exception:
+        pass
+
 @app.get("/")
 async def root():
     """Root endpoint"""
