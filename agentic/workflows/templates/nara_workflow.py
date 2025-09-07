@@ -52,11 +52,11 @@ class NaraWorkflow(PersonaWorkflow):
     - #4.5 Emergent Synthesis (recursive insight generation)
     """
     
-    def __init__(self):
+    def __init__(self, workflow_id: str = "nara-oracle-interface", persona_type: PersonaType = PersonaType.NARA):
         """Initialize Nara workflow with #4 coordinate identity."""
         super().__init__(
-            workflow_id="nara-oracle-interface",
-            persona_type=PersonaType.NARA
+            workflow_id=workflow_id,
+            persona_type=persona_type
         )
         
         # Load persona configuration

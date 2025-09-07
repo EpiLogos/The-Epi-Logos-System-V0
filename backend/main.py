@@ -180,7 +180,7 @@ app.include_router(webhooks_router, prefix="/api")
 
 # Import and include health router
 from .api.health import router as health_router
-app.include_router(health_router, prefix="/api")
+app.include_router(health_router, prefix="/api/health")
 
 # Import and include security router - new for Story 02.10.4
 from .api.security import router as security_router
@@ -304,14 +304,7 @@ async def root():
         "layer": "Backend (Deep Engine Room)"
     }
 
-@app.get("/health")
-async def health_check():
-    """Simple health check endpoint for Docker and monitoring"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "service": "epi-logos-backend"
-    }
+# Health endpoints consolidated in /api/health/ router
 
 @app.get("/api/v1/status")
 async def api_status():

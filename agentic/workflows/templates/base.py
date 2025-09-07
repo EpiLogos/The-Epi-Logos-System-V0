@@ -38,6 +38,7 @@ class WorkflowExecutionContext(BaseModel):
     # Temporal and coordination context  
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     coordinate_resolution_cache: Dict[str, Any] = Field(default_factory=dict, description="Cached coordinate resolutions")
+    
 
 
 class WorkflowExecutionResult(BaseModel):
@@ -62,6 +63,7 @@ class WorkflowExecutionResult(BaseModel):
     # Context updates
     updated_context: Optional[Dict[str, Any]] = Field(default=None, description="Context updates to persist")
     next_workflow_suggestions: List[str] = Field(default_factory=list, description="Suggested follow-up workflows")
+    
 
 
 class PersonaWorkflow(ABC):
@@ -340,3 +342,4 @@ class PersonaWorkflow(ABC):
     def _get_workflow_capabilities(self) -> List[str]:
         """Return list of workflow capabilities for discovery."""
         pass
+    

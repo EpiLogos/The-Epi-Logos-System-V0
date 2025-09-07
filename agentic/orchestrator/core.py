@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 # 🚨 ARCHITECTURAL COMPLIANCE: Import LLM service layer
 from ..llm_services import llm_manager
+from .types import PersonaType  # Re-exported for backward compatibility
 from .persona_models import PersonaModelRouter
 
 # AG-UI Protocol imports for event simulation
@@ -45,13 +46,6 @@ from .bimba_client import BimbaGraphQLClient
 from .capabilities import Capabilities
 
 logger = logging.getLogger(__name__)
-
-
-class PersonaType(str, Enum):
-    """Available persona types"""
-    NARA = "nara"
-    EPII = "epii" 
-    SYSTEM = "system"
 
 
 class OrchestratorRequest(BaseModel):

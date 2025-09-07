@@ -73,11 +73,11 @@ class EpiiWorkflow(PersonaWorkflow):
     - CAG orchestration across complete system
     """
     
-    def __init__(self):
+    def __init__(self, workflow_id: str = "epii-master-orchestrator", persona_type: PersonaType = PersonaType.EPII):
         """Initialize Epii workflow with #5 coordinate identity."""
         super().__init__(
-            workflow_id="epii-master-orchestrator",
-            persona_type=PersonaType.EPII
+            workflow_id=workflow_id,
+            persona_type=persona_type
         )
         
         # Load persona configuration

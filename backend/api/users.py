@@ -4,6 +4,7 @@ Provides REST API for user registration, authentication, and profile management.
 """
 import logging
 from typing import Dict, Any, Optional
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 from fastapi.security import HTTPBearer
 from pydantic import BaseModel, Field
@@ -390,6 +391,39 @@ async def get_password_requirements() -> APIResponse:
         message="Password requirements retrieved successfully",
         data=requirements
     )
+
+
+@router.get("/health")
+async def users_health_check() -> APIResponse:
+    """
+    Health check endpoint for user service.
+
+    Returns health status of user-related functionality.
+    """
+    try:
+        # Basic health check - verify service is responsive
+        return APIResponse(
+            success=True,
+            message="User service is healthy",
+            data={
+                "status": "healthy",
+                "service": "user-authentication",
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "endpoints_available": [
+                    "/api/users/register",
+                    "/api/users/login",
+                    "/api/users/me",
+                    "/api/users/profile"
+                ]
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"User service health check failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"message": "User service health check failed"}
+        )
 
 
 @router.get("/stats")

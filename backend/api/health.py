@@ -15,7 +15,7 @@ from ..middleware.performance import get_performance_metrics, request_metrics
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/health", tags=["health"])
+router = APIRouter(tags=["health"])
 
 
 class HealthChecker:
@@ -30,16 +30,16 @@ class HealthChecker:
         try:
             from ..database.mongodb import get_mongodb_client
             mongodb = await get_mongodb_client()
-            
+
             start_time = time.time()
             # Simple connection test
-            result = await mongodb.ping()
+            result = mongodb.test_connection()
             response_time = time.time() - start_time
-            
+
             return {
                 "status": "healthy" if result else "unhealthy",
                 "response_time_ms": round(response_time * 1000, 2),
-                "details": "MongoDB connection successful" if result else "MongoDB ping failed"
+                "details": "MongoDB connection successful" if result else "MongoDB connection failed"
             }
         except Exception as e:
             return {
@@ -51,14 +51,14 @@ class HealthChecker:
     async def check_redis(self) -> Dict[str, Any]:
         """Check Redis connection status."""
         try:
-            container = get_container()
-            # Session service removed - stateless JWT only
-            
+            from ..database.redis import get_redis_client
+
             start_time = time.time()
-            # Test Redis connection via session service
-            test_result = False  # Redis session removed
+            # Test Redis connection with ping
+            redis_client = await get_redis_client()
+            test_result = redis_client.ping()
             response_time = time.time() - start_time
-            
+
             return {
                 "status": "healthy" if test_result else "unhealthy",
                 "response_time_ms": round(response_time * 1000, 2),
@@ -74,18 +74,26 @@ class HealthChecker:
     async def check_neo4j(self) -> Dict[str, Any]:
         """Check Neo4j connection status."""
         try:
-            from ..database.neo4j_client import get_neo4j_client
-            neo4j = get_neo4j_client()
-            
+            from ..database.neo4j_client import Neo4jClient
+            from ..config.environment import get_config
+
+            config = get_config()
+            neo4j = Neo4jClient(
+                uri=config.neo4j_uri,
+                username=config.neo4j_username,
+                password=config.neo4j_password,
+                database=config.neo4j_database
+            )
+
             start_time = time.time()
-            # Simple query to test connection
-            result = await neo4j.execute_query("RETURN 1 as test")
+            # Use the test_connection method
+            result = neo4j.test_connection()
             response_time = time.time() - start_time
-            
+
             return {
-                "status": "healthy",
+                "status": "healthy" if result else "unhealthy",
                 "response_time_ms": round(response_time * 1000, 2),
-                "details": "Neo4j connection successful"
+                "details": "Neo4j connection successful" if result else "Neo4j connection failed"
             }
         except Exception as e:
             return {
@@ -97,15 +105,16 @@ class HealthChecker:
     async def check_external_services(self) -> Dict[str, Any]:
         """Check external service dependencies."""
         config = get_config()
-        
-        checks = {
-            "google_oauth": {
-                "status": "configured" if config.google_client_id and config.google_client_secret else "not_configured",
-                "details": "Google OAuth credentials available" if config.google_client_id else "Google OAuth not configured"
+
+        google_configured = config.google_client_id and config.google_client_secret
+
+        return {
+            "status": "healthy" if google_configured else "warning",
+            "details": "Google OAuth credentials available" if google_configured else "Google OAuth not configured",
+            "services": {
+                "google_oauth": "configured" if google_configured else "not_configured"
             }
         }
-        
-        return checks
     
     async def get_system_info(self) -> Dict[str, Any]:
         """Get system information."""
@@ -137,18 +146,18 @@ health_checker = HealthChecker()
 
 
 @router.get("/")
-async def health_check():
-    """Simple health check endpoint."""
+async def basic_health_check():
+    """Basic health check endpoint for Docker and monitoring."""
     return {
         "status": "healthy",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "service": "epi-logos-backend"
+        "service": "epi-logos-backend",
+        "layer": "Backend (Deep Engine Room)"
     }
 
 
-@router.get("/detailed")
-async def detailed_health_check():
-    """Comprehensive health check with dependency status."""
+async def _perform_comprehensive_health_check():
+    """Internal implementation for comprehensive health check."""
     try:
         # Run all health checks concurrently
         mongodb_check, redis_check, neo4j_check, external_checks, system_info = await asyncio.gather(
@@ -159,7 +168,7 @@ async def detailed_health_check():
             health_checker.get_system_info(),
             return_exceptions=True
         )
-        
+
         # Handle any exceptions
         checks = {
             "mongodb": mongodb_check if not isinstance(mongodb_check, Exception) else {
@@ -175,15 +184,19 @@ async def detailed_health_check():
                 "status": "error", "details": str(external_checks)
             }
         }
-        
+
         # Determine overall health
-        unhealthy_services = [
-            name for name, check in checks.items() 
-            if isinstance(check, dict) and check.get("status") in ["unhealthy", "error"]
-        ]
-        
+        unhealthy_services = []
+        for name, check in checks.items():
+            if isinstance(check, dict):
+                status = check.get("status")
+                logger.info(f"Health check {name}: status={status}, check={check}")
+                if status in ["unhealthy", "error"]:
+                    unhealthy_services.append(name)
+
         overall_status = "unhealthy" if unhealthy_services else "healthy"
-        
+        logger.info(f"Overall health status: {overall_status}, unhealthy services: {unhealthy_services}")
+
         response_data = {
             "status": overall_status,
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -191,10 +204,10 @@ async def detailed_health_check():
             "dependencies": checks,
             "unhealthy_services": unhealthy_services
         }
-        
+
         status_code = 503 if overall_status == "unhealthy" else 200
         return JSONResponse(content=response_data, status_code=status_code)
-        
+
     except Exception as e:
         logger.error(f"Health check failed: {e}", exc_info=True)
         return JSONResponse(
@@ -206,6 +219,16 @@ async def detailed_health_check():
             },
             status_code=500
         )
+
+@router.get("/detailed")
+async def detailed_health_check():
+    """Comprehensive health check with dependency status."""
+    return await _perform_comprehensive_health_check()
+
+@router.get("/comprehensive")
+async def comprehensive_health_check():
+    """Comprehensive health check with dependency status."""
+    return await _perform_comprehensive_health_check()
 
 
 @router.get("/metrics")

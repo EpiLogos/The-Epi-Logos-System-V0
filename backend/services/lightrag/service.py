@@ -58,11 +58,15 @@ class LightRAGService:
         # Set environment variables for LightRAG storage backends
         self._set_storage_environment_variables()
         
+        # CRITICAL: Override LightRAG chunk collection name to use pre-filled pratibimba_store
+        from lightrag.namespace import NameSpace
+        NameSpace.VECTOR_STORE_CHUNKS = "pratibimba_store"  # Change chunks → pratibimba_store
+        
         # Initialize LightRAG with database backends (NO FALLBACKS)
         try:
             self.rag = LightRAG(
                 working_dir=self.working_dir,
-                workspace=self.workspace,  # Workspace for data isolation
+                workspace="",  # Empty workspace = no prefixes, collections: entities, relationships, chunks
                 llm_model_func=gemini_llm_complete,  # Use async function
                 llm_model_name=os.getenv("LIGHTRAG_LLM_MODEL", "gemini-2.5-flash"),
                 llm_model_kwargs={
@@ -150,12 +154,15 @@ class LightRAGService:
             if value:  # Only set if value is not None/empty
                 os.environ[key] = str(value)
                 
-        # Qdrant configuration is handled via vector_db_storage_cls_kwargs
-        # but also set these for consistency and any internal Qdrant env var usage
+        # CRITICAL: Set Qdrant environment variables for pre-filled collections
+        # Empty workspace creates: entities, relationships, chunks
+        # Override chunks → pratibimba_store via QDRANT_COLLECTION
         qdrant_env_vars = {
             "QDRANT_URL": self.qdrant_config["url"],
             "QDRANT_API_KEY": self.qdrant_config["api_key"],
-            "QDRANT_COLLECTION_NAME": self.qdrant_config["collection_name"]
+            "QDRANT_COLLECTION": "pratibimba_store",  # Override chunks → pratibimba_store
+            "QDRANT_WORKSPACE": "",  # Empty = no prefixes
+            # Final result: entities, relationships, pratibimba_store
         }
         
         for key, value in qdrant_env_vars.items():
@@ -199,11 +206,21 @@ class LightRAGService:
             return {"success": False, "error": str(e)}
     
     def ingest_document_with_coordinates_sync(self, doc: BimbaDocument) -> Dict[str, Any]:
-        """Synchronous version of document ingestion"""
+        """Synchronous wrapper - uses text insertion to avoid event loop conflicts"""
         try:
-            custom_kg = build_coordinate_kg(doc)
-            result = self.rag.insert_custom_kg(custom_kg)
-            return {"success": True, "result": result, "document_id": doc.source_id}
+            # PRAGMATIC SOLUTION: Use text insertion with coordinate metadata
+            # This avoids async conflicts while preserving coordinate information
+            text_with_metadata = f"[{doc.metadata.source_coordinate}] {doc.content}"
+            result = self.rag.insert(text_with_metadata)
+            
+            return {
+                "success": True, 
+                "result": result, 
+                "document_id": doc.source_id,
+                "coordinates_preserved": doc.metadata.source_coordinate,
+                "method": "text_insertion_with_coordinate_prefix",
+                "note": "Custom KG available via async API only"
+            }
         except Exception as e:
             print(f"Document ingestion error: {e}")
             return {"success": False, "error": str(e)}
@@ -230,13 +247,14 @@ class LightRAGService:
             return {"success": False, "error": str(e)}
     
     def search_by_coordinates_sync(self, query: str, coordinate_filter: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
-        """Synchronous version of coordinate-based search"""
+        """Synchronous wrapper - uses simple query to avoid event loop conflicts"""
         try:
-            # Use proper QueryParam object
+            # PRAGMATIC SOLUTION: Use simple query, coordinates preserved in text content
+            from lightrag import QueryParam
             query_param = QueryParam(mode="global", top_k=limit)
             result = self.rag.query(query, param=query_param)
             
-            # Implement coordinate-based post-filtering if coordinate_filter is provided
+            # Apply coordinate-based filtering if requested
             filtered_result = self._filter_by_coordinate(result, coordinate_filter) if coordinate_filter else result
             
             return {
@@ -244,7 +262,9 @@ class LightRAGService:
                 "query": query,
                 "coordinate_filter": coordinate_filter,
                 "result": filtered_result,
-                "workspace": self.workspace
+                "workspace": self.workspace,
+                "method": "simple_query_with_coordinate_filtering",
+                "note": "Advanced coordinate search available via async API only"
             }
         except Exception as e:
             print(f"Search error: {e}")

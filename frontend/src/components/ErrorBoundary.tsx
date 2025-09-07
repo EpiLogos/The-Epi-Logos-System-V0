@@ -173,9 +173,9 @@ const ServiceErrorFallback: React.FC<ServiceErrorFallbackProps> = ({
               Check service status:
             </p>
             <div className="flex justify-center space-x-4 text-xs">
-              <a 
-                href="http://localhost:8000/health" 
-                target="_blank" 
+              <a
+                href="http://localhost:8000/api/health/"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 transition-colors"
               >

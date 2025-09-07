@@ -1,0 +1,98 @@
+{
+  "chunk-8bfa8e0684108f419933a5995264d150": {
+    "content": "Test content",
+    "source_id": "test",
+    "tokens": 2,
+    "chunk_order_index": 0,
+    "full_doc_id": "test",
+    "file_path": "custom_kg",
+    "status": "processed",
+    "llm_cache_list": [],
+    "create_time": 1757256618,
+    "update_time": 1757256618,
+    "_id": "chunk-8bfa8e0684108f419933a5995264d150"
+  },
+  "chunk-c9e2b0fd7e556d664a3004c876741fbd": {
+    "content": "Testing coordinate injection fix",
+    "source_id": "test_fix",
+    "tokens": 4,
+    "chunk_order_index": 0,
+    "full_doc_id": "test_fix",
+    "file_path": "custom_kg",
+    "status": "processed",
+    "llm_cache_list": [],
+    "create_time": 1757256652,
+    "update_time": 1757256652,
+    "_id": "chunk-c9e2b0fd7e556d664a3004c876741fbd"
+  },
+  "chunk-ea384ce109f1e11850cb4deaf0907beb": {
+    "tokens": 12,
+    "content": "[#4.2.3] This coordinate injection should work",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-ea384ce109f1e11850cb4deaf0907beb",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:7c7b4691562306ff05e60c2ddb9bfa1e",
+      "default:extract:bae25926a0781bd8bbf586f421357e67"
+    ],
+    "create_time": 1757256797,
+    "update_time": 1757256804,
+    "_id": "chunk-ea384ce109f1e11850cb4deaf0907beb"
+  },
+  "chunk-0ccbe48e936342a84f7c209b4a5148d5": {
+    "tokens": 10,
+    "content": "[#4.2.3] Dot separator test",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-0ccbe48e936342a84f7c209b4a5148d5",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:1bd864dd5c8860269c8ae7de106a9efb",
+      "default:extract:b15ac323a67736ab7592d9a244ab625e"
+    ],
+    "update_time": 1757257666,
+    "_id": "chunk-0ccbe48e936342a84f7c209b4a5148d5",
+    "create_time": 0
+  },
+  "chunk-b0a5dc1ee791c92ab914d2604f82456a": {
+    "tokens": 10,
+    "content": "[#4-2-3] Dash separator test",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-b0a5dc1ee791c92ab914d2604f82456a",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:361a0995444736a93393ee6a671a85f3",
+      "default:extract:3009b9dab2dd1c2ba7a0a6af43613e32"
+    ],
+    "create_time": 1757257666,
+    "update_time": 1757257677,
+    "_id": "chunk-b0a5dc1ee791c92ab914d2604f82456a"
+  },
+  "chunk-0bee0dd3c771f88e6d353cbd70991659": {
+    "tokens": 10,
+    "content": "[#4.2-3] Mixed separator test",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-0bee0dd3c771f88e6d353cbd70991659",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:ca60777876858c0293737fbdc0dd4a8d",
+      "default:extract:66343c3987af13eb90117fd35d7fea52"
+    ],
+    "create_time": 1757257677,
+    "update_time": 1757257688,
+    "_id": "chunk-0bee0dd3c771f88e6d353cbd70991659"
+  },
+  "chunk-016a71cf401400f8c3e81eac8ab53ef8": {
+    "tokens": 6,
+    "content": "[#0] Single coordinate test",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-016a71cf401400f8c3e81eac8ab53ef8",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:356b0c02cea45f75d083aa3cfa296836",
+      "default:extract:70bf7c355bf200309e4437551cf252d1"
+    ],
+    "create_time": 1757257692,
+    "update_time": 1757257698,
+    "_id": "chunk-016a71cf401400f8c3e81eac8ab53ef8"
+  }
+}

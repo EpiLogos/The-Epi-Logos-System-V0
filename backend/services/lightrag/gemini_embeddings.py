@@ -52,7 +52,7 @@ def gemini_embed_single(text: str, model_name: str = "models/text-embedding-004"
 
 
 # Wrapper function compatible with LightRAG (async version)
-async def gemini_embedding_func(texts: Union[str, List[str]]) -> Union[List[float], List[List[float]]]:
+async def gemini_embedding_func_raw(texts: Union[str, List[str]]) -> Union[List[float], List[List[float]]]:
     """
     LightRAG-compatible async embedding function using Gemini
     """
@@ -70,5 +70,10 @@ async def gemini_embedding_func(texts: Union[str, List[str]]) -> Union[List[floa
     else:
         raise ValueError(f"Unsupported input type: {type(texts)}")
 
-# Add embedding dimension attribute required by LightRAG
-gemini_embedding_func.embedding_dim = 768  # Gemini text-embedding-004 dimension
+# Create proper EmbeddingFunc object for LightRAG
+from lightrag.base import EmbeddingFunc
+
+gemini_embedding_func = EmbeddingFunc(
+    embedding_dim=768,
+    func=gemini_embedding_func_raw
+)

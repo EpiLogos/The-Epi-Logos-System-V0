@@ -338,36 +338,47 @@ async def get_current_session_info(
         )
 
 
+class RefreshTokenRequest(BaseModel):
+    refreshToken: str
+
 @router.post("/refresh")
-async def refresh_current_session(
-    current_user = Depends(get_current_user),
+async def refresh_tokens(
+    request: RefreshTokenRequest,
     jwt_service: JWTService = Depends(get_jwt_service_dependency)
 ) -> APIResponse:
     """
-    Refresh the current user's JWT tokens.
-    
-    Returns new access and refresh tokens for continued authentication.
+    Refresh JWT tokens using a valid refresh token.
+
+    This endpoint does not require authentication - it validates the refresh token
+    and returns new access and refresh tokens.
     """
     try:
-        # Generate new access token
-        new_access_token = await jwt_service.create_access_token(current_user)
-        new_refresh_token = await jwt_service.create_refresh_token(current_user)
-        
-        logger.info(f"JWT tokens refreshed for user {current_user.email}")
-        
+        # Use the JWT service's refresh method that validates the refresh token
+        new_tokens = await jwt_service.refresh_access_token(request.refreshToken)
+
+        logger.info(f"JWT tokens refreshed successfully")
+
         return APIResponse(
             success=True,
-            message="Session refreshed successfully",
+            message="Tokens refreshed successfully",
             data={
-                "access_token": new_access_token,
-                "refresh_token": new_refresh_token,
-                "token_type": "bearer"
+                "tokens": {
+                    "accessToken": new_tokens["access_token"],
+                    "refreshToken": new_tokens["refresh_token"],
+                    "tokenType": "bearer"
+                }
             }
         )
-        
+
+    except ValueError as e:
+        logger.warning(f"Invalid refresh token: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or expired refresh token"
+        )
     except Exception as e:
-        logger.error(f"Failed to refresh session: {e}")
+        logger.error(f"Failed to refresh tokens: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Session refresh failed"
+            detail="Token refresh failed"
         )

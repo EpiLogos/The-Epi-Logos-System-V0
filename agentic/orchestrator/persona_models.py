@@ -13,7 +13,7 @@ persona-specific AI capabilities through intelligent model selection.
 """
 
 from typing import Dict, Optional
-from .core import PersonaType
+from .types import PersonaType
 import logging
 
 logger = logging.getLogger(__name__)

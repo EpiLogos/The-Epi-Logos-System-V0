@@ -32,7 +32,9 @@ interface CLIResponse {
 // Real CLI implementation using subprocess integration
 async function executeCLICommand(command: CLICommand): Promise<CLIResponse> {
   return new Promise((resolve) => {
-    const projectRoot = path.resolve(process.cwd());
+    // Use absolute path to project root 
+    const projectRoot = '/Users/admin/Documents/The Epi-Logos System V0';
+    const pythonPath = `${projectRoot}/.venv/bin/python`;
     const startTime = Date.now();
     
     // Build the CLI command arguments
@@ -62,18 +64,29 @@ async function executeCLICommand(command: CLICommand): Promise<CLIResponse> {
         break;
     }
     
-    console.log(`Executing CLI command: python -m agentic.cli ${cliArgs.join(' ')}`);
+    console.log(`Executing CLI command: ${pythonPath} -m agentic.cli ${cliArgs.join(' ')}`);
     
-    // Spawn the Python CLI process
-    const child = spawn('python', ['-m', 'agentic.cli', ...cliArgs], {
+    // Spawn the Python CLI process with full venv path
+    const child = spawn(pythonPath, ['-m', 'agentic.cli', ...cliArgs], {
       cwd: projectRoot,
       stdio: ['pipe', 'pipe', 'pipe'],
       env: {
         ...process.env,
         PYTHONPATH: projectRoot,
-        // Add any required environment variables
+        // Agentic CLI specific variables
         AGENTIC_USER_ID: 'web-cli-user',
         AGENTIC_DEFAULT_MODEL: 'gemini:gemini-2.5-flash',
+        // Ensure all API keys are passed through
+        GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+        OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+        ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+        DEEPSEEK_API_KEY: process.env.DEEPSEEK_API_KEY,
+        // Database connections for orchestrator
+        REDIS_URL: process.env.REDIS_URL,
+        MONGODB_URI: process.env.MONGODB_URI,
+        NEO4J_URI: process.env.NEO4J_URI,
+        NEO4J_USERNAME: process.env.NEO4J_USERNAME,
+        NEO4J_PASSWORD: process.env.NEO4J_PASSWORD,
       }
     });
     
@@ -176,32 +189,35 @@ function parseModelsOutput(output: string): unknown {
   
   let inTable = false;
   for (const line of lines) {
-    // Look for capabilities output
-    if (line.includes('Capabilities:')) {
-      const match = line.match(/default=(\S+)/);
-      if (match) {
-        defaultModel = match[1];
-      }
-    }
-    
-    // Parse model table rows
-    if (inTable && line.trim() && !line.includes('─') && !line.includes('Model')) {
-      const parts = line.split(/\s{2,}/); // Split on multiple spaces
+    // Parse model table rows - look for lines with model info
+    if (inTable && line.trim() && !line.includes('━') && !line.includes('Model')) {
+      // Handle the Rich table format with proper spacing
+      const trimmed = line.trim();
+      
+      // Split by multiple spaces to handle table columns
+      const parts = trimmed.split(/\s{2,}/).filter(part => part.trim());
+      
       if (parts.length >= 3) {
-        const nameCell = parts[0]?.trim();
-        const provider = parts[1]?.trim();
-        const ready = parts[2]?.trim() === 'yes';
+        let modelPart = parts[0].trim();
+        let provider = parts[1].trim(); 
+        let ready = parts[2].trim() === 'yes';
         
-        if (nameCell) {
-          // Extract model name, removing markers
-          const name = nameCell.replace(/^[*•]\s*/, '');
-          if (nameCell.startsWith('*')) {
-            currentModel = name;
-          }
-          models.push({ name, provider: provider || 'unknown', ready });
+        // Remove marker indicators (• or *) and extract model name
+        let name = modelPart.replace(/^[*•]\s*/, '').trim();
+        
+        if (modelPart.includes('•')) {
+          defaultModel = name;
+        }
+        
+        if (name) {
+          models.push({ 
+            name, 
+            provider: provider || 'unknown', 
+            ready 
+          });
         }
       }
-    } else if (line.includes('Model') && line.includes('Provider')) {
+    } else if (line.includes('Model') && line.includes('Provider') && line.includes('Ready')) {
       inTable = true;
     }
   }

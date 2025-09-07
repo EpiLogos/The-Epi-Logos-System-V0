@@ -571,36 +571,36 @@ async def wisdom_synthesis(
         model: Optional[str] = None,
         **kwargs
     ) -> AsyncIterator[str]:
-    """DeepSeek streaming chat completion."""
-    try:
-        model = model or os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+        """DeepSeek streaming chat completion."""
+        try:
+            model = model or os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 
-        # Use asyncio to run the synchronous DeepSeek client with streaming
-        import asyncio
-        loop = asyncio.get_event_loop()
+            # Use asyncio to run the synchronous DeepSeek client with streaming
+            import asyncio
+            loop = asyncio.get_event_loop()
 
-        # Create streaming completion
-        stream = await loop.run_in_executor(
-            None,
-            lambda: self.deepseek_client.chat.completions.create(
-                model=model,
-                messages=messages,
-                stream=True,
-                **kwargs
+            # Create streaming completion
+            stream = await loop.run_in_executor(
+                None,
+                lambda: self.deepseek_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    stream=True,
+                    **kwargs
+                )
             )
-        )
 
-        # Stream chunks
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                yield chunk.choices[0].delta.content
+            # Stream chunks
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
 
-    except Exception as e:
-        logger.error(f"DeepSeek streaming failed: {e}")
-        # Fallback to non-streaming
-        response = await self._deepseek_chat(messages, model, **kwargs)
-        if response:
-            yield response
+        except Exception as e:
+            logger.error(f"DeepSeek streaming failed: {e}")
+            # Fallback to non-streaming
+            response = await self._deepseek_chat(messages, model, **kwargs)
+            if response:
+                yield response
 
 
 if __name__ == "__main__":
