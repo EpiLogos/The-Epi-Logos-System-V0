@@ -75,7 +75,8 @@ class LightRAGService:
                 },
                 # Use Gemini embedding function
                 embedding_func=gemini_embedding_func,
-                # Database storage backends
+                # Database storage backends - NO LOCAL STORAGE
+                kv_storage="RedisKVStorage",  # Use Redis instead of local JSON files
                 graph_storage="Neo4JStorage",
                 vector_storage="QdrantVectorDBStorage",
                 # Pass configuration to vector storage backend
@@ -86,6 +87,7 @@ class LightRAGService:
                     "vector_size": self.qdrant_config["vector_size"]
                 }
                 # Neo4j configuration is handled via environment variables (no graph_storage_cls_kwargs parameter)
+                # Redis configuration should use REDIS_URL environment variable
             )
             self.database_enabled = True
             
@@ -206,24 +208,18 @@ class LightRAGService:
             return {"success": False, "error": str(e)}
     
     def ingest_document_with_coordinates_sync(self, doc: BimbaDocument) -> Dict[str, Any]:
-        """Synchronous wrapper - uses text insertion to avoid event loop conflicts"""
-        try:
-            # PRAGMATIC SOLUTION: Use text insertion with coordinate metadata
-            # This avoids async conflicts while preserving coordinate information
-            text_with_metadata = f"[{doc.metadata.source_coordinate}] {doc.content}"
-            result = self.rag.insert(text_with_metadata)
-            
-            return {
-                "success": True, 
-                "result": result, 
-                "document_id": doc.source_id,
-                "coordinates_preserved": doc.metadata.source_coordinate,
-                "method": "text_insertion_with_coordinate_prefix",
-                "note": "Custom KG available via async API only"
-            }
-        except Exception as e:
-            print(f"Document ingestion error: {e}")
-            return {"success": False, "error": str(e)}
+        """
+        Synchronous wrapper - NOTE: Redis KV storage breaks LightRAG sync methods
+        Redis is async-only, so sync methods hang. Use async API instead.
+        """
+        return {
+            "success": False, 
+            "error": "Redis KV storage breaks sync methods. Use ingest_document_with_coordinates() async method instead.",
+            "document_id": doc.source_id,
+            "coordinates_requested": doc.metadata.source_coordinate,
+            "solution": "Call async method: await service.ingest_document_with_coordinates(doc)",
+            "reason": "Redis operations are async-only, LightRAG sync methods hang with Redis KV storage"
+        }
     
     async def search_by_coordinates(self, query: str, coordinate_filter: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
         """Search with coordinate-based filtering"""
@@ -247,28 +243,18 @@ class LightRAGService:
             return {"success": False, "error": str(e)}
     
     def search_by_coordinates_sync(self, query: str, coordinate_filter: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
-        """Synchronous wrapper - uses simple query to avoid event loop conflicts"""
-        try:
-            # PRAGMATIC SOLUTION: Use simple query, coordinates preserved in text content
-            from lightrag import QueryParam
-            query_param = QueryParam(mode="global", top_k=limit)
-            result = self.rag.query(query, param=query_param)
-            
-            # Apply coordinate-based filtering if requested
-            filtered_result = self._filter_by_coordinate(result, coordinate_filter) if coordinate_filter else result
-            
-            return {
-                "success": True,
-                "query": query,
-                "coordinate_filter": coordinate_filter,
-                "result": filtered_result,
-                "workspace": self.workspace,
-                "method": "simple_query_with_coordinate_filtering",
-                "note": "Advanced coordinate search available via async API only"
-            }
-        except Exception as e:
-            print(f"Search error: {e}")
-            return {"success": False, "error": str(e)}
+        """
+        Synchronous wrapper - NOTE: Redis KV storage breaks LightRAG sync methods
+        Redis is async-only, so sync methods hang. Use async API instead.
+        """
+        return {
+            "success": False,
+            "error": "Redis KV storage breaks sync methods. Use search_by_coordinates() async method instead.",
+            "query": query,
+            "coordinate_filter": coordinate_filter,
+            "solution": "Call async method: await service.search_by_coordinates(query, coordinate_filter, limit)",
+            "reason": "Redis operations are async-only, LightRAG sync methods hang with Redis KV storage"
+        }
     
     def _filter_by_coordinate(self, result: str, coordinate_filter: str) -> str:
         """Filter search results by Bimba coordinate"""
