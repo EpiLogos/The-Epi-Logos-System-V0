@@ -3,7 +3,7 @@ Redis connection wrapper for user session and caching services.
 Provides easy access to Redis client for session management.
 """
 import logging
-from backend.database.redis_client import RedisClient
+from shared.database import RedisClient
 
 logger = logging.getLogger(__name__)
 

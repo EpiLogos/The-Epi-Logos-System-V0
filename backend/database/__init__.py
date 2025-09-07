@@ -8,10 +8,8 @@ This module provides database clients for all data storage systems:
 - Qdrant (local vector database for semantic search)
 """
 
-from .neo4j_client import Neo4jClient
-from .mongodb_client import MongoDBClient
-from .redis_client import RedisClient
-from .qdrant_client import QdrantClient
+# Import from shared database package
+from shared.database import Neo4jClient, MongoDBClient, RedisClient, QdrantClient
 
 __all__ = [
     "Neo4jClient",

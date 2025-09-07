@@ -22,8 +22,8 @@ from dotenv import load_dotenv
 load_dotenv()  # loads .env
 # load_dotenv('.env.local')  # DISABLED: Using main .env file with all credentials
 
-# Import services - using relative imports within backend service
-from .database.neo4j_client import Neo4jClient
+# Import services - using shared database clients
+from shared.database import Neo4jClient
 from .config.environment import get_config
 from .auth.oauth_routes import oauth_router
 from .auth.oauth_exchange_routes import exchange_router

@@ -3,7 +3,7 @@ MongoDB connection wrapper for user authentication services.
 Provides easy access to MongoDB client for user-related operations.
 """
 import logging
-from backend.database.mongodb_client import MongoDBClient
+from shared.database import MongoDBClient
 
 logger = logging.getLogger(__name__)
 

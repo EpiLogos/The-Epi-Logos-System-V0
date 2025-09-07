@@ -1,11 +1,8 @@
 from pydantic import BaseModel
 from typing import Optional
 
-# Use absolute import to avoid relative import issues
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-from database.neo4j_client import Neo4jClient
+# Import from shared database package
+from shared.database import Neo4jClient
 
 class BimbaNode(BaseModel):
     coordinate: str
