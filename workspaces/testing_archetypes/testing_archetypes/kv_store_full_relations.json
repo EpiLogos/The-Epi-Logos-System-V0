@@ -1,0 +1,122 @@
+{
+  "doc-0a27cd77dc0333290fa928fee59a6b9e": {
+    "relation_pairs": [
+      [
+        "Entities",
+        "Extraction"
+      ],
+      [
+        "Entities",
+        "Entity_type"
+      ],
+      [
+        "Extraction",
+        "Steps"
+      ],
+      [
+        "Output",
+        "Relationships"
+      ],
+      [
+        "Input text",
+        "Relationships"
+      ],
+      [
+        "English",
+        "Output"
+      ],
+      [
+        "Entity_type",
+        "Person"
+      ],
+      [
+        "List",
+        "Output"
+      ],
+      [
+        "Relationships",
+        "Source_entity"
+      ],
+      [
+        "Philosophical Traditions",
+        "The Archetype of the Sage"
+      ],
+      [
+        "Pursuit of Truth",
+        "The Archetype of the Sage"
+      ],
+      [
+        "Relationship_strength",
+        "Relationships"
+      ],
+      [
+        "Entities",
+        "Input text"
+      ],
+      [
+        "Entities",
+        "Entity_description"
+      ],
+      [
+        "Relationship_description",
+        "Relationships"
+      ],
+      [
+        "Knowledge",
+        "The Archetype of the Sage"
+      ],
+      [
+        "Persona Development",
+        "The Archetype of the Sage"
+      ],
+      [
+        "Entity_type",
+        "Geo"
+      ],
+      [
+        "Relationship_keywords",
+        "Relationships"
+      ],
+      [
+        "Entity_type",
+        "Event"
+      ],
+      [
+        "Entities",
+        "Entity_name"
+      ],
+      [
+        "Relationships",
+        "Target_entity"
+      ],
+      [
+        "Extraction",
+        "Relationships"
+      ],
+      [
+        "The Archetype of the Sage",
+        "Wisdom"
+      ],
+      [
+        "Content_keywords",
+        "Output"
+      ],
+      [
+        "Entities",
+        "Output"
+      ],
+      [
+        "Category",
+        "Entity_type"
+      ],
+      [
+        "Entity_type",
+        "Organization"
+      ]
+    ],
+    "count": 28,
+    "create_time": 1757249307,
+    "update_time": 1757249307,
+    "_id": "doc-0a27cd77dc0333290fa928fee59a6b9e"
+  }
+}

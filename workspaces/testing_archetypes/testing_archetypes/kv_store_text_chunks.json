@@ -1,0 +1,70 @@
+{
+  "chunk-549044c1af55ccaaf63e2b8217cc2629": {
+    "content": "This is a test document about the archetype of the Hero. The Hero represents courage, determination, and the journey of transformation.",
+    "source_id": "test_001",
+    "tokens": 26,
+    "chunk_order_index": 0,
+    "full_doc_id": "test_001",
+    "file_path": "custom_kg",
+    "status": "processed",
+    "llm_cache_list": [],
+    "create_time": 1757249124,
+    "update_time": 1757249124,
+    "_id": "chunk-549044c1af55ccaaf63e2b8217cc2629"
+  },
+  "chunk-21baaa71785f591e07c8227bc160180d": {
+    "tokens": 14,
+    "content": "This is a test document about Hero archetype and persona identity coordinates.",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-21baaa71785f591e07c8227bc160180d",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:e6d4b3fe3a160d1554b004557db57cdd",
+      "default:extract:34a4e124bf73446ea9b67259c6f33a09"
+    ],
+    "create_time": 1757249245,
+    "update_time": 1757249256,
+    "_id": "chunk-21baaa71785f591e07c8227bc160180d"
+  },
+  "chunk-d154f3ce2d49a06d48337432141c6958": {
+    "tokens": 16,
+    "content": "The Hero archetype represents the journey of transformation and courage in mythological narratives.",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-d154f3ce2d49a06d48337432141c6958",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:2a0f9e90a494f3f861ec4989b48b7cc4",
+      "default:extract:913d2c8a42b615b05f380c3d5713ffbe"
+    ],
+    "create_time": 1757249245,
+    "update_time": 1757249264,
+    "_id": "chunk-d154f3ce2d49a06d48337432141c6958"
+  },
+  "chunk-0a27cd77dc0333290fa928fee59a6b9e": {
+    "tokens": 23,
+    "content": "The Archetype of the Sage represents wisdom, knowledge, and the pursuit of truth in philosophical traditions and persona development.",
+    "chunk_order_index": 0,
+    "full_doc_id": "doc-0a27cd77dc0333290fa928fee59a6b9e",
+    "file_path": "unknown_source",
+    "llm_cache_list": [
+      "default:extract:1c2a22c6fd97ec8e67c4a6913be98b38",
+      "default:extract:e0f91555020857765a09f4de21261094"
+    ],
+    "create_time": 1757249256,
+    "update_time": 1757249298,
+    "_id": "chunk-0a27cd77dc0333290fa928fee59a6b9e"
+  },
+  "chunk-6db613a1a499f79fa48fee2c042fc4a7": {
+    "content": "The Trickster archetype represents transformation through chaos and disruption in coordinate #2.3.4 of the Epi-Logos system.",
+    "source_id": "test_final_001",
+    "tokens": 28,
+    "chunk_order_index": 0,
+    "full_doc_id": "test_final_001",
+    "file_path": "custom_kg",
+    "status": "processed",
+    "llm_cache_list": [],
+    "create_time": 1757249370,
+    "update_time": 1757249370,
+    "_id": "chunk-6db613a1a499f79fa48fee2c042fc4a7"
+  }
+}

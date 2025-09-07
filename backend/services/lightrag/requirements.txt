@@ -1,0 +1,16 @@
+# LightRAG Foundation Service Requirements
+lightrag-hku==1.4.7
+google-generativeai>=0.8.3
+pydantic>=2.10.0
+fastapi>=0.116.0
+strawberry-graphql>=0.240.0
+uvicorn>=0.31.0
+
+# Database clients
+neo4j>=5.23.0
+qdrant-client>=1.15.0
+
+# Utilities
+python-dotenv>=1.0.0
+tenacity>=9.0.0
+aiofiles>=24.1.0

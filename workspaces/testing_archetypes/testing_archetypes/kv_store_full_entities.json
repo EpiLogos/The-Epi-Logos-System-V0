@@ -1,0 +1,47 @@
+{
+  "doc-d154f3ce2d49a06d48337432141c6958": {
+    "entity_names": [
+      "Hero archetype"
+    ],
+    "count": 1,
+    "create_time": 1757249265,
+    "update_time": 1757249265,
+    "_id": "doc-d154f3ce2d49a06d48337432141c6958"
+  },
+  "doc-0a27cd77dc0333290fa928fee59a6b9e": {
+    "entity_names": [
+      "Organization",
+      "Source_entity",
+      "Persona Development",
+      "Entities",
+      "Input text",
+      "Entity_description",
+      "The Archetype of the Sage",
+      "Steps",
+      "Category",
+      "English",
+      "List",
+      "Target_entity",
+      "Geo",
+      "Entity_name",
+      "Content_keywords",
+      "Knowledge",
+      "Pursuit of Truth",
+      "Wisdom",
+      "Relationship_description",
+      "Person",
+      "Relationships",
+      "Relationship_strength",
+      "Relationship_keywords",
+      "Extraction",
+      "Philosophical Traditions",
+      "Output",
+      "Entity_type",
+      "Event"
+    ],
+    "count": 28,
+    "create_time": 1757249307,
+    "update_time": 1757249307,
+    "_id": "doc-0a27cd77dc0333290fa928fee59a6b9e"
+  }
+}

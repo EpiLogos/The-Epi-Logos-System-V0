@@ -11,24 +11,30 @@ Implements AC5: Clean slate persona re-instantiation protocols
 import logging
 import uuid
 import json
+import asyncio
 from typing import Optional, Dict, Any, List, AsyncIterator
 from datetime import datetime, timezone
 from enum import Enum
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent, RunContext
 
-# AG-UI Protocol imports
+# 🚨 ARCHITECTURAL COMPLIANCE: Import LLM service layer
+from ..llm_services import llm_manager
+from .persona_models import PersonaModelRouter
+
+# AG-UI Protocol imports for event simulation
 try:
     from ag_ui.core import (
         RunAgentInput, UserMessage, Context, State,
         TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent,
         RunStartedEvent, RunFinishedEvent, RunErrorEvent
     )
-    from pydantic_ai.ag_ui import run_ag_ui, SSE_CONTENT_TYPE
     AG_UI_AVAILABLE = True
+    SSE_CONTENT_TYPE = "text/event-stream"
 except ImportError:
     AG_UI_AVAILABLE = False
+    SSE_CONTENT_TYPE = "text/event-stream"
+    logger = logging.getLogger(__name__)
     logger.warning("AG-UI Protocol not available. Install ag-ui-protocol package for streaming support.")
 
 from .persona_manager import PersonaManager
@@ -90,7 +96,7 @@ class UnifiedOrchestrator:
     ):
         """Initialize the UnifiedOrchestrator with required dependencies"""
         self.model_name = model_name
-        
+
         # Initialize core components
         self.persona_manager = PersonaManager()
         self.session_manager = SessionManager(redis_url)
@@ -103,19 +109,23 @@ class UnifiedOrchestrator:
         self.conversation_manager = ConversationManager(mongodb_url, mongodb_db_name)
         # Capabilities (single source of truth)
         self.capabilities = Capabilities()
-        
-        # Initialize the underlying Pydantic AI agent
-        self._agent = self._create_agent()
-        
+
+        # 🎭 CORE FEATURE: Persona model router
+        self.persona_router = PersonaModelRouter(self.capabilities)
+
+        # 🚨 ARCHITECTURAL COMPLIANCE: Validate LLM services on startup
+        self._validate_llm_services()
+
         logger.info(f"UnifiedOrchestrator initialized with model: {model_name}")
-    
-    def _create_agent(self) -> Agent:
-        """Create the underlying Pydantic AI agent for orchestration"""
-        return Agent(
-            self.model_name,
-            deps_type=Dict[str, Any],
-            system_prompt=self._get_base_system_prompt()
-        )
+        logger.info("Persona routing enabled - different personas will use different models")
+
+    def _validate_llm_services(self):
+        """Ensure LLM services are properly initialized"""
+        status = llm_manager.get_service_status()
+        available = [k for k, v in status.items() if v]
+        if not available:
+            raise RuntimeError("No LLM services available")
+        logger.info(f"LLM services available: {available}")
     
     def _get_base_system_prompt(self) -> str:
         """Base system prompt for the orchestrator"""
@@ -221,111 +231,20 @@ class UnifiedOrchestrator:
     async def process_request_ag_ui_stream(
         self,
         request: OrchestratorRequest,
-        accept: str = SSE_CONTENT_TYPE
+        accept: str = "text/event-stream"
     ) -> AsyncIterator[str]:
-        """
-        Process request using AG-UI Protocol for streaming responses.
-
-        This method converts the OrchestratorRequest to AG-UI format and streams
-        AG-UI protocol events for real-time communication with clients.
-
-        Now properly mirrors the non-streaming path for model resolution and
-        system prompt composition.
-
-        Args:
-            request: The orchestrator request to process
-            accept: Content type for streaming (default: SSE)
-
-        Yields:
-            AG-UI protocol event strings formatted for the specified accept type
-        """
-        if not AG_UI_AVAILABLE:
-            # Fallback to non-streaming response
-            response = await self.process_request(request)
-            yield f"data: {json.dumps({'type': 'text_message_content', 'content': response.response})}\n\n"
-            return
+        """🚨 ARCHITECTURAL COMPLIANCE: Process request using LLM service with AG-UI event simulation"""
 
         try:
-            # Get or create session for context
-            session = await self._get_or_create_session(
-                user_id=request.user_id,
-                session_id=request.session_id
-            )
+            # Standard processing through LLM service
+            response = await self.process_request(request)
 
-            # Determine persona and build context
-            target_persona = await self._determine_persona(request, session)
-
-            # Resolve effective model (mirrors non-streaming path)
-            effective_model = await self._resolve_effective_model(session, request)
-
-            # Persist system override into session if provided
-            if request.system_override is not None:
-                session.metadata["system_override"] = request.system_override
-                await self.session_manager.update_session(session)
-
-            # Build context package for the persona
-            context_package = await self._build_context_package(
-                persona=target_persona,
-                session=session,
-                request=request
-            )
-
-            # Compose final system prompt (persona + system_override)
-            persona_prompt = self.persona_manager.get_persona_prompt(target_persona.value)
-            sys_override = (session.metadata or {}).get("system_override")
-            if sys_override:
-                final_system_prompt = persona_prompt.rstrip() + "\n\n" + str(sys_override).strip()
-            else:
-                final_system_prompt = persona_prompt
-
-            # Create per-request agent with effective model and final prompt (mirrors non-streaming)
-            streaming_agent = Agent(
-                effective_model,
-                deps_type=Dict[str, Any],
-                system_prompt=final_system_prompt
-            )
-
-            # Prepare agent dependencies
-            agent_deps = self._build_agent_deps_for_streaming(
-                persona=target_persona,
-                context_package=context_package,
-                session=session,
-                final_system_prompt=final_system_prompt
-            )
-
-            # Convert OrchestratorRequest to AG-UI RunAgentInput using canonical builder
-            from agentic.cli.agui_payload import build_run_agent_input
-
-            ag_ui_input = build_run_agent_input(
-                thread_id=request.session_id or str(uuid.uuid4()),
-                user_text=request.message,
-                persona=target_persona.value,
-                system_override=sys_override,
-                tools=[],  # Empty for now, could be enhanced
-                state={},
-                forwarded_props={"thread_id": session.session_id, "model": effective_model}
-            )
-
-            # Stream AG-UI events using per-request agent
-            async for event_str in run_ag_ui(
-                streaming_agent,  # ✅ Use per-request agent with correct model/prompt
-                ag_ui_input,
-                accept=accept,
-                deps=agent_deps
-            ):
+            # Simulate AG-UI events for compatibility
+            async for event_str in self._simulate_ag_ui_events(response.response):
                 yield event_str
-
-            # Update session state after streaming completes
-            await self._update_session_state_from_ag_ui(
-                session=session,
-                persona=target_persona,
-                request=request,
-                ag_ui_input=ag_ui_input
-            )
 
         except Exception as e:
             logger.error(f"Error in AG-UI streaming: {e}")
-            # Send error event
             error_event = {
                 "type": "run_error",
                 "message": str(e),
@@ -333,167 +252,115 @@ class UnifiedOrchestrator:
             }
             yield f"data: {json.dumps(error_event)}\n\n"
 
-    # Removed _convert_to_ag_ui_input - now using canonical builder from agui_payload.py
+    async def _simulate_ag_ui_events(self, response_text: str) -> AsyncIterator[str]:
+        """Simulate AG-UI events for compatibility with existing clients"""
 
-    def _build_agent_deps(
-        self,
-        persona: PersonaType,
-        context_package: Optional['ContextPackage'],
-        session: 'OrchestratorSession'
-    ) -> Dict[str, Any]:
-        """Build agent dependencies for AG-UI execution (legacy method)."""
-        return {
-            'active_persona': persona.value,
-            'persona_prompt': self.persona_manager.get_persona_prompt(persona.value),
-            'context_package': context_package.model_dump() if context_package else None,
-            'session_id': session.session_id,
-            'user_id': session.user_id,
-            'session_context': session.context
-        }
+        # Start event
+        yield f"data: {json.dumps({'type': 'run_started'})}\n\n"
+        yield f"data: {json.dumps({'type': 'text_message_start'})}\n\n"
 
-    def _build_agent_deps_for_streaming(
-        self,
-        persona: PersonaType,
-        context_package: Optional['ContextPackage'],
-        session: 'OrchestratorSession',
-        final_system_prompt: str
-    ) -> Dict[str, Any]:
-        """Build agent dependencies for streaming AG-UI execution with composed system prompt."""
-        return {
-            'active_persona': persona.value,
-            'persona_prompt': final_system_prompt,  # ✅ Use composed prompt with system_override
-            'context_package': context_package.model_dump() if context_package else None,
-            'session_id': session.session_id,
-            'user_id': session.user_id,
-            'session_context': session.context
-        }
+        # Stream content in chunks
+        words = response_text.split()
+        chunk_size = 3
 
-    async def _update_session_state_from_ag_ui(
-        self,
-        session: 'OrchestratorSession',
-        persona: PersonaType,
-        request: OrchestratorRequest,
-        ag_ui_input: 'RunAgentInput'
-    ):
-        """Update session state after AG-UI streaming completes."""
-        # Update active persona
-        session.active_persona = persona.value
-        session.last_activity = datetime.now(timezone.utc)
+        for i in range(0, len(words), chunk_size):
+            chunk = " ".join(words[i:i + chunk_size])
+            if i + chunk_size < len(words):
+                chunk += " "
 
-        # Save session state
-        await self.session_manager.update_session(session)
+            event = {"type": "text_message_content", "content": chunk}
+            yield f"data: {json.dumps(event)}\n\n"
 
-        # Note: We don't have the final response here since it's streamed
-        # The conversation history will be updated by the client or through
-        # a separate mechanism that captures the streamed content
-        logger.info(f"Session {session.session_id} updated after AG-UI streaming")
+            # Small delay for realistic streaming
+            await asyncio.sleep(0.05)
+
+        # End events
+        yield f"data: {json.dumps({'type': 'text_message_end'})}\n\n"
+        yield f"data: {json.dumps({'type': 'run_finished'})}\n\n"
+
+    # 🚨 ARCHITECTURAL COMPLIANCE: Removed deprecated AG-UI helper methods
+    # All functionality now routes through LLM service layer
 
     async def process_ag_ui_input_stream(
         self,
         ag_ui_input: 'RunAgentInput',
-        accept: str = SSE_CONTENT_TYPE
+        accept: str = "text/event-stream"
     ) -> AsyncIterator[str]:
-        """
-        Process AG-UI RunAgentInput directly for streaming responses.
-
-        This method accepts AG-UI input directly and streams AG-UI protocol events.
-        Useful for WebSocket endpoints and direct AG-UI protocol integration.
-
-        Args:
-            ag_ui_input: The AG-UI RunAgentInput to process
-            accept: Content type for streaming (default: SSE)
-
-        Yields:
-            AG-UI protocol event strings formatted for the specified accept type
-        """
-        if not AG_UI_AVAILABLE:
-            raise RuntimeError("AG-UI Protocol not available")
+        """🚨 ARCHITECTURAL COMPLIANCE: Process AG-UI input through LLM service layer"""
 
         try:
             # Extract session information from AG-UI input
-            # Use thread_id as session_id; retrieve existing session to preserve model/persona
             session_id = ag_ui_input.thread_id
             session = await self.session_manager.get_session(session_id)
             if not session:
-                # Create a new session when none exists; use session_id as user_id for simplicity
                 session = await self.session_manager.create_session(user_id=session_id)
 
-            # Determine persona from AG-UI context (supports list or single Context)
+            # Determine persona from AG-UI context
             persona_name = "system"
             try:
                 ctx_obj = ag_ui_input.context
                 ctx_list = ctx_obj if isinstance(ctx_obj, list) else ([ctx_obj] if ctx_obj else [])
-                # Prefer entry explicitly labeled as persona
                 for ctx in ctx_list:
                     desc = getattr(ctx, "description", "")
                     val = getattr(ctx, "value", None)
                     if desc == "persona" and isinstance(val, str) and val:
                         persona_name = val
                         break
-                # Fallback to first string value
-                if persona_name == "system":
-                    for ctx in ctx_list:
-                        val = getattr(ctx, "value", None)
-                        if isinstance(val, str) and val:
-                            persona_name = val
-                            break
             except Exception:
                 persona_name = "system"
+
             try:
                 target_persona = PersonaType(persona_name)
             except ValueError:
                 target_persona = PersonaType.SYSTEM
 
-            # Build context package (simplified for AG-UI input)
-            context_package = None  # Could be enhanced to extract from ag_ui_input.state
+            # Extract user message
+            user_message = ""
+            if ag_ui_input.messages:
+                user_message = ag_ui_input.messages[0].content
 
-            # Build effective model and system prompt – align with non-streaming path
-            # Resolve model from session/default
-            model_name = None
-            try:
-                if session.model_name and self.capabilities.validate_model(session.model_name):
-                    model_name = session.model_name
-                else:
-                    model_name = self.capabilities.get_default_model()
-            except Exception:
-                model_name = self.model_name
-
-            # Compose final system prompt (persona + session override)
-            persona_prompt = self.persona_manager.get_persona_prompt(target_persona.value)
-            sys_override = (session.metadata or {}).get("system_override")
-            final_system_prompt = persona_prompt.rstrip()
-            if sys_override:
-                final_system_prompt += "\n\n" + str(sys_override).strip()
-
-            agent_deps = self._build_agent_deps(
-                persona=target_persona,
-                context_package=context_package,
-                session=session
+            # Create orchestrator request and process through LLM service
+            request = OrchestratorRequest(
+                user_id=session.user_id,
+                session_id=session_id,
+                message=user_message,
+                requested_persona=target_persona
             )
 
-            persona_agent = Agent(
-                model_name,
-                deps_type=Dict[str, Any],
-                system_prompt=final_system_prompt
-            )
+            # 🚀 REAL STREAMING through LLM service layer
 
-            # Stream AG-UI events using Pydantic AI's support
-            async for event_str in run_ag_ui(
-                persona_agent,
-                ag_ui_input,
-                accept=accept,
-                deps=agent_deps
+            # Start event
+            yield f"data: {json.dumps({'type': 'run_started'})}\n\n"
+
+            # Get session and resolve model through persona routing
+            session = await self._get_or_create_session(request.user_id, request.session_id)
+            effective_model = await self._resolve_effective_model(session, request)
+            provider, model_name = self._parse_model_name(effective_model)
+
+            # Build messages for LLM service
+            messages = self._build_llm_messages(request, session)
+
+            # Real streaming through LLM service layer
+            yield f"data: {json.dumps({'type': 'text_message_start'})}\n\n"
+
+            async for chunk in llm_manager.chat_completion_stream(
+                messages=messages,
+                provider=provider,
+                model=model_name
             ):
-                yield event_str
+                # Convert LLM chunks to AG-UI events
+                event = {
+                    "type": "text_message_content",
+                    "content": chunk
+                }
+                yield f"data: {json.dumps(event)}\n\n"
 
-            # Update session state after streaming completes
-            session.active_persona = target_persona.value
-            session.last_activity = datetime.now(timezone.utc)
-            await self.session_manager.update_session(session)
+            # End events
+            yield f"data: {json.dumps({'type': 'text_message_end'})}\n\n"
+            yield f"data: {json.dumps({'type': 'run_finished'})}\n\n"
 
         except Exception as e:
             logger.error(f"Error processing AG-UI input: {e}")
-            # Send error event
             error_event = {
                 "type": "run_error",
                 "message": str(e),
@@ -577,42 +444,72 @@ class UnifiedOrchestrator:
         session: OrchestratorSession,
         model_name: str
     ) -> str:
-        """Execute request with persona masking applied"""
-        
-        # Get persona-specific system prompt
+        """🚨 ARCHITECTURAL COMPLIANCE: Execute request through LLM service layer"""
+
+        # Parse provider and model from model_name
+        provider, model = self._parse_model_name(model_name)
+
+        # Build messages for LLM service
+        messages = self._build_llm_messages(
+            persona=persona,
+            context_package=context_package,
+            message=message,
+            session=session
+        )
+
+        try:
+            # 🎯 ROUTE THROUGH LLM SERVICE LAYER
+            response = await llm_manager.chat_completion(
+                messages=messages,
+                provider=provider,
+                model=model
+            )
+
+            if not response:
+                raise Exception(f"No response from {provider}:{model}")
+
+            return response
+
+        except Exception as e:
+            logger.error(f"LLM service error for {persona}: {e}")
+            return f"I apologize, but I encountered an error while processing your request as {persona.value}. Please try again."
+
+    def _parse_model_name(self, model_name: str) -> tuple[str, str]:
+        """Parse provider:model format"""
+        if ":" in model_name:
+            provider, model = model_name.split(":", 1)
+            return provider.strip(), model.strip()
+        return "openai", model_name  # Default to OpenAI
+
+    def _build_llm_messages(
+        self,
+        persona: PersonaType,
+        context_package: Optional[ContextPackage],
+        message: str,
+        session: OrchestratorSession
+    ) -> List[Dict[str, str]]:
+        """Build messages array for LLM service"""
+
+        # Get persona system prompt
         persona_prompt = self.persona_manager.get_persona_prompt(persona.value)
-        # Compose system override if present in session
+
+        # Add system override if present
         sys_override = (session.metadata or {}).get("system_override")
         if sys_override:
             final_system_prompt = persona_prompt.rstrip() + "\n\n" + str(sys_override).strip()
         else:
             final_system_prompt = persona_prompt
-        
-        # Prepare context for agent execution
-        agent_context = {
-            'active_persona': persona.value,
-            'persona_prompt': final_system_prompt,
-            'context_package': context_package.model_dump() if context_package else None,
-            'session_id': session.session_id,
-            'user_id': session.user_id
-        }
-        
-        # Create temporary agent with persona-specific prompt
-        persona_agent = Agent(
-            model_name,
-            deps_type=Dict[str, Any],
-            system_prompt=final_system_prompt
-        )
-        
-        try:
-            # Execute with clean slate for persona
-            result = await persona_agent.run(message, deps=agent_context)
-            return result.output
-            
-        except Exception as e:
-            logger.error(f"Error executing with persona {persona}: {e}")
-            return f"I apologize, but I encountered an error while processing your request as {persona.value}. Please try again."
-    
+
+        # Add context package if available
+        if context_package:
+            context_text = f"\n\nContext Package:\n{context_package.model_dump_json(indent=2)}"
+            final_system_prompt += context_text
+
+        return [
+            {"role": "system", "content": final_system_prompt},
+            {"role": "user", "content": message}
+        ]
+
     async def _update_session_state(
         self,
         session: OrchestratorSession,
@@ -638,12 +535,15 @@ class UnifiedOrchestrator:
         )
 
     async def _resolve_effective_model(self, session: OrchestratorSession, request: OrchestratorRequest) -> str:
-        """Determine the effective model for this request and persist it to the session.
+        """🎭 ENHANCED: Determine effective model with persona-specific routing
 
-        Precedence: requested_model -> session.model_name -> capabilities.get_default_model()
-        Raises ValueError if the requested model is invalid/not-ready or no default available.
+        Precedence:
+        1. requested_model (explicit override)
+        2. session.model_name (session preference)
+        3. persona-specific model (CORE FEATURE)
+        4. capabilities.get_default_model() (fallback)
         """
-        # Requested model takes precedence
+        # Explicit request takes precedence
         if request.requested_model:
             if not self.capabilities.validate_model(request.requested_model):
                 raise ValueError(f"invalid or not-ready model: {request.requested_model}")
@@ -652,16 +552,24 @@ class UnifiedOrchestrator:
                 await self.session_manager.update_session(session)
             return request.requested_model
 
-        # Use session model if valid
+        # Session model if set and valid
         if session.model_name and self.capabilities.validate_model(session.model_name):
             return session.model_name
 
-        # Otherwise, use default
-        model = self.capabilities.get_default_model()
-        if session.model_name != model:
-            session.model_name = model
+        # 🎭 PERSONA-SPECIFIC MODEL ROUTING (CORE FEATURE)
+        persona = await self._determine_persona(request, session)
+        persona_model = self.persona_router.get_model_for_persona(
+            persona,
+            fallback_model=session.model_name
+        )
+
+        # Update session with persona model
+        if session.model_name != persona_model:
+            session.model_name = persona_model
             await self.session_manager.update_session(session)
-        return model
+            logger.info(f"Session {session.session_id} assigned persona model: {persona.value} → {persona_model}")
+
+        return persona_model
     
     async def switch_persona(
         self, 
@@ -788,8 +696,25 @@ class UnifiedOrchestrator:
             }
             for m in self.capabilities.list_models()
         ]
+
+        # 🎭 Include persona routing information
+        persona_routing = self.persona_router.get_routing_summary()
+
         return {
             "providers": self.capabilities.list_providers(),
             "models": models,
             "default_model": self.capabilities.get_default_model(),
+            "persona_routing": persona_routing,
         }
+
+    def set_persona_model(self, persona: PersonaType, model: str) -> bool:
+        """🎭 Set model for a specific persona"""
+        return self.persona_router.set_persona_model(persona, model)
+
+    def get_persona_models(self) -> Dict[PersonaType, str]:
+        """🎭 Get current model assignments for all personas"""
+        return self.persona_router.get_all_persona_models()
+
+    def validate_persona_models(self) -> Dict[PersonaType, bool]:
+        """🎭 Validate all persona model assignments"""
+        return self.persona_router.validate_all_persona_models()

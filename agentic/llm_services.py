@@ -10,7 +10,7 @@ This module provides unified access to multiple LLM providers:
 
 import os
 import asyncio
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, AsyncIterator
 import logging
 
 # LLM Provider Imports
@@ -188,7 +188,42 @@ class LLMServiceManager:
         else:
             logger.error(f"Provider {provider} not available or not initialized")
             return None
-    
+
+    async def chat_completion_stream(
+        self,
+        messages: List[Dict[str, str]],
+        provider: str = "openai",
+        model: Optional[str] = None,
+        **kwargs
+    ) -> AsyncIterator[str]:
+        """🚀 REAL STREAMING: Get streaming chat completion from specified provider"""
+
+        if provider == "openai" and self.openai_client:
+            async for chunk in self._openai_chat_stream(messages, model, **kwargs):
+                yield chunk
+        elif provider == "gemini" and self.gemini_model:
+            async for chunk in self._gemini_chat_stream(messages, **kwargs):
+                yield chunk
+        elif provider == "anthropic" and self.anthropic_client:
+            async for chunk in self._anthropic_chat_stream(messages, model, **kwargs):
+                yield chunk
+        elif provider == "deepseek" and self.deepseek_client:
+            async for chunk in self._deepseek_chat_stream(messages, model, **kwargs):
+                yield chunk
+        else:
+            logger.error(f"Streaming provider {provider} not available or not initialized")
+            # Fallback to non-streaming
+            response = await self.chat_completion(messages, provider, model, **kwargs)
+            if response:
+                # Simulate streaming by yielding chunks
+                words = response.split()
+                for i in range(0, len(words), 3):  # 3 words per chunk
+                    chunk = " ".join(words[i:i+3])
+                    if i + 3 < len(words):
+                        chunk += " "
+                    yield chunk
+                    await asyncio.sleep(0.01)  # Small delay for streaming effect
+
     async def _openai_chat(
         self,
         messages: List[Dict[str, str]],
@@ -244,20 +279,39 @@ class LLMServiceManager:
     ) -> Optional[str]:
         """Anthropic chat completion."""
         try:
-            model = model or os.getenv("ANTHROPIC_MODEL", "claude-3-sonnet-20240229")
+            model = model or os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+
+            # Convert messages to Anthropic format
+            system_msg = None
+            user_messages = []
+
+            for msg in messages:
+                if msg["role"] == "system":
+                    system_msg = msg["content"]
+                else:
+                    user_messages.append({
+                        "role": msg["role"],
+                        "content": msg["content"]
+                    })
 
             # Use asyncio to run the synchronous Anthropic client
             import asyncio
             loop = asyncio.get_event_loop()
 
+            # Build request parameters
+            request_params = {
+                "model": model,
+                "messages": user_messages,
+                "max_tokens": kwargs.get("max_tokens", 1000)
+            }
+
+            # Add system message if present
+            if system_msg:
+                request_params["system"] = system_msg
+
             response = await loop.run_in_executor(
                 None,
-                lambda: self.anthropic_client.messages.create(
-                    model=model,
-                    messages=messages,
-                    max_tokens=kwargs.get("max_tokens", 1000),
-                    **{k: v for k, v in kwargs.items() if k != "max_tokens"}
-                )
+                lambda: self.anthropic_client.messages.create(**request_params)
             )
 
             return response.content[0].text
@@ -382,6 +436,171 @@ async def wisdom_synthesis(
         messages.append({"role": "user", "content": query})
     
     return await chat_with_llm(messages, provider)
+
+
+    # 🚀 STREAMING IMPLEMENTATIONS FOR EACH PROVIDER
+
+    async def _openai_chat_stream(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        **kwargs
+    ) -> AsyncIterator[str]:
+        """OpenAI streaming chat completion."""
+        try:
+            model = model or os.getenv("OPENAI_MODEL", "gpt-4")
+
+            # Use asyncio to run the synchronous OpenAI client with streaming
+            import asyncio
+            loop = asyncio.get_event_loop()
+
+            # Create streaming completion
+            stream = await loop.run_in_executor(
+                None,
+                lambda: self.openai_client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    stream=True,
+                    **kwargs
+                )
+            )
+
+            # Stream chunks
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
+        except Exception as e:
+            logger.error(f"OpenAI streaming failed: {e}")
+            # Fallback to non-streaming
+            response = await self._openai_chat(messages, model, **kwargs)
+            if response:
+                yield response
+
+    async def _gemini_chat_stream(
+        self,
+        messages: List[Dict[str, str]],
+        **kwargs
+    ) -> AsyncIterator[str]:
+        """Gemini streaming chat completion."""
+        try:
+            # Convert messages to Gemini format
+            prompt = "\n".join([f"{msg['role']}: {msg['content']}" for msg in messages])
+
+            # Gemini doesn't have native streaming, so simulate it
+            import asyncio
+            loop = asyncio.get_event_loop()
+
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.gemini_model.generate_content(prompt)
+            )
+
+            # Simulate streaming by yielding words
+            if response.text:
+                words = response.text.split()
+                for i in range(0, len(words), 2):  # 2 words per chunk
+                    chunk = " ".join(words[i:i+2])
+                    if i + 2 < len(words):
+                        chunk += " "
+                    yield chunk
+                    await asyncio.sleep(0.02)  # Small delay for streaming effect
+
+        except Exception as e:
+            logger.error(f"Gemini streaming failed: {e}")
+            # Fallback to non-streaming
+            response = await self._gemini_chat(messages, **kwargs)
+            if response:
+                yield response
+
+    async def _anthropic_chat_stream(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        **kwargs
+    ) -> AsyncIterator[str]:
+        """Anthropic streaming chat completion."""
+        try:
+            model = model or os.getenv("ANTHROPIC_MODEL", "claude-3-5-haiku-20241022")
+
+            # Convert messages to Anthropic format
+            system_msg = None
+            user_messages = []
+
+            for msg in messages:
+                if msg["role"] == "system":
+                    system_msg = msg["content"]
+                else:
+                    user_messages.append(msg)
+
+            # Use asyncio to run the synchronous Anthropic client with streaming
+            import asyncio
+            loop = asyncio.get_event_loop()
+
+            # Create streaming completion
+            stream_kwargs = {
+                "model": model,
+                "messages": user_messages,
+                "max_tokens": kwargs.get("max_tokens", 1000),
+                "stream": True
+            }
+
+            if system_msg:
+                stream_kwargs["system"] = system_msg
+
+            stream = await loop.run_in_executor(
+                None,
+                lambda: self.anthropic_client.messages.create(**stream_kwargs)
+            )
+
+            # Stream chunks
+            for chunk in stream:
+                if hasattr(chunk, 'delta') and hasattr(chunk.delta, 'text'):
+                    yield chunk.delta.text
+
+        except Exception as e:
+            logger.error(f"Anthropic streaming failed: {e}")
+            # Fallback to non-streaming
+            response = await self._anthropic_chat(messages, model, **kwargs)
+            if response:
+                yield response
+
+    async def _deepseek_chat_stream(
+        self,
+        messages: List[Dict[str, str]],
+        model: Optional[str] = None,
+        **kwargs
+    ) -> AsyncIterator[str]:
+    """DeepSeek streaming chat completion."""
+    try:
+        model = model or os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
+
+        # Use asyncio to run the synchronous DeepSeek client with streaming
+        import asyncio
+        loop = asyncio.get_event_loop()
+
+        # Create streaming completion
+        stream = await loop.run_in_executor(
+            None,
+            lambda: self.deepseek_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=True,
+                **kwargs
+            )
+        )
+
+        # Stream chunks
+        for chunk in stream:
+            if chunk.choices[0].delta.content:
+                yield chunk.choices[0].delta.content
+
+    except Exception as e:
+        logger.error(f"DeepSeek streaming failed: {e}")
+        # Fallback to non-streaming
+        response = await self._deepseek_chat(messages, model, **kwargs)
+        if response:
+            yield response
 
 
 if __name__ == "__main__":

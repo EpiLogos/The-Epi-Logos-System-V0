@@ -138,19 +138,93 @@ def doctor():
     async def run_checks():
         # Capabilities
         caps = await adapter.get_capabilities()
-        console.print(f"Capabilities: default={caps.get('default_model')} models={len(caps.get('models', []))}")
+        models = caps.get('models', [])
+        default = caps.get('default_model')
+        console.print(f"Capabilities: default={default} models={len(models)}")
+        if not models:
+            console.print("[red]FAIL:[/] no allowed models configured (agentic/config.yaml or AGENTIC_MODELS)")
         # Personas
         pers = await adapter.list_orchestrator_personas()
-        console.print(f"Personas: {pers}")
-        # Streaming check
-        stream_iter, meta = await adapter.send_message("diagnostic ping", stream=True)
-        text = ""
-        async for chunk in stream_iter:
-            text += chunk
-        console.print(f"Streaming: first_token_ms={meta.get('first_token_ms')} total_ms={meta.get('latency_ms')} mode={meta.get('streaming_mode')} len={len(text)}")
+        console.print(f"Personas: {pers if pers else '[]'}")
+        # Streaming check (strict)
+        try:
+            stream_iter, meta = await adapter.send_message("diagnostic ping", stream=True, strict=True, timeout_s=10)
+            text = ""
+            async for chunk in stream_iter:
+                text += chunk
+            passed = bool(meta.get('first_token_ms')) and len(text) > 0 and meta.get('streaming_mode') == 'ag_ui'
+            console.print(f"Streaming: {'PASS' if passed else 'WARN'} first_token_ms={meta.get('first_token_ms')} total_ms={meta.get('latency_ms')} mode={meta.get('streaming_mode')} len={len(text)}")
+        except Exception as e:
+            console.print(f"Streaming: [red]FAIL[/] {e}")
+        # Model switch probe (if another model exists)
+        try:
+            alt = next((m['name'] for m in models if m['name'] != default and m.get('ready')), None)
+            if alt:
+                ok = await adapter.update_model_in_session(alt)
+                status = await adapter.orch.get_session_status(adapter.session_id)
+                active = status.get('model_name') if status else None
+                console.print(f"Model switch: {'PASS' if ok and active==alt else 'FAIL'} requested={alt} active={active} ok={ok}")
+        except Exception as e:
+            console.print(f"Model switch probe failed: {e}")
+        # Persona switch probe (if available)
+        try:
+            current = (await adapter.orch.get_session_status(adapter.session_id)).get('active_persona') if adapter.session_id else None
+            altp = next((p for p in pers if p != current), None)
+            if altp:
+                okp = await adapter.switch_persona(altp)
+                status2 = await adapter.orch.get_session_status(adapter.session_id)
+                activep = status2.get('active_persona') if status2 else None
+                console.print(f"Persona switch: {'PASS' if okp and activep==altp else 'FAIL'} requested={altp} active={activep} ok={okp}")
+        except Exception as e:
+            console.print(f"Persona switch probe failed: {e}")
 
     import asyncio as _a
     _a.run(run_checks())
+
+
+@app.command()
+def persona_models():
+    """🎭 Show and manage persona model assignments."""
+    load_env()
+    adapter = OrchestratorAdapter(
+        model=os.getenv("AGENTIC_DEFAULT_MODEL", "openai:gpt-4o"),
+    )
+
+    async def show_assignments():
+        assignments = await adapter.get_persona_models()
+        validation = await adapter.validate_persona_models()
+
+        table = Table(title="🎭 Persona Model Assignments", box=box.ROUNDED)
+        table.add_column("Persona", style="cyan", width=12)
+        table.add_column("Model", style="green", width=30)
+        table.add_column("Status", style="yellow", width=10)
+        table.add_column("Provider", style="blue", width=12)
+
+        for persona, model in assignments.items():
+            is_valid = validation.get(persona, False)
+            status = "✅ Ready" if is_valid else "❌ Invalid"
+
+            # Parse provider from model
+            provider = model.split(":")[0] if ":" in model else "openai"
+
+            table.add_row(
+                persona.title(),
+                model,
+                status,
+                provider.title()
+            )
+
+        console.print(table)
+
+        # Show routing summary
+        caps = await adapter.get_capabilities()
+        routing = caps.get("persona_routing", {})
+
+        console.print(f"\n📊 Routing Summary:")
+        console.print(f"  Valid Assignments: {routing.get('valid_assignments', 0)}/{routing.get('total_personas', 0)}")
+        console.print(f"  Default Model: {routing.get('default_model', 'unknown')}")
+
+    asyncio.run(show_assignments())
 
 
 @app.command()
@@ -159,6 +233,8 @@ def chat(
     persona: Optional[str] = typer.Option(None, "--persona", help="Persona key (orchestrator personas)"),
     sys: str = typer.Option("", "--sys", help="System prompt override for the session"),
     stream: bool = typer.Option(True, "--stream/--no-stream", help="Enable/disable streaming"),
+    no_fallback: bool = typer.Option(False, "--no-fallback", help="Strict streaming; no automatic fallback"),
+    stream_timeout: float = typer.Option(10.0, "--stream-timeout", help="Streaming timeout in seconds (per event)"),
     transcript: Optional[str] = typer.Option(None, "--transcript", help="Transcript JSONL path"),
     debug: bool = typer.Option(False, "--debug", help="Verbose logs"),
     trace: bool = typer.Option(False, "--trace", help="Per-turn timing logs"),
@@ -202,10 +278,13 @@ def chat(
         console.print("/use <model> — switch model live")
         console.print("/personas — list available personas; current")
         console.print("/persona <key-or-path> — switch persona")
+        console.print("/timeout <sec> — set streaming timeout per event")
         console.print("/sys [text] — view or set system override")
         console.print("/save [path] — save current transcript")
         console.print("/load <path> — load transcript into context")
         console.print("/config — show effective config")
+        console.print("/status — show session+turn status")
+        console.print("/stream [on|off] — toggle streaming mode")
         console.print("/clear — clear conversation context")
         console.print("/exit — quit")
 
@@ -217,6 +296,8 @@ def chat(
         current_sys = sys_override
         console.print(f"[dim]Using model: {current_model} (default: {caps.get('default_model')})[/]")
 
+        current_stream = stream
+        current_timeout = float(stream_timeout)
         while True:
             try:
                 user = Prompt.ask("[bold green]you[/]")
@@ -244,8 +325,10 @@ def chat(
                     else:
                         ok = await adapter.update_model_in_session(arg)
                         if ok:
-                            current_model = arg
-                            console.print(f"Switched model to [bold]{arg}[/bold].")
+                            # Confirm with orchestrator truth
+                            status = await adapter.orch.get_session_status(adapter.session_id)
+                            current_model = status.get("model_name") if status else arg
+                            console.print(f"Active model (orchestrator): [bold]{current_model}[/bold].")
                         else:
                             console.print("[red]Invalid or not-ready model (not advertised by orchestrator).[/]")
                 elif cmd == "/personas":
@@ -266,8 +349,9 @@ def chat(
                         try:
                             ok = await adapter.switch_persona(arg)
                             if ok:
-                                current_persona = arg
-                                console.print(f"Switched persona to [bold]{arg}[/bold].")
+                                status = await adapter.orch.get_session_status(adapter.session_id)
+                                current_persona = status.get("active_persona") if status else arg
+                                console.print(f"Active persona (orchestrator): [bold]{current_persona}[/bold].")
                             else:
                                 console.print("[red]Unknown persona (orchestrator did not list it).[/]")
                         except Exception as e:
@@ -279,9 +363,29 @@ def chat(
                         ok = await adapter.update_sys_override(arg)
                         if ok:
                             current_sys = arg
-                            console.print("System prompt updated.")
+                            status = await adapter.orch.get_session_status(adapter.session_id)
+                            console.print(f"System prompt updated (hash): [bold]{(status or {}).get('system_hash')}[/bold]")
                         else:
                             console.print("[red]Failed to update system prompt.[/]")
+                elif cmd == "/status":
+                    status = await adapter.orch.get_session_status(adapter.session_id)
+                    if not status:
+                        console.print("[red]No active session.[/]")
+                    else:
+                        t = Table(title="Session Status", box=box.SIMPLE_HEAVY)
+                        t.add_column("Key")
+                        t.add_column("Value")
+                        t.add_row("session_id", status.get("session_id") or "")
+                        t.add_row("model_name", status.get("model_name") or "")
+                        t.add_row("active_persona", status.get("active_persona") or "")
+                        t.add_row("system_hash", status.get("system_hash") or "")
+                        # Last turn stats
+                        if diag.turn:
+                            t.add_row("first_token_ms", str(diag.turn.first_token_ms or ""))
+                            t.add_row("total_ms", str(diag.turn.total_ms or ""))
+                            t.add_row("sse_events", str(diag.turn.sse_events))
+                            t.add_row("sse_bytes", str(diag.turn.sse_bytes))
+                        console.print(t)
                 elif cmd == "/save":
                     path = Path(arg) if arg else tpath
                     try:
@@ -302,6 +406,66 @@ def chat(
                             console.print(f"[red]Load failed:[/] {e}")
                 elif cmd == "/config":
                     print_config(current_model, current_persona, current_sys, stream, tpath)
+                elif cmd == "/stream":
+                    if not arg:
+                        console.print(f"Streaming is {'on' if current_stream else 'off'}.")
+                    else:
+                        val = arg.strip().lower()
+                        if val in ("on", "off"):
+                            current_stream = (val == "on")
+                            console.print(f"Streaming turned {'on' if current_stream else 'off'}.")
+                        else:
+                            console.print("Usage: /stream [on|off]")
+                elif cmd == "/timeout":
+                    if not arg:
+                        console.print(f"Current stream timeout: {current_timeout:.1f} s")
+                    else:
+                        try:
+                            new_to = float(arg)
+                            if new_to <= 0:
+                                raise ValueError
+                            current_timeout = new_to
+                            console.print(f"Stream timeout set to {current_timeout:.1f} s")
+                        except Exception:
+                            console.print("Usage: /timeout <seconds> (positive number)")
+                elif cmd == "/persona_models":
+                    # 🎭 Show persona model assignments
+                    try:
+                        assignments = await adapter.get_persona_models()
+                        validation = await adapter.validate_persona_models()
+
+                        table = Table(title="🎭 Persona Model Assignments", box=box.ROUNDED)
+                        table.add_column("Persona", style="cyan")
+                        table.add_column("Model", style="green")
+                        table.add_column("Status", style="yellow")
+
+                        for persona, model in assignments.items():
+                            is_valid = validation.get(persona, False)
+                            status = "✅ Ready" if is_valid else "❌ Invalid"
+                            table.add_row(persona.title(), model, status)
+
+                        console.print(table)
+                    except Exception as e:
+                        console.print(f"[red]Failed to get persona models:[/] {e}")
+                elif cmd == "/persona_model":
+                    # 🎭 Set persona model: /persona_model <persona> <model>
+                    if not arg:
+                        console.print("Usage: /persona_model <persona> <model>")
+                        console.print("Example: /persona_model nara anthropic:claude-3-5-haiku-20241022")
+                    else:
+                        parts = arg.split(maxsplit=1)
+                        if len(parts) != 2:
+                            console.print("Usage: /persona_model <persona> <model>")
+                        else:
+                            persona, model = parts
+                            try:
+                                success = await adapter.set_persona_model(persona, model)
+                                if success:
+                                    console.print(f"✅ Set {persona} to use {model}")
+                                else:
+                                    console.print(f"❌ Failed to set {persona} model to {model} (invalid or not ready)")
+                            except Exception as e:
+                                console.print(f"[red]Failed to set persona model:[/] {e}")
                 elif cmd == "/clear":
                     try:
                         asyncio.run(adapter.clear())
@@ -326,7 +490,11 @@ def chat(
             spinner = Spinner("dots", text="thinking…")
             with Live(spinner, refresh_per_second=12, console=console):
                 try:
-                    stream_iter, meta = await adapter.send_message(user, stream=stream)
+                    try:
+                        stream_iter, meta = await adapter.send_message(user, stream=current_stream, strict=no_fallback, timeout_s=current_timeout)
+                    except Exception as e:
+                        console.print(f"[red]Streaming error:[/] {e}")
+                        continue
                     spinner.update(text=f"{meta.get('active_persona') or adapter.persona_key} • {meta.get('first_token_ms','?')}→{meta.get('latency_ms','?')} ms")
                     # Render response
                     console.print("[bold blue]assistant[/]:", end=" ")

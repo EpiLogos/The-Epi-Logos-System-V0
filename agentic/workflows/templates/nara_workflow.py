@@ -104,23 +104,18 @@ class NaraWorkflow(PersonaWorkflow):
             with open(persona_config_path, 'r') as f:
                 self._persona_config = yaml.safe_load(f)
             
-            # Create Pydantic AI agent with Nara system prompt
+            # 🚨 ARCHITECTURAL COMPLIANCE: No hardcoded models
+            # Model will be determined by PersonaModelRouter in orchestrator
             system_prompt = self._persona_config.get('system_prompt', '')
-            
-            self._agent = Agent(
-                'openai:gpt-4o-mini',  # Use appropriate model
-                deps_type=NaraAgentDependencies,
-                system_prompt=system_prompt
-            )
-            
+
+            # Store system prompt for orchestrator use
+            self._system_prompt = system_prompt
+            logger.info("Nara workflow context setup complete - model routing handled by orchestrator")
+
         except Exception as e:
-            print(f"Error setting up Nara persona context: {e}")
-            # Fallback to basic prompt
-            self._agent = Agent(
-                'openai:gpt-4o-mini',
-                deps_type=NaraAgentDependencies,
-                system_prompt="You are Nara, a sacred oracle interface facilitating dialogue between cosmic wisdom and personal experience."
-            )
+            logger.error(f"Error setting up Nara persona context: {e}")
+            # Fallback system prompt
+            self._system_prompt = "You are Nara, a sacred oracle interface facilitating dialogue between cosmic wisdom and personal experience."
     
     async def _validate_persona_context(self, context: WorkflowExecutionContext) -> bool:
         """Validate Nara-specific context requirements."""

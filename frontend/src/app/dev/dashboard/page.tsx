@@ -127,6 +127,74 @@ export default function DeveloperDashboard() {
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-blue-12 mb-4">Development Tools</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Orchestrator Testing */}
+            <Link
+              href="/dev/orchestrator/chat"
+              className="bg-orange-900/30 border border-orange-600/50 hover:border-orange-400/70 rounded-lg p-6 transition-all duration-200 hover:bg-orange-800/30 group"
+              role="link"
+              aria-label="Orchestrator Chat Interface - Testing CLI Capabilities"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">🤖</div>
+                  <h3 className="text-lg font-medium text-blue-12">Orchestrator Chat</h3>
+                </div>
+                <span className="px-2 py-1 bg-orange-500/20 text-orange-300 text-xs rounded group-hover:bg-orange-400/30 transition-colors">
+                  NEW
+                </span>
+              </div>
+              <p className="text-gray-300 text-sm mb-3">
+                Web interface for comprehensive CLI testing capabilities
+              </p>
+              <div className="space-y-2 text-xs text-gray-400">
+                <div>• 15+ CLI commands through web interface</div>
+                <div>• Real-time AG-UI Protocol streaming</div>
+                <div>• Persona switching & model management</div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="px-2 py-1 bg-orange-600/20 text-orange-300 text-xs rounded">
+                  CLI Bridge
+                </span>
+                <span className="px-2 py-1 bg-orange-600/20 text-orange-300 text-xs rounded">
+                  Story 02.14.C
+                </span>
+              </div>
+            </Link>
+
+            {/* Orchestrator Monitoring */}
+            <Link
+              href="/dev/orchestrator/status"
+              className="bg-cyan-900/30 border border-cyan-600/50 hover:border-cyan-400/70 rounded-lg p-6 transition-all duration-200 hover:bg-cyan-800/30 group"
+              role="link"
+              aria-label="Orchestrator Status Dashboard - System Monitoring"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl">📊</div>
+                  <h3 className="text-lg font-medium text-blue-12">Orchestrator Status</h3>
+                </div>
+                <span className="px-2 py-1 bg-cyan-500/20 text-cyan-300 text-xs rounded group-hover:bg-cyan-400/30 transition-colors">
+                  NEW
+                </span>
+              </div>
+              <p className="text-gray-300 text-sm mb-3">
+                Real-time monitoring of CLI diagnostics and system health
+              </p>
+              <div className="space-y-2 text-xs text-gray-400">
+                <div>• Live session metrics & diagnostics</div>
+                <div>• Infrastructure status monitoring</div>
+                <div>• Real-time trace logs & performance data</div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <span className="px-2 py-1 bg-cyan-600/20 text-cyan-300 text-xs rounded">
+                  Monitoring
+                </span>
+                <span className="px-2 py-1 bg-cyan-600/20 text-cyan-300 text-xs rounded">
+                  Story 02.14.C
+                </span>
+              </div>
+            </Link>
+
             <Link
               href="/placeholder-demo"
               className="bg-purple-900/30 border border-purple-600/50 hover:border-purple-400/70 rounded-lg p-6 transition-all duration-200 hover:bg-purple-800/30 group"

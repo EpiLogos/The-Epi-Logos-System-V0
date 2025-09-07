@@ -85,6 +85,48 @@ services:
           path: ./backend
           target: /app/backend
 
+  # LightRAG Foundation Service (DB-2)
+  lightrag:
+    build:
+      context: .
+      dockerfile: backend/services/lightrag/Dockerfile
+    container_name: epi-logos-lightrag
+    ports:
+      - "8003:8080"  # Health check port
+      - "3003:3001"  # MCP server port
+    environment:
+      - ENVIRONMENT=development
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_USERNAME=${NEO4J_USERNAME}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      - NEO4J_DATABASE=${NEO4J_DATABASE:-neo4j}
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_API_KEY=
+      - LIGHTRAG_WORKSPACE=gnostic
+      - LIGHTRAG_WORKING_DIR=/app/workspaces/gnostic
+      - LIGHTRAG_LLM_MODEL=gemini-2.5-flash
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./backend:/app/backend
+      - lightrag_workspaces:/app/workspaces
+      - /app/backend/__pycache__
+    depends_on:
+      qdrant:
+        condition: service_healthy
+    networks:
+      - epi-logos-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "from backend.services.lightrag.service import get_lightrag_service; s=get_lightrag_service(); print('healthy' if s.health_check()['healthy'] else exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/services/lightrag
+          target: /app/backend/services/lightrag
+
   # Graphiti MCP Foundation Service (DB-3)
   graphiti:
     build:
@@ -159,6 +201,8 @@ services:
 
 volumes:
   qdrant_storage:
+    driver: local
+  lightrag_workspaces:
     driver: local
 
 networks:

@@ -70,6 +70,36 @@ class OrchestratorAdapter:
     async def get_capabilities(self) -> Dict[str, Any]:
         return self.orch.get_capabilities()
 
+    # 🎭 PERSONA MODEL MANAGEMENT
+    async def set_persona_model(self, persona: str, model: str) -> bool:
+        """Set model for a specific persona"""
+        try:
+            core_mod = importlib.import_module('agentic.orchestrator.core')
+            PersonaType = getattr(core_mod, 'PersonaType')
+            persona_type = PersonaType(persona.upper())
+            return self.orch.set_persona_model(persona_type, model)
+        except Exception as e:
+            logger.error(f"Error setting persona model: {e}")
+            return False
+
+    async def get_persona_models(self) -> Dict[str, str]:
+        """Get current model assignments for all personas"""
+        try:
+            assignments = self.orch.get_persona_models()
+            return {persona.value.lower(): model for persona, model in assignments.items()}
+        except Exception as e:
+            logger.error(f"Error getting persona models: {e}")
+            return {}
+
+    async def validate_persona_models(self) -> Dict[str, bool]:
+        """Validate all persona model assignments"""
+        try:
+            validation = self.orch.validate_persona_models()
+            return {persona.value.lower(): valid for persona, valid in validation.items()}
+        except Exception as e:
+            logger.error(f"Error validating persona models: {e}")
+            return {}
+
     # --- Personas ---
     async def list_orchestrator_personas(self) -> List[str]:
         try:
@@ -125,7 +155,7 @@ class OrchestratorAdapter:
         self.session_id = None
 
     # --- Messaging ---
-    async def send_message(self, text: str, stream: bool = True) -> Tuple[Iterable[str], Dict[str, Any]]:
+    async def send_message(self, text: str, stream: bool = True, strict: bool = False, timeout_s: float | None = None) -> Tuple[Iterable[str], Dict[str, Any]]:
         """Send a message; returns AG-UI event stream or fallback to non-streaming."""
         core_mod = importlib.import_module('agentic.orchestrator.core')
         OrchestratorRequest = getattr(core_mod, 'OrchestratorRequest')
@@ -145,7 +175,7 @@ class OrchestratorAdapter:
         if stream:
             # Use AG-UI streaming if available
             try:
-                stream_iter, meta = await self._stream_ag_ui_events(req, start)
+                stream_iter, meta = await self._stream_ag_ui_events(req, start, timeout_s=timeout_s)
 
                 async def _guarded_stream() -> AsyncGenerator[str, None]:
                     had_output = False
@@ -155,20 +185,26 @@ class OrchestratorAdapter:
                         yield chunk
                     if not had_output:
                         # No output from stream; fallback to non-streaming
-                        fb_iter, _ = await self._fallback_non_streaming(req, start)
-                        async for c in fb_iter:
-                            self.diag.record_chunk(c)
-                            yield c
+                        if strict:
+                            raise RuntimeError("No stream events within timeout; strict streaming is enabled")
+                        else:
+                            fb_iter, _ = await self._fallback_non_streaming(req, start)
+                            async for c in fb_iter:
+                                self.diag.record_chunk(c)
+                                yield c
                 return _guarded_stream(), meta
             except Exception as e:
                 # Fallback to non-streaming if AG-UI fails at setup
-                print(f"AG-UI streaming failed, falling back to non-streaming: {e}")
-                return await self._fallback_non_streaming(req, start)
+                if strict:
+                    raise
+                else:
+                    print(f"AG-UI streaming failed, falling back to non-streaming: {e}")
+                    return await self._fallback_non_streaming(req, start)
         else:
             # Non-streaming mode
             return await self._fallback_non_streaming(req, start)
 
-    async def _stream_ag_ui_events(self, req, start_time) -> Tuple[AsyncGenerator[str, None], Dict[str, Any]]:
+    async def _stream_ag_ui_events(self, req, start_time, timeout_s: float | None = None) -> Tuple[AsyncGenerator[str, None], Dict[str, Any]]:
         """Stream real AG-UI events from the orchestrator."""
         collected_text = []
         error_msg = None
@@ -202,7 +238,8 @@ class OrchestratorAdapter:
 
                 async def next_event_with_timeout():
                     # Timeout protects against silent hangs
-                    return await asyncio.wait_for(stream_gen.__anext__(), timeout=5.0)
+                    to = timeout_s if (timeout_s and timeout_s > 0) else 5.0
+                    return await asyncio.wait_for(stream_gen.__anext__(), timeout=to)
 
                 while True:
                     try:
@@ -211,9 +248,15 @@ class OrchestratorAdapter:
                         break
                     
                     # Parse AG-UI event - enhanced SSE parsing
-                    if event_str.startswith('data: '):
+                    if event_str.startswith('data: ') or '\n' in event_str:
                         try:
-                            event_data = json.loads(event_str[6:].rstrip('\n'))
+                            # Support multi-line SSE "data:" frames
+                            data_lines = []
+                            for line in event_str.splitlines():
+                                if line.startswith('data: '):
+                                    data_lines.append(line[6:])
+                            payload = "\n".join(data_lines) if data_lines else event_str[6:] if event_str.startswith('data: ') else event_str
+                            event_data = json.loads(payload.strip())
                             event_type = event_data.get('type', '')
 
                             # Extract text content from AG-UI events
@@ -236,7 +279,9 @@ class OrchestratorAdapter:
                                 success = True
 
                         except json.JSONDecodeError as e:
-                            logger.warning(f"Failed to parse AG-UI event: {e}")
+                            # If it's plain text content, yield as chunk
+                            self.diag.record_first_token()
+                            yield payload
                             continue
                         except Exception as e:
                             logger.warning(f"Error processing AG-UI event: {e}")
@@ -317,3 +362,16 @@ class OrchestratorAdapter:
             "streaming_mode": "fallback"
         }
         return _fallback_streamer(), meta
+
+    # --- Optional persona-model helpers (stubs for now) ---
+    async def get_persona_models(self) -> Dict[str, str]:
+        """Return persona->model mapping if supported; otherwise empty."""
+        return {}
+
+    async def validate_persona_models(self) -> Dict[str, bool]:
+        """Return persona->bool readiness validation; otherwise empty."""
+        return {}
+
+    async def set_persona_model(self, persona: str, model: str) -> bool:
+        """Attempt to set a persona's model; returns False if unsupported."""
+        return False

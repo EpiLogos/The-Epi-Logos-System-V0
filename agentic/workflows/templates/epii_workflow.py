@@ -138,23 +138,18 @@ class EpiiWorkflow(PersonaWorkflow):
             with open(persona_config_path, 'r') as f:
                 self._persona_config = yaml.safe_load(f)
             
-            # Create Pydantic AI agent with Epii system prompt
+            # 🚨 ARCHITECTURAL COMPLIANCE: No hardcoded models
+            # Model will be determined by PersonaModelRouter in orchestrator
             system_prompt = self._persona_config.get('system_prompt', '')
-            
-            self._agent = Agent(
-                'openai:gpt-4o-mini',  # Use appropriate model for complex orchestration
-                deps_type=EpiiAgentDependencies,
-                system_prompt=system_prompt
-            )
-            
+
+            # Store system prompt for orchestrator use
+            self._system_prompt = system_prompt
+            logger.info("Epii workflow context setup complete - model routing handled by orchestrator")
+
         except Exception as e:
-            print(f"Error setting up Epii persona context: {e}")
-            # Fallback to basic prompt
-            self._agent = Agent(
-                'openai:gpt-4o-mini',
-                deps_type=EpiiAgentDependencies,
-                system_prompt="You are Epii, the master orchestrator and unified consciousness of the Epi-Logos System, containing all expert domains internally."
-            )
+            logger.error(f"Error setting up Epii persona context: {e}")
+            # Fallback system prompt
+            self._system_prompt = "You are Epii, the master orchestrator and unified consciousness of the Epi-Logos System, containing all expert domains internally."
     
     async def _validate_persona_context(self, context: WorkflowExecutionContext) -> bool:
         """Validate Epii-specific context requirements."""
