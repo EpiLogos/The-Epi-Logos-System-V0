@@ -99,28 +99,8 @@ async def run_agent(request: Request) -> Response:
         # Use Pydantic AI's native AG-UI integration (original request, enriched deps)
         response = await handle_ag_ui_request(dynamic_agent, request, deps=deps)
         
-        # Post-processing: Store conversation in MongoDB for future context
-        try:
-            if deps.mongodb_client:
-                # Extract the user message from original request
-                user_messages = request_data.get('messages', [])
-                for msg in user_messages:
-                    if msg.get('role') == 'user':
-                        await deps.mongodb_client.store_message(
-                            thread_id=thread_id,
-                            role='user',
-                            content=msg.get('content', ''),
-                            message_id=msg.get('id'),
-                            persona=current_persona,
-                            model=model_config
-                        )
-                
-                # Note: AG-UI response content isn't easily extractable here
-                # Consider implementing response capture in the future
-                logger.info(f"💾 Stored user message for thread: {thread_id}")
-                
-        except Exception as e:
-            logger.warning(f"⚠️ Failed to store conversation: {e}")
+        # Conversation memory is now handled natively by AG-UI
+        # No need for manual storage - Pydantic AI manages conversation context
         
         # Update session with response insights (future extension point)
         # await update_session_context(thread_id, response, deps.redis_client)

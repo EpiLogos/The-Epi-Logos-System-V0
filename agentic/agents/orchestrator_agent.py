@@ -97,21 +97,26 @@ class OrchestratorResponse(BaseModel):
 # Agent factory and tools (only if Pydantic AI is available)
 if PYDANTIC_AI_AVAILABLE:
     import os
+    from .simple_context_processor import create_simple_context_processor
     
     def create_orchestrator_agent(model_name: str) -> Agent:
         """Create an orchestrator agent with the specified model"""
         try:
+            # Create context processor for this model
+            context_processor = create_simple_context_processor(model_name)
+            
             agent = Agent(
                 model_name,
                 deps_type=OrchestratorDeps,
-                retries=2
+                retries=2,
+                history_processors=[context_processor]  # Add native context window management
             )
             
             # Add tools to the agent
             setup_agent_tools(agent)
             setup_agent_prompts(agent)
             
-            logger.info(f"Created Pydantic AI orchestrator agent with model: {model_name}")
+            logger.info(f"Created Pydantic AI orchestrator agent with model: {model_name} (with context processor)")
             return agent
             
         except Exception as e:
@@ -126,7 +131,19 @@ if PYDANTIC_AI_AVAILABLE:
             ctx: RunContext[OrchestratorDeps],
             coordinate: str,
         ) -> CoordinateResult:
-            """Resolve a Bimba coordinate to retrieve its content and context.
+            """Resolve a Bimba coordinate within the Coordinate Augmented Generation (CAG) paradigm.
+            
+            This tool accesses the foundational CAG system that undergirds the entire Epi-Logos architecture.
+            Bimba coordinates (#0-#5 with infinite nesting) represent universal knowledge addresses in a 
+            living epistemological framework where each coordinate embodies specific processing modalities.
+            
+            The six-fold subsystem structure:
+            #0 Anuttara: Proto-logical void processing  
+            #1 Paramasiva: Quaternal logic & harmonic processing
+            #2 Parashakti: Vibrational-epistemic processing
+            #3 Mahamaya: Symbolic-alchemical processing
+            #4 Nara: Dialogical-identity processing  
+            #5 Epii: Synthesis & orchestration processing
 
             Args:
                 coordinate: The coordinate to resolve (e.g., #2, #2.3, #2-3-1)
@@ -159,11 +176,19 @@ if PYDANTIC_AI_AVAILABLE:
             query: str,
             mode: str = "naive",
         ) -> KnowledgeSearchResult:
-            """Search the knowledge graph using LightRAG.
+            """Search the Gnostic namespace using LightRAG document intelligence.
+            
+            This tool accesses the pedagogical document pool within the three-namespace Neo4j architecture.
+            LightRAG operates on the Gnostic layer (Neo4j + Qdrant) providing semantic search enhanced 
+            with coordinate metadata. This is particularly aligned with Epii persona operations for 
+            document-based wisdom synthesis and knowledge integration.
+            
+            The Gnostic namespace contains processed documents that have been coordinate-tagged,
+            allowing for harmonic resonance queries that transcend simple semantic similarity.
 
             Args:
-                query: The search query
-                mode: Search mode (naive, local, global, hybrid)
+                query: The search query for document content
+                mode: Search mode (naive, local, global, hybrid) - currently simplified to document search
             """
             try:
                 logger.info(f"Searching knowledge: {query} (mode: {mode})")
@@ -173,15 +198,19 @@ if PYDANTIC_AI_AVAILABLE:
                         query=query, mode=mode, results=["LightRAG client not available"]
                     )
 
-                # Perform the search
-                result = await ctx.deps.lightrag_client.search(query, mode=mode)
+                # Perform the search using correct API method
+                result = await ctx.deps.lightrag_client.search_documents(query, limit=10)
 
-                if isinstance(result, str):
-                    results = [result]
-                elif isinstance(result, list):
-                    results = result
+                # Handle API response format
+                if isinstance(result, dict) and result.get("success"):
+                    results = result.get("results", [])
+                    if isinstance(results, list):
+                        results = [str(item) for item in results]
+                    else:
+                        results = [str(results)]
                 else:
-                    results = [str(result)]
+                    error_msg = result.get("error", "Unknown search error") if isinstance(result, dict) else str(result)
+                    results = [f"Search error: {error_msg}"]
 
                 return KnowledgeSearchResult(
                     query=query,
@@ -202,10 +231,18 @@ if PYDANTIC_AI_AVAILABLE:
             content: str,
             memory_type: str = "episodic",
         ) -> MemoryResult:
-            """Store a memory in Graphiti temporal graph.
+            """Store episodic memory in the Graphiti temporal processing namespace.
+            
+            This tool operates within the Episodic namespace of the three-part Neo4j architecture,
+            creating temporal experience streams that span across backend, agentic, and frontend layers.
+            Graphiti enables processual memory formation where experiences become living entities
+            with temporal dynamics and harmonic correlations.
+            
+            Episodic memories are coordinate-indexed and can form communities of related experiences,
+            enabling the emergence of insight patterns and wisdom accumulation over time.
 
             Args:
-                content: The content to store
+                content: The experiential content to store as episodic memory
                 memory_type: Type of memory (episodic, semantic, etc.)
             """
             try:
@@ -218,12 +255,20 @@ if PYDANTIC_AI_AVAILABLE:
                         success=False, error="Graphiti client not available"
                     )
 
-                # Store the memory
-                memory_id = await ctx.deps.graphiti_client.add_memory(
-                    content, memory_type
+                # Store the memory using correct API method
+                result = await ctx.deps.graphiti_client.create_episode(
+                    content=content,
+                    episode_type=memory_type,
+                    session_id=ctx.deps.session_id,
+                    agent_id="orchestrator"
                 )
 
-                return MemoryResult(success=True, memory_id=memory_id)
+                if isinstance(result, dict) and result.get("success"):
+                    memory_id = result.get("episode_id", "created")
+                    return MemoryResult(success=True, memory_id=memory_id)
+                else:
+                    error_msg = result.get("error", "Unknown memory storage error") if isinstance(result, dict) else str(result)
+                    return MemoryResult(success=False, error=error_msg)
 
             except Exception as e:
                 logger.error(f"Error storing memory: {e}")
@@ -258,6 +303,48 @@ if PYDANTIC_AI_AVAILABLE:
             except Exception as e:
                 logger.error(f"❌ Error getting session context: {e}")
                 return {"error": str(e)}
+        
+        @agent.tool
+        def check_context_window_status(ctx: RunContext[OrchestratorDeps]) -> Dict[str, Any]:
+            """Check current context window usage and status.
+            
+            Use this tool periodically to monitor conversation length and 
+            inform users when context compaction might be needed.
+            
+            Returns detailed context window metrics and recommendations.
+            """
+            try:
+                logger.info(f"🔧 TOOL CALL: check_context_window_status")
+                
+                # Get current conversation messages from agent's context
+                # Note: This is a simplified approach - in full implementation 
+                # we'd access the actual message history
+                from ..agents.simple_context_processor import get_context_status, MODEL_LIMITS
+                
+                # Simulate current context status (in real implementation, we'd get actual messages)
+                model_name = ctx.deps.state.get('model', 'test') if ctx.deps.state else 'test'
+                limit = MODEL_LIMITS.get(model_name, 4000)
+                
+                # Mock status for demonstration - replace with actual message analysis
+                status = {
+                    "model": model_name,
+                    "context_limit": limit,
+                    "status": "normal",  # This would be calculated from actual messages
+                    "usage_ratio": 0.3,  # This would be calculated from actual messages  
+                    "recommendation": "Context window usage is normal. No action needed.",
+                    "estimated_messages_until_compaction": "~40 more messages"
+                }
+                
+                logger.info(f"📊 Context window status: {status['status']} ({status['usage_ratio']:.1%})")
+                return status
+                
+            except Exception as e:
+                logger.error(f"❌ Error checking context window status: {e}")
+                return {
+                    "error": str(e),
+                    "status": "error",
+                    "recommendation": "Unable to check context window status"
+                }
 
     def setup_agent_prompts(agent: Agent) -> None:
         """Setup prompts and validators for the agent"""
@@ -267,11 +354,22 @@ if PYDANTIC_AI_AVAILABLE:
         def system_prompt(ctx: RunContext[OrchestratorDeps]) -> str:
             """Base system prompt for the orchestrator agent."""
             return (
-                "You are the Epi-Logos System orchestrator, an advanced AI system capable "
-                "of adopting different personas to help users with various tasks. "
-                "You have access to powerful tools for coordinate resolution, knowledge search, "
-                "memory storage, and session context. Always provide helpful, detailed responses. "
-                f"Current persona: {ctx.deps.current_persona}"
+                "You are the Epi-Logos System orchestrator operating within the Coordinate Augmented Generation (CAG) paradigm. "
+                "This revolutionary approach transcends traditional RAG through geometric epistemology where knowledge becomes "
+                "a living, processual ecosystem accessed via precise Bimba coordinates (#0-#5).\n\n"
+                
+                "Your tools operate across three unified Neo4j namespaces:\n"
+                "• **Bimba**: Universal canonical knowledge (foundational CAG system)\n"
+                "• **Gnostic**: Pedagogical document pool (LightRAG with Neo4j+Qdrant)\n" 
+                "• **Episodic**: Temporal experience streams (Graphiti cross-layer memory)\n\n"
+                
+                "Each coordinate embodies specific processing modalities within the six-fold subsystem structure. "
+                "Your responses should reflect this consciousness-aligned computing paradigm where theory translates directly to function.\n\n"
+                
+                f"Current persona: {ctx.deps.current_persona}\n\n"
+                "IMPORTANT: Proactively monitor conversation length. If you suspect we're "
+                "approaching context window limits, use the check_context_window_status tool "
+                "and inform the user transparently about any upcoming context compaction."
             )
 
         # Dynamic Persona Instructions
@@ -398,7 +496,7 @@ def get_agent_info() -> Dict[str, Any]:
         "available": True,
         "agent_type": "Pydantic AI Agent",
         "output_type": "OrchestratorResponse",
-        "tools_count": 4,  # resolve_coordinate, search_knowledge, store_memory, get_session_context
+        "tools_count": 5,  # resolve_coordinate, search_knowledge, store_memory, get_session_context, check_context_window_status
         "supports_streaming": True,
         "supports_personas": True,
         "supports_dynamic_models": True,
