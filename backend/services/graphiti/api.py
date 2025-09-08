@@ -13,7 +13,7 @@ from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel, Field
 
-from ..database.neo4j_client import Neo4jClient
+from shared.database import Neo4jClient
 from .service import GraphitiService
 from .models import (
     Episode, Community, EpisodeType,

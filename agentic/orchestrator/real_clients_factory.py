@@ -173,49 +173,37 @@ async def create_enhanced_orchestrator_deps(
     context: Optional[Dict[str, Any]] = None,
     use_real_clients: bool = True
 ):
-    """Create enhanced orchestrator dependencies with real clients"""
-    from ..agents.clean_orchestrator import CleanOrchestratorDeps
-    
+    """Create enhanced orchestrator dependencies using the canonical OrchestratorDeps."""
+    from ..agents.orchestrator_agent import OrchestratorDeps
+
+    # model_config retained for compatibility; OrchestratorDeps stores context_package/current_persona
     if use_real_clients:
         # Get real clients
         clients = await get_real_clients_container()
-        
-        return CleanOrchestratorDeps(
+
+        return OrchestratorDeps(
             session_id=session_id,
             user_id=user_id,
-            current_persona=current_persona,
-            model_config=model_config or os.getenv('DEFAULT_LLM_MODEL', 'test'),
-            context=context,
-            
-            # Real clients
             redis_client=clients.redis_client,
             mongodb_client=clients.mongo_client,
             bimba_client=clients.bimba_client,
             lightrag_client=clients.lightrag_client,
             graphiti_client=clients.graphiti_client,
-            
-            # Context packages (future)
-            context_packages=context.get('packages') if context else None,
-            act_protocol_enabled=context.get('act_enabled', False) if context else False
+            current_persona=current_persona,
+            context_package=(context.get('packages') if context else None)
         )
     else:
         # Mock clients (graceful degradation)
-        return CleanOrchestratorDeps(
+        return OrchestratorDeps(
             session_id=session_id,
             user_id=user_id,
-            current_persona=current_persona,
-            model_config=model_config or os.getenv('DEFAULT_LLM_MODEL', 'test'),
-            context=context,
-            
-            # No real clients - will use mock implementations
             redis_client=None,
             mongodb_client=None,
             bimba_client=None,
             lightrag_client=None,
             graphiti_client=None,
-            
-            context_packages=None,
-            act_protocol_enabled=False
+            current_persona=current_persona,
+            context_package=None
         )
 
 

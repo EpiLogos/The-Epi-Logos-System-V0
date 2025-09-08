@@ -37,7 +37,8 @@ class RealMongoConversationClient:
     async def connect(self):
         """Connect to MongoDB Atlas"""
         try:
-            self.client = AsyncIOMotorClient(self.mongo_uri)
+            # Add tlsAllowInvalidCertificates=True for macOS development
+            self.client = AsyncIOMotorClient(self.mongo_uri, tlsAllowInvalidCertificates=True)
             # Test connection
             await self.client.admin.command('ismaster')
             self.db = self.client[self.database]

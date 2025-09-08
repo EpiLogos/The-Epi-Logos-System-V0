@@ -32,6 +32,7 @@ export default function SimpleChatPage() {
   const [currentPersona, setCurrentPersona] = useState('system');
   const [currentModel, setCurrentModel] = useState('');
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -50,27 +51,46 @@ export default function SimpleChatPage() {
 
   const loadModels = async () => {
     try {
-      const response = await fetch('/api/dev/orchestrator/models');
+      // Call agentic layer for available models (proper trilaminar architecture)
+      const response = await fetch('http://localhost:8001/api/v1/orchestrator/models');
       const result = await response.json();
-      if (result.success) {
+      
+      if (result.success && result.models && result.models.length > 0) {
         const models = result.models.map((m: any) => ({
           id: m.id,
           name: m.name,
           provider: m.provider,
           available: m.available
         }));
+        
         setAvailableModels(models);
         
-        // Set first available model as default
+        // Set default model from agentic layer or first available
+        const defaultModel = result.default_model;
+        const defaultModelObj = models.find((m: ModelInfo) => m.id === defaultModel);
         const firstAvailable = models.find((m: ModelInfo) => m.available);
-        if (firstAvailable) {
+        
+        if (defaultModelObj && defaultModelObj.available) {
+          setCurrentModel(defaultModel);
+        } else if (firstAvailable) {
           setCurrentModel(firstAvailable.id);
         }
+        
+        console.log(`Loaded ${models.length} models from agentic layer`);
+      } else {
+        throw new Error('No models returned from agentic layer');
       }
     } catch (error) {
-      console.error('Failed to load models:', error);
-      // Set fallback to environment configured model
-      const fallbackModel = { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google', available: true };
+      console.error('Failed to load models from agentic layer:', error);
+      
+      // Fallback to test model (agentic layer provides this when no API keys configured)
+      const fallbackModel = { 
+        id: 'test', 
+        name: 'Test Model', 
+        provider: 'Local', 
+        available: true 
+      };
+      
       setAvailableModels([fallbackModel]);
       setCurrentModel(fallbackModel.id);
     }
@@ -94,42 +114,134 @@ export default function SimpleChatPage() {
     setIsLoading(true);
 
     try {
-      // Use simple Pydantic AI endpoint
-      const response = await fetch('/api/dev/orchestrator/simple', {
+      // Use Agentic layer AG-UI endpoint (proper trilaminar architecture)
+      const response = await fetch('http://localhost:8001/api/v1/ag-ui/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: messageText,
-          persona: currentPersona,
-          model: currentModel
+          thread_id: sessionId || `thread-${Date.now()}`,
+          run_id: `run-${Date.now()}`,
+          messages: [{
+            id: `msg-${Date.now()}`,
+            role: 'user',
+            content: messageText
+          }],
+          context: [],
+          state: {
+            persona: currentPersona,
+            model: currentModel
+          },
+          tools: [],
+          forwarded_props: {}
         })
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
+      if (response.ok) {
+        // Parse AG-UI streaming response
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        
+        // Set session ID from thread_id if this is a new session
+        const thread_id = sessionId || `thread-${Date.now()}`;
+        if (!sessionId) {
+          setSessionId(thread_id);
+        }
+        
+        let messageContent = '';
+        let messageId = '';
+        
+        // Create placeholder assistant message
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: result.response,
-          role: 'assistant',
-          persona: result.persona || currentPersona,
-          model: result.model || currentModel,
-          timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, assistantMessage]);
-      } else {
-        // Handle error
-        const errorMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: `Error: ${result.error || 'Unknown error'}`,
+          content: '',
           role: 'assistant',
           persona: currentPersona,
           model: currentModel,
           timestamp: new Date()
         };
         
-        setMessages(prev => [...prev, errorMessage]);
+        // Add message to UI for streaming updates
+        setMessages(prev => [...prev, assistantMessage]);
+        
+        if (reader) {
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n');
+              
+              for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                  try {
+                    const data = JSON.parse(line.substring(6));
+                    
+                    switch (data.type) {
+                      case 'RUN_STARTED':
+                        console.log('🚀 AG-UI Run started:', data.threadId);
+                        break;
+                        
+                      case 'TEXT_MESSAGE_START':
+                        messageId = data.messageId;
+                        messageContent = '';
+                        console.log('📝 Message started:', messageId);
+                        break;
+                        
+                      case 'TEXT_MESSAGE_CONTENT':
+                        messageContent += data.delta;
+                        // Update message content in real-time
+                        setMessages(prev => prev.map(msg => 
+                          msg.id === assistantMessage.id 
+                            ? { ...msg, content: messageContent }
+                            : msg
+                        ));
+                        break;
+                        
+                      case 'TEXT_MESSAGE_END':
+                        console.log('✅ Message completed:', messageId);
+                        break;
+                        
+                      case 'RUN_FINISHED':
+                        console.log('🏁 AG-UI Run finished:', data.threadId);
+                        break;
+                        
+                      case 'RUN_ERROR':
+                        console.error('❌ AG-UI Run error:', data.message);
+                        break;
+                    }
+                  } catch (e) {
+                    console.warn('Failed to parse AG-UI event:', line, e);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error reading AG-UI stream:', error);
+          }
+        }
+      } else {
+        // Handle HTTP error
+        const errorText = await response.text();
+        let errorMessage = 'Unknown error';
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.detail || errorData.error || errorText;
+        } catch {
+          errorMessage = errorText || `HTTP ${response.status}`;
+        }
+        
+        const errorMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          content: `Error: ${errorMessage}`,
+          role: 'assistant',
+          persona: currentPersona,
+          model: currentModel,
+          timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, errorMsg]);
       }
     } catch (error) {
       console.error('Chat error:', error);
@@ -157,6 +269,7 @@ export default function SimpleChatPage() {
 
   const clearChat = () => {
     setMessages([]);
+    setSessionId(null); // Start a new session
   };
 
   return (
@@ -295,9 +408,15 @@ export default function SimpleChatPage() {
               <div className="space-y-2 pt-2">
                 <button
                   onClick={clearChat}
+                  className="w-full px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-600/30 rounded text-sm text-blue-300"
+                >
+                  New Chat Session
+                </button>
+                <button
+                  onClick={clearChat}
                   className="w-full px-3 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-600/30 rounded text-sm text-red-300"
                 >
-                  Clear Chat
+                  Clear Messages
                 </button>
               </div>
             </div>
@@ -311,6 +430,7 @@ export default function SimpleChatPage() {
               <div>• Model: {currentModel}</div>
               <div>• Available Models: {availableModels.filter(m => m.available).length}</div>
               <div>• Messages: {messages.length}</div>
+              <div>• Session: {sessionId ? sessionId.substring(0, 8) + '...' : 'New'}</div>
             </div>
           </div>
 

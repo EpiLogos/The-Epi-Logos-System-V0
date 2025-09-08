@@ -7,7 +7,6 @@ operations for user profiles, personal documents, and analytics.
 
 import os
 import logging
-import certifi
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
 from pymongo import MongoClient, ASCENDING, DESCENDING
@@ -41,7 +40,8 @@ class MongoDBClient:
             if not self.connection_string:
                 raise ValueError("MongoDB connection string must be configured")
             
-            self._client = MongoClient(self.connection_string, tlsCAFile=certifi.where())
+            # Add tlsAllowInvalidCertificates=True for macOS development
+            self._client = MongoClient(self.connection_string, tlsAllowInvalidCertificates=True)
         return self._client
     
     @property

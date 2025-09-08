@@ -58,13 +58,7 @@ async def lifespan(app: FastAPI):
         database=config.neo4j_database
     )
     
-    # Initialize real AG-UI Protocol service
-    try:
-        from .epi_logos_system.services.ag_ui_service import ag_ui_service
-        app.state.ag_ui_service = ag_ui_service
-        logger.info("Real AG-UI Protocol service initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize AG-UI service: {e}")
+    # AG-UI Protocol moved to Agentic layer - Backend handles only database operations
     
     logger.info("Application startup complete")
     
@@ -75,10 +69,7 @@ async def lifespan(app: FastAPI):
         if hasattr(app.state, 'neo4j_client'):
             app.state.neo4j_client.close()
             logger.info("Neo4j client connection closed successfully")
-        if hasattr(app.state, 'ag_ui_server'):
-            if hasattr(app.state.ag_ui_server, 'close'):
-                app.state.ag_ui_server.close()
-                logger.info("AG-UI Server closed successfully")
+        # AG-UI Protocol cleanup not needed - using Pydantic AI native integration
     except Exception as e:
         logger.error(f"Error during shutdown cleanup: {e}")
 
@@ -186,11 +177,16 @@ app.include_router(health_router, prefix="/api/health")
 from .api.security import router as security_router
 app.include_router(security_router, prefix="/api")
 
-# Include real AG-UI protocol router
-from .api.ag_ui import router as ag_ui_router
-app.include_router(ag_ui_router)
+# Include LightRAG service router for document operations
+from .services.lightrag.api import router as lightrag_router
+app.include_router(lightrag_router)
 
-# Real AG-UI WebSocket endpoint is handled by the ag_ui router at /api/v1/ag-ui/ws
+# Include Graphiti service router for temporal memory operations
+from .services.graphiti.api import router as graphiti_router
+app.include_router(graphiti_router)
+
+# AG-UI Protocol has been moved to Agentic layer (Trilaminar Architecture compliance)
+# Frontend should communicate with Agentic layer at http://localhost:8001/api/v1/ag-ui/*
 
 # Add GraphQL support
 import ariadne
@@ -259,6 +255,21 @@ class BimbaNodeBasic(BaseModel):
     coordinate: str
     name: str
     subsystem: int
+
+class BimbaNode(BaseModel):
+    """Extended Bimba Node with all available properties"""
+    coordinate: str
+    name: str
+    subsystem: Optional[str] = None
+    description: Optional[str] = None
+    operationalEssence: Optional[str] = None
+    coreNature: Optional[str] = None
+    function: Optional[str] = None
+    symbol: Optional[str] = None
+    nodeType: Optional[str] = None
+    uuid: Optional[str] = None
+    createdAt: Optional[str] = None
+    updatedAt: Optional[str] = None
 
 
 # API endpoints

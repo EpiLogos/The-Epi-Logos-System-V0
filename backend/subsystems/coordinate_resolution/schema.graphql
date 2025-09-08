@@ -1,9 +1,40 @@
-type BimbaNodeBasic {
+type BimbaNode {
     coordinate: String!
     name: String!
     subsystem: String
+    description: String
+    operationalEssence: String
+    coreNature: String
+    function: String
+    symbol: String
+    nodeType: String
+    uuid: String
+    createdAt: String
+    updatedAt: String
+}
+
+type SearchResult {
+    coordinate: String!
+    name: String!
+    subsystem: String
+    description: String
+    relevance_score: Float
+}
+
+type SearchResponse {
+    success: Boolean!
+    results: [SearchResult!]!
+    error: String
+}
+
+type SubsystemCoordinatesResponse {
+    success: Boolean!
+    coordinates: [BimbaNode!]!
+    error: String
 }
 
 type Query {
-    getNodeByCoordinate(coordinate: String!): BimbaNodeBasic
+    getNodeByCoordinate(coordinate: String!): BimbaNode
+    searchCoordinates(query: String!, subsystem: Int, limit: Int): SearchResponse
+    getSubsystemCoordinates(subsystem: Int!, limit: Int): SubsystemCoordinatesResponse
 }

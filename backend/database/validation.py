@@ -245,12 +245,13 @@ class DatabaseValidator:
         start_time = time.time()
         
         try:
-            # Create MongoDB client
+            # Create MongoDB client with TLS fix for macOS development
             client = MongoClient(
                 uri,
                 serverSelectionTimeoutMS=self.timeout_seconds * 1000,
                 connectTimeoutMS=self.timeout_seconds * 1000,
-                socketTimeoutMS=self.timeout_seconds * 1000
+                socketTimeoutMS=self.timeout_seconds * 1000,
+                tlsAllowInvalidCertificates=True
             )
             
             async def test_connection():

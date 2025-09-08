@@ -392,6 +392,7 @@ class LightRAGService:
             return {
                 "success": True,
                 "healthy": all_healthy,
+                "workspace": self.workspace,  # Add workspace as top-level field for HealthResponse
                 "checks": checks,
                 "workspace_info": self.get_workspace_info(),
                 "database_status": {
@@ -406,7 +407,13 @@ class LightRAGService:
                 }
             }
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {
+                "success": False,
+                "healthy": False,
+                "workspace": getattr(self, 'workspace', 'unknown'),
+                "checks": {"error": str(e)},
+                "error": str(e)
+            }
 
 
 # Global service instance

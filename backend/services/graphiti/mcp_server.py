@@ -19,7 +19,7 @@ from mcp.types import (
     Prompt, PromptArgument, PromptMessage, Role
 )
 
-from ...database.neo4j_client import Neo4jClient
+from shared.database import Neo4jClient
 from .service import GraphitiService
 from .models import (
     EpisodeRequest, EpisodeType, SearchRequest,
@@ -1128,7 +1128,7 @@ class GraphitiMCPServer:
 async def main():
     """Main entry point for standalone MCP server."""
     import os
-    from ...database.neo4j_client import Neo4jClient
+    from shared.database import Neo4jClient
     
     # Initialize Neo4j client from environment
     neo4j_client = Neo4jClient()

@@ -1,0 +1,229 @@
+"""
+HTTP Clients Factory - Initialize all HTTP-based service clients
+
+This module provides factory functions to create and initialize HTTP clients
+for communicating with the Backend layer APIs, replacing direct database connections
+to maintain proper trilaminar architecture separation.
+"""
+
+import logging
+import os
+from typing import Dict, Any, Optional
+from datetime import datetime, timezone
+
+from ..clients import (
+    BackendHttpClient,
+    LightRAGHttpClient, 
+    GraphitiHttpClient,
+    BimbaGraphQLClient
+)
+from .redis_session_tools import create_redis_session_client, RealRedisSessionClient
+from .mongo_conversation_tools import create_mongo_conversation_client, RealMongoConversationClient
+
+logger = logging.getLogger(__name__)
+
+
+class HttpClientsContainer:
+    """Container for all HTTP-based service clients"""
+    
+    def __init__(self):
+        self.backend_client: Optional[BackendHttpClient] = None
+        self.bimba_client: Optional[BimbaGraphQLClient] = None
+        self.lightrag_client: Optional[LightRAGHttpClient] = None
+        self.graphiti_client: Optional[GraphitiHttpClient] = None
+        
+        # Session management can still be direct since it's within agentic layer
+        self.redis_client: Optional[RealRedisSessionClient] = None
+        self.mongo_client: Optional[RealMongoConversationClient] = None
+        
+        self.connected_services = set()
+        self.failed_services = set()
+        
+    async def initialize_all(self, required_services: Optional[list] = None) -> Dict[str, bool]:
+        """Initialize all available HTTP clients"""
+        if required_services is None:
+            required_services = ['backend', 'bimba', 'lightrag', 'graphiti', 'redis', 'mongo']
+        
+        results = {}
+        backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+        
+        # Initialize base Backend HTTP client
+        if 'backend' in required_services:
+            try:
+                self.backend_client = BackendHttpClient(backend_url)
+                await self.backend_client.connect()
+                # Test backend connection
+                await self.backend_client.health_check()
+                self.connected_services.add('backend')
+                results['backend'] = True
+                logger.info(f"✅ Backend HTTP client connected: {backend_url}")
+            except Exception as e:
+                logger.warning(f"❌ Backend client failed: {e}")
+                self.failed_services.add('backend')
+                results['backend'] = False
+        
+        # Initialize Bimba GraphQL client (depends on backend)
+        if 'bimba' in required_services:
+            try:
+                self.bimba_client = BimbaGraphQLClient(backend_url)
+                await self.bimba_client.connect()
+                # Test with a simple coordinate resolution
+                test_result = await self.bimba_client.resolve_coordinate("#0")
+                if test_result:
+                    self.connected_services.add('bimba')
+                    results['bimba'] = True
+                    logger.info("✅ Bimba GraphQL client connected")
+                else:
+                    raise Exception("Bimba GraphQL test failed")
+            except Exception as e:
+                logger.warning(f"❌ Bimba client failed: {e}")
+                self.failed_services.add('bimba')
+                results['bimba'] = False
+        
+        # Initialize LightRAG HTTP client (depends on backend)
+        if 'lightrag' in required_services:
+            try:
+                self.lightrag_client = LightRAGHttpClient(backend_url)
+                await self.lightrag_client.connect()
+                # Test LightRAG connection
+                await self.lightrag_client.health_check()
+                self.connected_services.add('lightrag')
+                results['lightrag'] = True
+                logger.info("✅ LightRAG HTTP client connected")
+            except Exception as e:
+                logger.warning(f"❌ LightRAG client failed: {e}")
+                self.failed_services.add('lightrag')
+                results['lightrag'] = False
+        
+        # Initialize Graphiti HTTP client (depends on backend)
+        if 'graphiti' in required_services:
+            try:
+                self.graphiti_client = GraphitiHttpClient(backend_url)
+                await self.graphiti_client.connect()
+                # Test Graphiti connection
+                await self.graphiti_client.health_check()
+                self.connected_services.add('graphiti')
+                results['graphiti'] = True
+                logger.info("✅ Graphiti HTTP client connected")
+            except Exception as e:
+                logger.warning(f"❌ Graphiti client failed: {e}")
+                self.failed_services.add('graphiti')
+                results['graphiti'] = False
+        
+        # Initialize Redis session client (direct connection within agentic layer)
+        if 'redis' in required_services:
+            try:
+                self.redis_client = await create_redis_session_client()
+                self.connected_services.add('redis')
+                results['redis'] = True
+                logger.info("✅ Redis session client connected")
+            except Exception as e:
+                logger.warning(f"❌ Redis client failed: {e}")
+                self.failed_services.add('redis')
+                results['redis'] = False
+        
+        # Initialize MongoDB conversation client (direct connection within agentic layer)
+        if 'mongo' in required_services:
+            try:
+                self.mongo_client = await create_mongo_conversation_client()
+                self.connected_services.add('mongo')
+                results['mongo'] = True
+                logger.info("✅ MongoDB conversation client connected")
+            except Exception as e:
+                logger.warning(f"❌ MongoDB client failed: {e}")
+                self.failed_services.add('mongo')
+                results['mongo'] = False
+        
+        connected_count = len(self.connected_services)
+        total_count = len(required_services)
+        
+        logger.info(f"🔗 HTTP clients initialized: {connected_count}/{total_count} services connected")
+        
+        if connected_count == 0:
+            logger.error("❌ CRITICAL: No HTTP clients connected! System cannot function.")
+        elif connected_count < total_count:
+            logger.warning(f"⚠️  Partial connection: {self.failed_services} services failed. System will use graceful degradation.")
+        else:
+            logger.info("🎉 All HTTP clients connected successfully!")
+        
+        return results
+    
+    async def close_all(self):
+        """Close all connected clients"""
+        if self.backend_client:
+            await self.backend_client.close()
+        if self.bimba_client:
+            await self.bimba_client.close()
+        if self.lightrag_client:
+            await self.lightrag_client.close()
+        if self.graphiti_client:
+            await self.graphiti_client.close()
+        if self.redis_client:
+            await self.redis_client.close()
+        if self.mongo_client:
+            await self.mongo_client.close()
+        
+        logger.info("🔚 All HTTP clients closed")
+    
+    def get_status(self) -> Dict[str, Any]:
+        """Get status of all clients"""
+        return {
+            'connected_services': list(self.connected_services),
+            'failed_services': list(self.failed_services),
+            'connected_count': len(self.connected_services),
+            'total_available': 6,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'clients': {
+                'backend': self.backend_client is not None,
+                'bimba': self.bimba_client is not None,
+                'lightrag': self.lightrag_client is not None,
+                'graphiti': self.graphiti_client is not None,
+                'redis': self.redis_client is not None,
+                'mongo': self.mongo_client is not None,
+            },
+            'architecture_type': 'HTTP-based trilaminar'
+        }
+    
+    def is_service_connected(self, service: str) -> bool:
+        """Check if a specific service is connected"""
+        return service in self.connected_services
+
+
+async def create_enhanced_orchestrator_deps(
+    session_id: str,
+    user_id: str,
+    current_persona: str,
+    model_config: str = "gemini-2.5-flash"
+):
+    """
+    Create enhanced orchestrator dependencies using HTTP clients.
+    
+    This replaces the direct database connections with HTTP-based clients
+    that communicate through the Backend layer APIs.
+    
+    Returns OrchestratorDeps for Pydantic AI StateHandler protocol compatibility.
+    """
+    from ..agents.orchestrator_agent import OrchestratorDeps
+    
+    # Create HTTP clients container
+    container = HttpClientsContainer()
+    
+    # Initialize all HTTP clients
+    await container.initialize_all()
+    
+    # Create OrchestratorDeps with HTTP clients and state support
+    deps = OrchestratorDeps(
+        session_id=session_id,
+        user_id=user_id,
+        redis_client=container.redis_client,
+        mongodb_client=container.mongo_client,
+        bimba_client=container.bimba_client,
+        lightrag_client=container.lightrag_client,
+        graphiti_client=container.graphiti_client,
+        current_persona=current_persona,
+        context_package=None,
+        state={}  # Initialize empty state dict for StateHandler protocol
+    )
+    
+    logger.info(f"Enhanced HTTP orchestrator deps created for session {session_id} ({current_persona})")
+    return deps

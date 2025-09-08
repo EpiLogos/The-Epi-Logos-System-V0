@@ -15,7 +15,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from graphiti_core import Graphiti
 from graphiti_core.search.search_config import SearchConfig, CommunitySearchMethod
 
-from ...database.neo4j_client import Neo4jClient
+from shared.database import Neo4jClient
 from .models import (
     Episode, Community, EpisodeType,
     EpisodeRequest, EpisodeResponse,

@@ -13,7 +13,7 @@ from unittest.mock import Mock, AsyncMock
 
 from ..service import GraphitiService
 from ..models import EpisodeType, Episode, Community
-from ...database.neo4j_client import Neo4jClient
+from shared.database import Neo4jClient
 
 
 # Test configuration

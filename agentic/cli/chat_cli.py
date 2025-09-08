@@ -186,80 +186,48 @@ def doctor():
 
 @app.command()
 def agent_status():
-    """🤖 Check Native Pydantic AI model status and capabilities."""
+    """🤖 Check canonical Pydantic AI agent status and capabilities."""
     load_env()
-    console.print("🤖 Checking Native Pydantic AI Model Status...\n")
-    
+    console.print("🤖 Checking Canonical Pydantic AI Agent Status...\n")
+
     try:
-        # Import the dynamic orchestrator and model manager
-        from ..orchestrator.dynamic_agent import dynamic_orchestrator
-        from ..orchestrator.pydantic_models import model_manager
-        
-        # Get available models and providers
-        available_models = dynamic_orchestrator.get_available_models()
-        available_providers = dynamic_orchestrator.get_available_providers()
-        
-        # Create overview table
-        overview_table = Table(title="Native Pydantic AI Overview", box=box.ROUNDED)
+        from ..agents.orchestrator_agent import get_agent_info
+
+        info = get_agent_info()
+
+        # Overview table
+        overview_table = Table(title="Pydantic AI Orchestrator (Canonical)", box=box.ROUNDED)
         overview_table.add_column("Property", style="cyan")
         overview_table.add_column("Value", style="green")
-        
-        overview_table.add_row("Models Available", str(len(available_models)))
-        overview_table.add_row("Providers Available", ", ".join(available_providers) if available_providers else "None")
-        overview_table.add_row("Dynamic Agent Ready", "✅ YES" if available_models else "❌ NO")
-        overview_table.add_row("Supports Streaming", "✅ YES")
-        overview_table.add_row("Supports Personas", "✅ YES (Nara, Epii, System)")
-        overview_table.add_row("Supports Tool Calling", "✅ YES (Bimba, LightRAG, Graphiti)")
-        
+        overview_table.add_row("Agent Available", "✅ YES" if info.get("available") else "❌ NO")
+        overview_table.add_row("Default Model", info.get("default_model", "unknown"))
+        overview_table.add_row("Supports Streaming", "✅ YES" if info.get("supports_streaming") else "❌ NO")
+        overview_table.add_row("Supports Personas", "✅ YES" if info.get("supports_personas") else "❌ NO")
+        overview_table.add_row("Supports Tools", str(info.get("tools_count", 0)))
         console.print(overview_table)
-        
-        if available_models:
+
+        # Models table
+        models = info.get("available_models", {}) or {}
+        if models:
             console.print("\n📋 Available Models:")
-            
-            # Create models table
             models_table = Table(box=box.SIMPLE)
-            models_table.add_column("Model Spec", style="cyan")
-            models_table.add_column("Description", style="white")
             models_table.add_column("Provider", style="yellow")
-            
-            for model_spec, description in available_models.items():
-                provider = model_spec.split(':')[0]
-                models_table.add_row(model_spec, description, provider)
-            
+            models_table.add_column("Model", style="cyan")
+            for provider, model in models.items():
+                models_table.add_row(provider, model or "<unset>")
             console.print(models_table)
         else:
-            console.print("[red]❌ No Pydantic AI models available. Check environment variables.[/red]")
+            console.print("[yellow]No models advertised by orchestrator_agent. Configure API keys.[/yellow]")
             console.print("Required environment variables:")
-            console.print("  - OPENAI_API_KEY for OpenAI models")
-            console.print("  - GEMINI_API_KEY for Gemini models") 
-            console.print("  - ANTHROPIC_API_KEY for Anthropic models")
-            console.print("  - DEEPSEEK_API_KEY for DeepSeek models")
-        
-        # Show integration status
-        console.print(f"\n📊 **Integration Status:**")
-        if available_models:
-            console.print(f"- Frontend → CLI → UnifiedOrchestrator → 🤖 Native Pydantic AI Agent")
-            console.print(f"- Model routing: provider:model format (e.g., openai:gpt-4o-mini)")
-            console.print("[green]✅ Ready for Native Pydantic AI testing![/green]")
-        else:
-            console.print(f"- Frontend → CLI → UnifiedOrchestrator → 📡 LLM Service Fallback")
-            console.print("[yellow]⚠️  Using LLM service fallback - configure API keys for Pydantic AI[/yellow]")
-            
-        # Test with available model
-        if available_models:
-            console.print("\n🧪 Testing Dynamic Agent...")
-            try:
-                test_model = list(available_models.keys())[0]
-                agent = dynamic_orchestrator.create_agent(test_model)
-                if agent:
-                    console.print(f"✅ Agent created successfully with model: {test_model}")
-                else:
-                    console.print(f"❌ Failed to create agent with model: {test_model}")
-            except Exception as e:
-                console.print(f"❌ Agent test failed: {e}")
-            
-    except ImportError as e:
-        console.print(f"[red]❌ Import Error: {e}[/red]")
+            console.print("  - OPENAI_API_KEY (+ OPENAI_MODEL)")
+            console.print("  - GEMINI_API_KEY (+ GEMINI_MODEL)")
+            console.print("  - ANTHROPIC_API_KEY (+ ANTHROPIC_MODEL)")
+            console.print("  - DEEPSEEK_API_KEY (+ DATABASE_MODEL)")
+
+        console.print("\n📊 Integration Path:")
+        console.print("- Frontend → Next API → AgentRunner → 🤖 orchestrator_agent")
+        console.print("[green]✅ Unified on canonical agent[/green]")
+
     except Exception as e:
         console.print(f"[red]❌ Error: {e}[/red]")
 

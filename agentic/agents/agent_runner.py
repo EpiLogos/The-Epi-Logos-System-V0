@@ -98,15 +98,25 @@ class AgentRunner:
                 try:
                     # Create a new agent instance with the specified model
                     current_agent = create_orchestrator_agent(model_name)
-                    logger.info(f"Created agent instance with model: {model_name}")
+                    logger.info(f"🤖 AGENT CREATED: model={model_name}, session={session.session_id}")
                 except Exception as e:
-                    logger.warning(f"Failed to create agent with model {model_name}, using default: {e}")
+                    logger.warning(f"❌ AGENT CREATION FAILED: model={model_name}, error={e}, using default")
                     current_agent = self.agent
+            else:
+                logger.info(f"🤖 USING DEFAULT AGENT: session={session.session_id}")
+            
+            # Log the actual model being used
+            actual_model = getattr(current_agent, 'model', 'unknown')
+            logger.info(f"📡 ACTUAL MODEL IN USE: {actual_model}")
             
             # Track the complete response for final processing
             full_response = ""
             
-            logger.info(f"Starting streaming run for session {session.session_id} with persona {deps.current_persona}")
+            logger.info(f"🚀 STARTING AGENT RUN: session={session.session_id}, persona={deps.current_persona}, model={actual_model}")
+            logger.info(f"💬 USER MESSAGE: {message}")
+            
+            import time
+            start_time = time.time()
             
             # Run the agent with streaming
             # Auto-hydrate message history from conversation store if not provided
@@ -132,7 +142,17 @@ class AgentRunner:
                     result = await response.get_result()
                     structured_output = result.output
                     
-                    logger.info(f"Agent run completed successfully. Tools used: {structured_output.tools_used}")
+                    # Calculate execution time
+                    execution_time = time.time() - start_time
+                    
+                    logger.info(f"✅ AGENT RESPONSE COMPLETED")
+                    logger.info(f"⏱️  EXECUTION TIME: {execution_time:.2f}s")
+                    logger.info(f"🧠 PERSONA USED: {structured_output.persona_used}")
+                    logger.info(f"🔧 TOOLS USED: {structured_output.tools_used}")
+                    logger.info(f"📍 COORDINATES ACCESSED: {structured_output.coordinates_accessed}")
+                    logger.info(f"🎯 CONFIDENCE: {structured_output.confidence}")
+                    logger.info(f"📝 RESPONSE LENGTH: {len(full_response)} characters")
+                    logger.info(f"💭 RESPONSE PREVIEW: {full_response[:100]}{'...' if len(full_response) > 100 else ''}")
                     
                     # Store interaction in conversation history with actual Pydantic AI messages
                     await conversation_manager.add_interaction(
@@ -144,23 +164,34 @@ class AgentRunner:
                             "tools_used": structured_output.tools_used,
                             "coordinates_accessed": structured_output.coordinates_accessed,
                             "confidence": structured_output.confidence,
-                            "metadata": structured_output.metadata
+                            "metadata": structured_output.metadata,
+                            "execution_time_ms": int(execution_time * 1000)
                         },
                         pydantic_messages=result.new_messages()  # Store the actual Pydantic AI messages!
                     )
                     
                 except Exception as e:
-                    logger.error(f"Error getting structured result: {e}")
+                    execution_time = time.time() - start_time
+                    logger.error(f"❌ ERROR GETTING STRUCTURED RESULT: {e}")
+                    logger.info(f"⏱️  EXECUTION TIME: {execution_time:.2f}s")
+                    logger.info(f"📝 RESPONSE LENGTH: {len(full_response)} characters")
+                    logger.info(f"💭 PARTIAL RESPONSE: {full_response[:100]}{'...' if len(full_response) > 100 else ''}")
+                    
                     # Still store the basic interaction
                     await conversation_manager.add_interaction(
                         session_id=session.session_id,
                         user_message=message,
                         agent_response=full_response,
-                        persona=deps.current_persona
+                        persona=deps.current_persona,
+                        metadata={"execution_time_ms": int(execution_time * 1000), "error": str(e)}
                     )
                     
         except Exception as e:
-            logger.error(f"Error in streaming agent run: {e}")
+            execution_time = time.time() - start_time if 'start_time' in locals() else 0
+            logger.error(f"💥 AGENT RUN FAILED: {e}")
+            logger.info(f"⏱️  EXECUTION TIME: {execution_time:.2f}s")
+            logger.info(f"💬 FAILED MESSAGE: {message[:100]}{'...' if len(message) > 100 else ''}")
+            
             error_message = f"I apologize, but I encountered an error while processing your request: {str(e)}"
             yield error_message
             
@@ -171,10 +202,13 @@ class AgentRunner:
                     user_message=message,
                     agent_response=error_message,
                     persona=session.active_persona or "system",
-                    metadata={"error_details": str(e)}
+                    metadata={
+                        "error_details": str(e),
+                        "execution_time_ms": int(execution_time * 1000)
+                    }
                 )
             except Exception as store_error:
-                logger.error(f"Error storing conversation after agent error: {store_error}")
+                logger.error(f"❌ ERROR STORING CONVERSATION: {store_error}")
     
     async def run_with_structured_output(
         self,
@@ -211,12 +245,18 @@ class AgentRunner:
             if model_name:
                 try:
                     current_agent = create_orchestrator_agent(model_name)
-                    logger.info(f"Created agent instance with model: {model_name}")
+                    logger.info(f"🤖 STRUCTURED AGENT CREATED: model={model_name}, session={session.session_id}")
                 except Exception as e:
-                    logger.warning(f"Failed to create agent with model {model_name}, using default: {e}")
+                    logger.warning(f"❌ STRUCTURED AGENT CREATION FAILED: model={model_name}, error={e}, using default")
                     current_agent = self.agent
+            else:
+                logger.info(f"🤖 USING DEFAULT AGENT FOR STRUCTURED RUN: session={session.session_id}")
             
-            logger.info(f"Starting structured run for session {session.session_id}")
+            # Log the actual model being used
+            actual_model = getattr(current_agent, 'model', 'unknown')
+            logger.info(f"📡 STRUCTURED RUN MODEL: {actual_model}")
+            logger.info(f"🚀 STARTING STRUCTURED RUN: session={session.session_id}, persona={deps.current_persona}")
+            logger.info(f"💬 USER MESSAGE: {message}")
             
             # Run the agent
             # Auto-hydrate message history from conversation store if not provided
@@ -227,6 +267,9 @@ class AgentRunner:
                 except Exception:
                     effective_history = []
 
+            import time
+            start_time = time.time()
+            
             result = await current_agent.run(
                 message,
                 deps=deps,
@@ -234,6 +277,16 @@ class AgentRunner:
             )
             
             structured_output = result.output
+            execution_time = time.time() - start_time
+            
+            logger.info(f"✅ STRUCTURED RESPONSE COMPLETED")
+            logger.info(f"⏱️  EXECUTION TIME: {execution_time:.2f}s")
+            logger.info(f"🧠 PERSONA USED: {structured_output.persona_used}")
+            logger.info(f"🔧 TOOLS USED: {structured_output.tools_used}")
+            logger.info(f"📍 COORDINATES ACCESSED: {structured_output.coordinates_accessed}")
+            logger.info(f"🎯 CONFIDENCE: {structured_output.confidence}")
+            logger.info(f"📝 RESPONSE LENGTH: {len(structured_output.response)} characters")
+            logger.info(f"💭 RESPONSE PREVIEW: {structured_output.response[:100]}{'...' if len(structured_output.response) > 100 else ''}")
             
             # Store interaction in conversation history with actual Pydantic AI messages
             await conversation_manager.add_interaction(
@@ -245,7 +298,8 @@ class AgentRunner:
                     "tools_used": structured_output.tools_used,
                     "coordinates_accessed": structured_output.coordinates_accessed,
                     "confidence": structured_output.confidence,
-                    "metadata": structured_output.metadata.model_dump() if structured_output.metadata else {}
+                    "metadata": structured_output.metadata.model_dump() if structured_output.metadata else {},
+                    "execution_time_ms": int(execution_time * 1000)
                 },
                 pydantic_messages=result.new_messages()  # Store the actual Pydantic AI messages!
             )
@@ -258,7 +312,10 @@ class AgentRunner:
             }
             
         except Exception as e:
-            logger.error(f"Error in structured agent run: {e}")
+            execution_time = time.time() - start_time if 'start_time' in locals() else 0
+            logger.error(f"💥 STRUCTURED RUN FAILED: {e}")
+            logger.info(f"⏱️  EXECUTION TIME: {execution_time:.2f}s")
+            logger.info(f"💬 FAILED MESSAGE: {message[:100]}{'...' if len(message) > 100 else ''}")
             
             error_response = f"I apologize, but I encountered an error: {str(e)}"
             
@@ -269,10 +326,13 @@ class AgentRunner:
                     user_message=message,
                     agent_response=error_response,
                     persona=session.active_persona or "system",
-                    metadata={"error_details": str(e)}
+                    metadata={
+                        "error_details": str(e),
+                        "execution_time_ms": int(execution_time * 1000)
+                    }
                 )
             except Exception as store_error:
-                logger.error(f"Error storing conversation after agent error: {store_error}")
+                logger.error(f"❌ ERROR STORING CONVERSATION: {store_error}")
             
             return {
                 "success": False,

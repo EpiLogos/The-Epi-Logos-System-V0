@@ -11,6 +11,10 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import os
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env files
+load_dotenv()  # loads .env from project root
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -24,7 +28,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://frontend:3000", "http://localhost:8000", "http://backend:8000"],
+    allow_origins=["http://localhost:3000", "http://frontend:3000", "http://localhost:8000", "http://backend:8000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -113,6 +117,10 @@ async def list_personas():
         ]
     }
 
+# Include AG-UI protocol router (moved from Backend layer)
+from .api.ag_ui import router as ag_ui_router
+app.include_router(ag_ui_router)
+
 @app.get("/api/v1/orchestrator/status")
 async def orchestrator_status():
     """Get orchestrator status"""
@@ -121,6 +129,89 @@ async def orchestrator_status():
         "active_workflows": 0,
         "available_tools": [],
         "persona_coordination": "ready"
+    }
+
+@app.get("/api/v1/orchestrator/models")
+async def get_available_models():
+    """Get available models for the orchestrator agent"""
+    from .agents.orchestrator_agent import get_agent_info
+    
+    # Get agent info which includes available models
+    agent_info = get_agent_info()
+    available_models = agent_info.get("available_models", {})
+    default_model = agent_info.get("default_model", "gemini-2.5-flash")
+    
+    # Format models for frontend consumption
+    models = []
+    
+    # Map environment variables to user-friendly model info
+    model_mappings = {
+        "gemini": {
+            "gemini-2.5-flash": {"name": "Gemini 2.5 Flash", "provider": "Google"},
+            "gemini-2.5-pro": {"name": "Gemini 2.5 Pro", "provider": "Google"},
+            "gemini-1.5-pro": {"name": "Gemini 1.5 Pro", "provider": "Google"},
+        },
+        "openai": {
+            "gpt-4o": {"name": "GPT-4o", "provider": "OpenAI"},
+            "gpt-4o-mini": {"name": "GPT-4o Mini", "provider": "OpenAI"},
+            "gpt-4-turbo": {"name": "GPT-4 Turbo", "provider": "OpenAI"},
+        },
+        "anthropic": {
+            "claude-3-5-sonnet-20241022": {"name": "Claude 3.5 Sonnet", "provider": "Anthropic"},
+            "claude-3-haiku-20240307": {"name": "Claude 3 Haiku", "provider": "Anthropic"},
+            "claude-3-opus-20240229": {"name": "Claude 3 Opus", "provider": "Anthropic"},
+        },
+        "deepseek": {
+            "deepseek-chat": {"name": "DeepSeek Chat", "provider": "DeepSeek"},
+            "deepseek-coder": {"name": "DeepSeek Coder", "provider": "DeepSeek"},
+        }
+    }
+    
+    # Process available models - only include tested working ones
+    for provider, model_id in available_models.items():
+        if model_id:  # Only include models that have API keys configured
+            # Handle special cases for model format
+            if provider == "gemini":
+                # Gemini models work without provider prefix in Pydantic AI
+                full_model_id = model_id
+                clean_model_id = model_id
+            else:
+                # Other providers need provider:model format
+                if ":" not in model_id:
+                    full_model_id = f"{provider}:{model_id}"
+                    clean_model_id = model_id
+                else:
+                    full_model_id = model_id
+                    _, clean_model_id = model_id.split(":", 1)
+            
+            # Get model info from mappings
+            provider_models = model_mappings.get(provider, {})
+            model_info = provider_models.get(clean_model_id, {
+                "name": clean_model_id.title().replace("-", " "),
+                "provider": provider.title()
+            })
+            
+            models.append({
+                "id": full_model_id,  # Correct format for each provider
+                "name": model_info["name"],
+                "provider": model_info["provider"],
+                "available": True
+            })
+    
+    # If no models are available, provide fallback
+    if not models:
+        models.append({
+            "id": "test",
+            "name": "Test Model",
+            "provider": "Local",
+            "available": True
+        })
+    
+    return {
+        "success": True,
+        "models": models,
+        "default_model": default_model,
+        "total_available": len(models)
     }
 
 if __name__ == "__main__":

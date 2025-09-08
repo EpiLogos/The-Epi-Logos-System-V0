@@ -48,6 +48,7 @@ class OrchestratorDeps:
     graphiti_client: Optional[Any] = None
     current_persona: str = "system"
     context_package: Optional[Dict[str, Any]] = None
+    state: Dict[str, Any] = None  # Required by Pydantic AI StateHandler protocol
 
 
 # Structured Output Types
@@ -103,7 +104,6 @@ if PYDANTIC_AI_AVAILABLE:
             agent = Agent(
                 model_name,
                 deps_type=OrchestratorDeps,
-                output_type=OrchestratorResponse,
                 retries=2
             )
             
@@ -328,74 +328,16 @@ if PYDANTIC_AI_AVAILABLE:
 
             return persona_prompts.get(persona, persona_prompts["system"])
 
-        # Output Validator for Persona Consistency
-        @agent.output_validator
-        def validate_persona_response(
-            ctx: RunContext[OrchestratorDeps],
-            output: OrchestratorResponse,
-        ) -> OrchestratorResponse:
-            """Validate that response matches persona characteristics and requirements."""
-
-            persona = ctx.deps.current_persona.lower()
-
-            # Ensure persona is correctly set
-            output.persona_used = ctx.deps.current_persona
-
-            # Persona-specific validations
-            if persona == "nara":
-                # Nara should focus on personal and reflective content
-                if not any(
-                    word in output.response.lower()
-                    for word in [
-                        "feel",
-                        "reflect",
-                        "personal",
-                        "insight",
-                        "experience",
-                        "journey",
-                        "growth",
-                    ]
-                ):
-                    if len(output.response) > 100:  # Only for substantial responses
-                        # Don't retry, but add metadata note
-                        output.metadata[
-                            "persona_note"
-                        ] = "Response could be more personally reflective for Nara persona"
-
-            elif persona == "epii":
-                # Epii should focus on synthesis and patterns
-                if not any(
-                    word in output.response.lower()
-                    for word in [
-                        "connect",
-                        "pattern",
-                        "relationship",
-                        "synthesis",
-                        "meaning",
-                        "deeper",
-                        "insight",
-                    ]
-                ):
-                    if len(output.response) > 100:  # Only for substantial responses
-                        output.metadata[
-                            "persona_note"
-                        ] = "Response could show more synthesis for Epii persona"
-
-            # Ensure confidence is reasonable
-            if output.confidence > 0.95 and not output.tools_used:
-                output.confidence = 0.8  # Lower confidence if no tools were used
-
-            # Set requires_followup based on context
-            if "?" in output.response or "would you like" in output.response.lower():
-                output.requires_followup = True
-
-            return output
+        # Output Validator disabled for AG-UI compatibility
+        # AG-UI handles response formatting, structured output validation not needed
+        # @agent.output_validator
+        # def validate_persona_response(...) - COMMENTED OUT
 
     # Create a default agent with environment-based model selection
     def get_default_model() -> str:
-        """Get the default model from environment variables"""
-        if os.getenv('GEMINI_API_KEY') and os.getenv('GEMINI_MODEL'):
-            return os.getenv('GEMINI_MODEL')
+        """Get the default model from environment variables in correct Pydantic AI format"""
+        if os.getenv('GOOGLE_API_KEY') and os.getenv('GOOGLE_MODEL'):
+            return os.getenv('GOOGLE_MODEL')  # Gemini models work without prefix
         elif os.getenv('OPENAI_API_KEY') and os.getenv('OPENAI_MODEL'):
             return f"openai:{os.getenv('OPENAI_MODEL')}"
         elif os.getenv('ANTHROPIC_API_KEY') and os.getenv('ANTHROPIC_MODEL'):
@@ -464,7 +406,7 @@ def get_agent_info() -> Dict[str, Any]:
         "supports_dynamic_models": True,
         "default_model": get_default_model(),
         "available_models": {
-            "gemini": os.getenv('GEMINI_MODEL') if os.getenv('GEMINI_API_KEY') else None,
+            "gemini": os.getenv('GOOGLE_MODEL') if os.getenv('GOOGLE_API_KEY') else None,
             "openai": os.getenv('OPENAI_MODEL') if os.getenv('OPENAI_API_KEY') else None,
             "anthropic": os.getenv('ANTHROPIC_MODEL') if os.getenv('ANTHROPIC_API_KEY') else None,
             "deepseek": os.getenv('DATABASE_MODEL') if os.getenv('DEEPSEEK_API_KEY') else None

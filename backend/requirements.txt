@@ -4,9 +4,8 @@ uvicorn[standard]>=0.34.0
 pydantic>=2.11.2,<3.0.0
 pydantic-settings>=2.7.1
 
-# AG-UI Protocol for agent-to-UI communication
-pydantic-ai==0.8.1
-ag-ui-protocol==0.1.8
+# Note: AG-UI Protocol moved to Agentic layer
+# pydantic-ai and ag-ui-protocol no longer needed in Backend
 
 # GraphQL with Ariadne
 ariadne==0.23.0
