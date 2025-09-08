@@ -121,11 +121,20 @@ export default function SimpleChatPage() {
         body: JSON.stringify({
           thread_id: sessionId || `thread-${Date.now()}`,
           run_id: `run-${Date.now()}`,
-          messages: [{
-            id: `msg-${Date.now()}`,
-            role: 'user',
-            content: messageText
-          }],
+          messages: [
+            // Send entire conversation history for native AG-UI context
+            ...messages.map(msg => ({
+              id: msg.id,
+              role: msg.role,
+              content: msg.content
+            })),
+            // Add the new user message
+            {
+              id: `msg-${Date.now()}`,
+              role: 'user',
+              content: messageText
+            }
+          ],
           context: [],
           state: {
             persona: currentPersona,

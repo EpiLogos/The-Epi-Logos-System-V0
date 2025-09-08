@@ -24,22 +24,49 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/ag-ui", tags=["ag-ui-protocol"])
 
 
+async def ensure_session_lifecycle(thread_id: str, session_client, is_new_chat: bool = False) -> None:
+    """
+    Simple session lifecycle management for Redis.
+    Creates session on new chat, maintains it during conversation.
+    """
+    if not session_client:
+        return
+        
+    try:
+        if is_new_chat:
+            # Create new session for new chat
+            await session_client.create_session(user_id="web-user", session_data={"thread_id": thread_id})
+            logger.info(f"🆕 Created new session: {thread_id}")
+        else:
+            # Ensure session exists (create if not)
+            session = await session_client.get_session(thread_id)
+            if not session:
+                await session_client.create_session(user_id="web-user", session_data={"thread_id": thread_id})
+                logger.info(f"🆕 Created session: {thread_id}")
+            else:
+                logger.info(f"📖 Session active: {thread_id}")
+    except Exception as e:
+        logger.warning(f"⚠️ Session lifecycle failed: {e}")
+
+
 @router.post("/run")
 async def run_agent(request: Request) -> Response:
     """
-    Process AG-UI RunAgentInput using Pydantic AI's native AG-UI integration.
+    Process AG-UI RunAgentInput with session-aware context enrichment.
 
-    This endpoint uses Pydantic AI's built-in AG-UI support to handle
-    the complete request/response cycle with proper streaming.
+    This endpoint implements a middleware pattern that enriches requests with session context
+    while maintaining clean separation between AG-UI protocol and session management.
+    
+    Architecture:
+    - AG-UI Protocol: Handles streaming mechanics 
+    - Session Layer: Provides context enrichment capabilities
+    - Context Package: Delivers structured, token-efficient context
     """
     logger.info("🔥 AG-UI /run endpoint called")
 
     try:
-        # Parse request body to extract model and persona configuration
+        # Parse request body
         body = await request.body()
-        logger.info(f"📥 Request body size: {len(body)} bytes")
-        
-        # Parse the AG-UI request to extract model and persona settings
         import json
         request_data = json.loads(body.decode('utf-8'))
         
@@ -49,28 +76,55 @@ async def run_agent(request: Request) -> Response:
         model_config = state.get('model', os.getenv('DEFAULT_LLM_MODEL', 'test'))
         current_persona = state.get('persona', 'system')
         
-        logger.info(f"🤖 Using model: {model_config}")
-        logger.info(f"👤 Using persona: {current_persona}")
-        logger.info(f"📞 Session ID: {thread_id}")
+        # Detect new chat from frontend (clear messages button sets this)
+        is_new_chat = len(request_data.get('messages', [])) == 1 and 'new-chat' in thread_id
+        
+        logger.info(f"🤖 Model: {model_config} | 👤 Persona: {current_persona} | 📞 Session: {thread_id}")
 
+        # Create dependencies for agent (let AG-UI handle message history natively)
         deps = await create_enhanced_orchestrator_deps(
             session_id=thread_id,
-            user_id="web-user",  # Default for web interface
+            user_id="web-user",
             current_persona=current_persona,
             model_config=model_config
         )
-        logger.info(f"✅ Dependencies created: {type(deps).__name__}")
+        
+        # Simple session lifecycle management
+        await ensure_session_lifecycle(thread_id, deps.redis_client, is_new_chat)
 
-        # Create orchestrator agent with selected model (supports dynamic models)
+        # Create orchestrator agent with selected model
         from ..agents.orchestrator_agent import create_orchestrator_agent
         dynamic_agent = create_orchestrator_agent(model_config)
-        logger.info(f"🔧 Created dynamic agent with model: {model_config}")
-
-        # Use Pydantic AI's native AG-UI integration with dynamic agent
-        logger.info("🚀 Calling handle_ag_ui_request...")
+        
+        # Use Pydantic AI's native AG-UI integration (original request, enriched deps)
         response = await handle_ag_ui_request(dynamic_agent, request, deps=deps)
-        logger.info(f"✅ AG-UI response generated: {type(response).__name__}")
-
+        
+        # Post-processing: Store conversation in MongoDB for future context
+        try:
+            if deps.mongodb_client:
+                # Extract the user message from original request
+                user_messages = request_data.get('messages', [])
+                for msg in user_messages:
+                    if msg.get('role') == 'user':
+                        await deps.mongodb_client.store_message(
+                            thread_id=thread_id,
+                            role='user',
+                            content=msg.get('content', ''),
+                            message_id=msg.get('id'),
+                            persona=current_persona,
+                            model=model_config
+                        )
+                
+                # Note: AG-UI response content isn't easily extractable here
+                # Consider implementing response capture in the future
+                logger.info(f"💾 Stored user message for thread: {thread_id}")
+                
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to store conversation: {e}")
+        
+        # Update session with response insights (future extension point)
+        # await update_session_context(thread_id, response, deps.redis_client)
+        
         return response
 
     except Exception as e:

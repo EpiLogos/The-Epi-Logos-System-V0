@@ -235,14 +235,11 @@ if PYDANTIC_AI_AVAILABLE:
 
             Returns information about the current session including:
             - User context
-            - Previous interactions
             - Active persona
             - Session metadata
             """
             try:
-                logger.debug(
-                    f"Getting session context for session: {ctx.deps.session_id}"
-                )
+                logger.info(f"🔧 TOOL CALL: get_session_context for session: {ctx.deps.session_id}")
 
                 context = {
                     "session_id": ctx.deps.session_id,
@@ -251,14 +248,15 @@ if PYDANTIC_AI_AVAILABLE:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
 
-                # Add context package if available
+                # Add Redis session data if available
                 if ctx.deps.context_package:
-                    context["context_package"] = ctx.deps.context_package
+                    context["session_data"] = ctx.deps.context_package
 
+                logger.info(f"✅ Session context retrieved successfully")
                 return context
 
             except Exception as e:
-                logger.error(f"Error getting session context: {e}")
+                logger.error(f"❌ Error getting session context: {e}")
                 return {"error": str(e)}
 
     def setup_agent_prompts(agent: Agent) -> None:
