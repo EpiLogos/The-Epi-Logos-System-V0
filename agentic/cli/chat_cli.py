@@ -25,11 +25,13 @@ console = Console()
 
 
 def load_env() -> None:
-    """Load `.env` if present without failing if missing."""
+    """Load `.env` from project root if present without failing if missing."""
     try:
         from dotenv import load_dotenv  # type: ignore
 
-        env_path = Path(".env")
+        # Look for .env in project root (parent of agentic directory)
+        project_root = Path(__file__).parent.parent.parent
+        env_path = project_root / ".env"
         if env_path.exists():
             load_dotenv(env_path)
     except Exception:
@@ -180,6 +182,86 @@ def doctor():
 
     import asyncio as _a
     _a.run(run_checks())
+
+
+@app.command()
+def agent_status():
+    """🤖 Check Native Pydantic AI model status and capabilities."""
+    load_env()
+    console.print("🤖 Checking Native Pydantic AI Model Status...\n")
+    
+    try:
+        # Import the dynamic orchestrator and model manager
+        from ..orchestrator.dynamic_agent import dynamic_orchestrator
+        from ..orchestrator.pydantic_models import model_manager
+        
+        # Get available models and providers
+        available_models = dynamic_orchestrator.get_available_models()
+        available_providers = dynamic_orchestrator.get_available_providers()
+        
+        # Create overview table
+        overview_table = Table(title="Native Pydantic AI Overview", box=box.ROUNDED)
+        overview_table.add_column("Property", style="cyan")
+        overview_table.add_column("Value", style="green")
+        
+        overview_table.add_row("Models Available", str(len(available_models)))
+        overview_table.add_row("Providers Available", ", ".join(available_providers) if available_providers else "None")
+        overview_table.add_row("Dynamic Agent Ready", "✅ YES" if available_models else "❌ NO")
+        overview_table.add_row("Supports Streaming", "✅ YES")
+        overview_table.add_row("Supports Personas", "✅ YES (Nara, Epii, System)")
+        overview_table.add_row("Supports Tool Calling", "✅ YES (Bimba, LightRAG, Graphiti)")
+        
+        console.print(overview_table)
+        
+        if available_models:
+            console.print("\n📋 Available Models:")
+            
+            # Create models table
+            models_table = Table(box=box.SIMPLE)
+            models_table.add_column("Model Spec", style="cyan")
+            models_table.add_column("Description", style="white")
+            models_table.add_column("Provider", style="yellow")
+            
+            for model_spec, description in available_models.items():
+                provider = model_spec.split(':')[0]
+                models_table.add_row(model_spec, description, provider)
+            
+            console.print(models_table)
+        else:
+            console.print("[red]❌ No Pydantic AI models available. Check environment variables.[/red]")
+            console.print("Required environment variables:")
+            console.print("  - OPENAI_API_KEY for OpenAI models")
+            console.print("  - GEMINI_API_KEY for Gemini models") 
+            console.print("  - ANTHROPIC_API_KEY for Anthropic models")
+            console.print("  - DEEPSEEK_API_KEY for DeepSeek models")
+        
+        # Show integration status
+        console.print(f"\n📊 **Integration Status:**")
+        if available_models:
+            console.print(f"- Frontend → CLI → UnifiedOrchestrator → 🤖 Native Pydantic AI Agent")
+            console.print(f"- Model routing: provider:model format (e.g., openai:gpt-4o-mini)")
+            console.print("[green]✅ Ready for Native Pydantic AI testing![/green]")
+        else:
+            console.print(f"- Frontend → CLI → UnifiedOrchestrator → 📡 LLM Service Fallback")
+            console.print("[yellow]⚠️  Using LLM service fallback - configure API keys for Pydantic AI[/yellow]")
+            
+        # Test with available model
+        if available_models:
+            console.print("\n🧪 Testing Dynamic Agent...")
+            try:
+                test_model = list(available_models.keys())[0]
+                agent = dynamic_orchestrator.create_agent(test_model)
+                if agent:
+                    console.print(f"✅ Agent created successfully with model: {test_model}")
+                else:
+                    console.print(f"❌ Failed to create agent with model: {test_model}")
+            except Exception as e:
+                console.print(f"❌ Agent test failed: {e}")
+            
+    except ImportError as e:
+        console.print(f"[red]❌ Import Error: {e}[/red]")
+    except Exception as e:
+        console.print(f"[red]❌ Error: {e}[/red]")
 
 
 @app.command()

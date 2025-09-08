@@ -3,10 +3,9 @@ import { spawn } from 'child_process';
 import * as path from 'path';
 
 /**
- * WebSocket/SSE Bridge for CLI Streaming
+ * Direct Pydantic AI Streaming Endpoint
  * 
- * This endpoint provides real-time streaming capabilities that bridge
- * the CLI's AG-UI Protocol streaming functionality to web SSE.
+ * Bypasses CLI complexity and connects directly to Pydantic AI dynamic orchestrator.
  */
 
 interface StreamMessage {
@@ -26,7 +25,7 @@ interface StreamMessage {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, persona = 'system', model = 'gemini:gemini-2.5-flash', stream_timeout = 10 } = body;
+    const { message, persona = 'system', model = 'openai:gpt-4o-mini' } = body;
 
     if (!message) {
       return new Response(
@@ -39,152 +38,210 @@ export async function POST(request: NextRequest) {
     const projectRoot = path.resolve(process.cwd());
     
     const stream = new ReadableStream({
-      start(controller) {
+      async start(controller) {
         const startTime = Date.now();
         let firstTokenTime: number | null = null;
         let totalBytes = 0;
         let eventCount = 0;
-        const traceId = `stream-${startTime}`;
+        const traceId = `pydantic-${startTime}`;
         
-        // Build CLI command for streaming chat
-        const cliArgs = [
-          'chat',
-          '--stream',
-          '--stream-timeout', stream_timeout.toString(),
-          '--persona', persona,
-          '--model', model,
-          '--debug', // Enable debug output for diagnostics
-          '--trace', // Enable trace output for diagnostics  
-          '--stats'  // Enable per-turn stats
-        ];
+        console.log(`🤖 Direct Pydantic AI: ${model} with persona ${persona}`);
         
-        console.log(`Starting CLI stream: python -m agentic.cli ${cliArgs.join(' ')}`);
+        try {
+          // Create Python script to call Pydantic AI directly
+          const pythonScript = `
+import asyncio
+import sys
+import os
+import json
+sys.path.append("${projectRoot}")
+
+async def main():
+    try:
+        from agentic.orchestrator.dynamic_agent import dynamic_orchestrator
         
-        // Spawn the Python CLI process
-        const child = spawn('python', ['-m', 'agentic.cli', ...cliArgs], {
-          cwd: projectRoot,
-          stdio: ['pipe', 'pipe', 'pipe'],
-          env: {
-            ...process.env,
-            PYTHONPATH: projectRoot,
-            AGENTIC_USER_ID: 'web-stream-user',
-            AGENTIC_DEFAULT_MODEL: model,
-          }
-        });
+        # Check model availability
+        available_models = dynamic_orchestrator.get_available_models()
+        if "${model}" not in available_models:
+            error_msg = f"Model ${model} not available. Available: {list(available_models.keys())}"
+            print(json.dumps({"error": error_msg}), file=sys.stderr)
+            return
+            
+        print("🚀 Streaming with Pydantic AI...", file=sys.stderr, flush=True)
         
-        let accumulatedOutput = '';
-        let isResponseStarted = false;
-        
-        // Handle stdout - this contains the actual response
-        child.stdout?.on('data', (data: Buffer) => {
-          const chunk = data.toString();
-          accumulatedOutput += chunk;
+        # Stream the response
+        async for chunk in dynamic_orchestrator.run_streaming_with_model(
+            model_spec="${model}",
+            message="""${message.replace(/"/g, '\\"')}""",
+            session_id="web-${Date.now()}",
+            user_id="web-user",
+            persona="${persona}",
+            context=None
+        ):
+            if chunk and chunk.strip():
+                print(chunk, end="", flush=True)
+                
+    except Exception as e:
+        error_data = {"error": f"Pydantic AI error: {str(e)}"}
+        print(json.dumps(error_data), file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+
+if __name__ == "__main__":
+    asyncio.run(main())
+`;
+
+          // Write temporary script
+          const fs = await import('fs');
+          const scriptPath = path.join(projectRoot, `pydantic_stream_${Date.now()}.py`);
+          fs.writeFileSync(scriptPath, pythonScript);
           
-          // Look for assistant response marker
-          if (chunk.includes('assistant:') && !isResponseStarted) {
-            isResponseStarted = true;
-            if (firstTokenTime === null) {
+          // Execute Python script
+          const child = spawn('python', [scriptPath], {
+            cwd: projectRoot,
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: {
+              ...process.env,
+              PYTHONPATH: projectRoot,
+            }
+          });
+          
+          let fullResponse = '';
+          
+          // Handle streaming response
+          child.stdout?.on('data', (data: Buffer) => {
+            const chunk = data.toString();
+            fullResponse += chunk;
+            
+            if (firstTokenTime === null && chunk.trim()) {
               firstTokenTime = Date.now() - startTime;
             }
-          }
-          
-          // Stream response content if we're in response mode
-          if (isResponseStarted) {
-            // Extract just the response content (after "assistant: ")
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              if (line.trim() && !line.includes('assistant:')) {
-                const content = line.trim();
-                if (content) {
-                  eventCount++;
-                  totalBytes += content.length;
-                  
-                  const streamMessage: StreamMessage = {
-                    content,
-                    persona,
-                    model,
-                    timestamp: new Date().toISOString(),
-                    diagnostics: {
-                      trace_id: traceId,
-                      first_token_ms: firstTokenTime,
-                      total_ms: Date.now() - startTime,
-                      sse_events: eventCount,
-                      sse_bytes: totalBytes
-                    }
-                  };
-                  
-                  const sseData = `data: ${JSON.stringify(streamMessage)}\n\n`;
-                  controller.enqueue(encoder.encode(sseData));
+            
+            if (chunk.trim()) {
+              eventCount++;
+              totalBytes += chunk.length;
+              
+              const streamMessage: StreamMessage = {
+                content: chunk,
+                persona,
+                model,
+                timestamp: new Date().toISOString(),
+                diagnostics: {
+                  trace_id: traceId,
+                  first_token_ms: firstTokenTime,
+                  total_ms: Date.now() - startTime,
+                  sse_events: eventCount,
+                  sse_bytes: totalBytes
                 }
+              };
+              
+              const sseData = `data: ${JSON.stringify(streamMessage)}\n\n`;
+              controller.enqueue(encoder.encode(sseData));
+            }
+          });
+          
+          // Handle errors and info
+          child.stderr?.on('data', (data: Buffer) => {
+            const output = data.toString();
+            console.log('Pydantic AI:', output);
+            
+            // Check for error JSON
+            try {
+              const errorData = JSON.parse(output);
+              if (errorData.error) {
+                const errorMessage = {
+                  content: '',
+                  persona,
+                  model,
+                  timestamp: new Date().toISOString(),
+                  error: errorData.error,
+                  final: true,
+                  success: false
+                };
+                
+                const errorSse = `data: ${JSON.stringify(errorMessage)}\n\n`;
+                controller.enqueue(encoder.encode(errorSse));
+                controller.close();
               }
+            } catch (e) {
+              // Not JSON, just log
             }
-          }
-        });
-        
-        // Handle stderr - this contains diagnostics and debug info
-        child.stderr?.on('data', (data: Buffer) => {
-          const errorOutput = data.toString();
-          console.warn('CLI stderr:', errorOutput);
+          });
           
-          // Look for diagnostic information in stderr
-          if (errorOutput.includes('latency:')) {
-            const match = errorOutput.match(/latency: (\d+) ms/);
-            if (match) {
-              const latencyMs = parseInt(match[1]);
-              // Could send diagnostic update here if needed
+          // Handle completion
+          child.on('close', (code: number | null) => {
+            // Clean up script
+            try {
+              fs.unlinkSync(scriptPath);
+            } catch (e) {
+              console.warn('Could not cleanup script:', e);
             }
-          }
-        });
-        
-        // Handle process completion
-        child.on('close', (code: number | null) => {
-          console.log(`CLI process closed with code: ${code}`);
+            
+            console.log(`Pydantic AI completed with code: ${code}`);
+            
+            // Send final message
+            const finalMessage = {
+              content: '',
+              persona,
+              model,
+              timestamp: new Date().toISOString(),
+              diagnostics: {
+                trace_id: traceId,
+                first_token_ms: firstTokenTime,
+                total_ms: Date.now() - startTime,
+                sse_events: eventCount,
+                sse_bytes: totalBytes
+              },
+              final: true,
+              success: code === 0,
+              response_length: fullResponse.length
+            };
+            
+            const finalSse = `data: ${JSON.stringify(finalMessage)}\n\n`;
+            controller.enqueue(encoder.encode(finalSse));
+            controller.close();
+          });
           
-          // Send final message with complete diagnostics
-          const finalMessage = {
-            content: '',
-            persona,
-            model,
-            timestamp: new Date().toISOString(),
-            diagnostics: {
-              trace_id: traceId,
-              first_token_ms: firstTokenTime,
-              total_ms: Date.now() - startTime,
-              sse_events: eventCount,
-              sse_bytes: totalBytes
-            },
-            final: true,
-            success: code === 0
-          };
+          child.on('error', (error: Error) => {
+            console.error('Process error:', error);
+            
+            // Clean up script
+            try {
+              fs.unlinkSync(scriptPath);
+            } catch (e) {}
+            
+            const errorMessage = {
+              content: '',
+              persona,
+              model,
+              timestamp: new Date().toISOString(),
+              error: `Process error: ${error.message}`,
+              final: true,
+              success: false
+            };
+            
+            const errorSse = `data: ${JSON.stringify(errorMessage)}\n\n`;
+            controller.enqueue(encoder.encode(errorSse));
+            controller.close();
+          });
           
-          const finalData = `data: ${JSON.stringify(finalMessage)}\n\n`;
-          controller.enqueue(encoder.encode(finalData));
-          controller.close();
-        });
-        
-        // Handle process errors
-        child.on('error', (error: Error) => {
-          console.error('CLI process error:', error);
+        } catch (error) {
+          console.error('Setup error:', error);
           
           const errorMessage = {
             content: '',
             persona,
             model,
             timestamp: new Date().toISOString(),
-            error: `CLI process error: ${error.message}`,
+            error: `Setup failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
             final: true,
             success: false
           };
           
-          const errorData = `data: ${JSON.stringify(errorMessage)}\n\n`;
-          controller.enqueue(encoder.encode(errorData));
+          const errorSse = `data: ${JSON.stringify(errorMessage)}\n\n`;
+          controller.enqueue(encoder.encode(errorSse));
           controller.close();
-        });
-        
-        // Send the user message to the CLI
-        const userInput = `${message}\n/exit\n`;
-        child.stdin?.write(userInput);
-        child.stdin?.end();
+        }
       }
     });
 
@@ -200,10 +257,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Streaming Error:', error);
+    console.error('Stream Error:', error);
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to start stream',
+        error: 'Failed to start Pydantic AI stream',
         details: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 
@@ -215,12 +272,13 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(_request: NextRequest) {
-  // Health check for streaming endpoint
+  // Health check for direct Pydantic AI endpoint
   return new Response(
     JSON.stringify({ 
       status: 'ready',
       streaming_supported: true,
-      ag_ui_protocol: true
+      pydantic_ai_direct: true,
+      description: 'Direct Pydantic AI streaming without CLI dependency'
     }),
     { 
       headers: { 'Content-Type': 'application/json' }

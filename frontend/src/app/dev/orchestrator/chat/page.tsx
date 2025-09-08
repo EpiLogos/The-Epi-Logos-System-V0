@@ -76,14 +76,29 @@ export default function OrchestratorChatPage() {
 
   const loadModels = async () => {
     try {
-      const response = await fetch('/api/dev/orchestrator/cli-bridge?command=models');
+      const response = await fetch('/api/dev/orchestrator/models');
       const result = await response.json();
       if (result.success) {
-        setModels(result.data.models || []);
-        setCurrentModel(result.data.current_model || result.data.default_model);
+        const availableModels = result.models
+          .filter((m: any) => m.available)
+          .map((m: any) => ({
+            name: m.id,
+            provider: m.provider,
+            ready: m.available
+          }));
+        setModels(availableModels);
+        if (availableModels.length > 0) {
+          setCurrentModel(availableModels[0].name);
+        }
       }
     } catch (error) {
       console.error('Failed to load models:', error);
+      // Fallback to basic models
+      setModels([
+        { name: 'gemini-2.5-flash', provider: 'Google', ready: true },
+        { name: 'gemini-2.5-pro', provider: 'Google', ready: true }
+      ]);
+      setCurrentModel('gemini-2.5-flash');
     }
   };
 
@@ -361,24 +376,34 @@ export default function OrchestratorChatPage() {
           }
         }
       } else {
-        // Non-streaming response (mock for now)
-        setTimeout(() => {
-          const assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: `Mock response from ${currentPersona} using ${currentModel}: "${userMessage.content}"`,
-            role: 'assistant',
+        // Non-streaming response using simple endpoint
+        const response = await fetch('/api/dev/orchestrator/simple', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: input,
             persona: currentPersona,
-            model: currentModel,
-            timestamp: new Date(),
-            diagnostics: {
-              trace_id: `trace-${Date.now()}`,
-              total_ms: 500,
-              sse_events: 0,
-              sse_bytes: 0
-            }
-          };
-          setMessages(prev => [...prev, assistantMessage]);
-        }, 500);
+            model: currentModel
+          })
+        });
+
+        const result = await response.json();
+
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: result.response || result.error || 'No response received',
+          role: 'assistant',
+          persona: currentPersona,
+          model: currentModel,
+          timestamp: new Date(),
+          diagnostics: {
+            trace_id: `trace-${Date.now()}`,
+            total_ms: 500,
+            sse_events: 0,
+            sse_bytes: 0
+          }
+        };
+        setMessages(prev => [...prev, assistantMessage]);
       }
     } catch (error) {
       console.error('Send message error:', error);

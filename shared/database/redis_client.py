@@ -25,9 +25,9 @@ class RedisClient:
         """Initialize Redis client with configuration from environment."""
         self.connection_url = os.getenv("REDIS_URL")
         self.password = os.getenv("REDIS_PASSWORD")
-        
+
         self._client: Optional[redis.Redis] = None
-        
+
         if not self.connection_url:
             raise ValueError("Redis connection URL must be configured")
     
