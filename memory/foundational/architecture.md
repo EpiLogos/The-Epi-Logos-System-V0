@@ -315,10 +315,10 @@ This section is the single source of truth for all technologies and specific ver
 | **Cache** | Redis | `8.2.1` | High-performance caching and event streaming. | Industry standard for its speed and versatile data structures, including Redis Streams for our event bus. |
 | **File Storage** | Cloudflare R2 | - | Storing user-uploaded assets or documents. | A scalable, low-cost object store that is a best practice for separating binary files from application data. |
 | **Authentication** | JWT-based + OAuth 2.0 | - | Securely managing user sessions and identity. | A standard, token-based approach that is secure and can integrate with third-party identity providers. |
-| **Frontend Testing** | Vitest + RTL | `3.2.4` / `16.3.0` | Unit/integration testing of frontend components. | Vitest integrates seamlessly with Vite. React Testing Library (RTL) encourages user-centric testing patterns. |
+| **Frontend Testing** | Jest | `29.7.0` | Unit/integration testing of frontend components. | A mature, battle-tested framework with a large ecosystem of testing utilities. |
 | **Backend Testing** | Pytest | `8.4.1` | Unit/integration testing of the Python backend. | The standard for Python testing, offering a powerful and flexible fixture model. |
 | **E2E Testing** | Playwright | `1.55.0` | End-to-end testing of critical user flows. | A modern, reliable choice for cross-browser automation with excellent debugging capabilities. |
-| **Containerization** | Docker | `28.3.3` | Packages applications into standard containers. | Ensures consistency across all development, testing, and production environments. |
+| **Containerization** | Docker | `28.3.3` | Packages applications into standard containers. | Ensures consistency across all development, testing, and production environments. | *PRODUCTION*
 | **Orchestration (V0.1)**| Docker Compose | `(latest)` | Manages multi-container application for dev/prod. | A pragmatic choice for V0.1 to maximize development velocity, with a clear migration path to Kubernetes. |
 | **CI/CD** | GitHub Actions | `2.328.0` | Automates the test, build, and deploy pipeline. | Natively integrated with the source code repository for a seamless workflow. |
 | **Monitoring** | Prometheus | `3.5.0 (LTS)` | Collects metrics for system health. | A powerful, open-source industry standard for metrics collection and alerting. |
