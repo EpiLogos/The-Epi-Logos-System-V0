@@ -16,7 +16,7 @@ from rich import box
 from rich.live import Live
 from rich.spinner import Spinner
 
-from .orchestrator_adapter import OrchestratorAdapter
+from .simple_agent_adapter import SimpleAgentAdapter
 from .diagnostics import DiagnosticsRecorder
 
 app = typer.Typer(add_completion=False, help="Agentic chat CLI for Unified Orchestrator.")
@@ -108,19 +108,17 @@ def print_config(model: str, persona: str, sys_prompt: str, stream: bool, transc
     console.print(t)
 
 
-@app.callback(invoke_without_command=True)
-def main(models: bool = typer.Option(False, "--models", help="List available models and exit")):
-    """Agentic CLI entry. Use `chat` to start the REPL."""
-    if models:
-        load_env()
-        adapter = OrchestratorAdapter(
-            model=os.getenv("AGENTIC_DEFAULT_MODEL", "openai:gpt-4o"),
-            user_id=os.getenv("AGENTIC_USER_ID", "cli-user"),
-            persona_key="system",
-        )
-        caps = asyncio.run(adapter.get_capabilities())
-        print_models(caps.get("models", []), caps.get("default_model", ""), current=None)
-        raise typer.Exit(0)
+@app.command()
+def models():
+    """List available models and exit."""
+    load_env()
+    adapter = SimpleAgentAdapter(
+        model=os.getenv("AGENTIC_DEFAULT_MODEL", "groq:moonshotai/kimi-k2-instruct"),
+        user_id=os.getenv("AGENTIC_USER_ID", "cli-user"),
+        persona_key="system",
+    )
+    caps = asyncio.run(adapter.get_capabilities())
+    print_models(caps.get("models", []), caps.get("default_model", ""), current=None)
 
 
 @app.command()
@@ -129,8 +127,8 @@ def doctor():
     load_env()
     console.print("Running diagnostics…")
     diag = DiagnosticsRecorder(debug=True, trace=True, dump_payloads=True, stats=True)
-    adapter = OrchestratorAdapter(
-        model=os.getenv("AGENTIC_DEFAULT_MODEL", "openai:gpt-4o"),
+    adapter = SimpleAgentAdapter(
+        model=os.getenv("AGENTIC_DEFAULT_MODEL", "groq:moonshotai/kimi-k2-instruct"),
         user_id=os.getenv("AGENTIC_USER_ID", "cli-user"),
         persona_key="system",
         system_override="",
@@ -153,7 +151,11 @@ def doctor():
             stream_iter, meta = await adapter.send_message("diagnostic ping", stream=True, strict=True, timeout_s=10)
             text = ""
             async for chunk in stream_iter:
-                text += chunk
+                # Handle both string chunks and dict chunks
+                if isinstance(chunk, dict):
+                    text += chunk.get('content', '')
+                else:
+                    text += str(chunk)
             passed = bool(meta.get('first_token_ms')) and len(text) > 0 and meta.get('streaming_mode') == 'ag_ui'
             console.print(f"Streaming: {'PASS' if passed else 'WARN'} first_token_ms={meta.get('first_token_ms')} total_ms={meta.get('latency_ms')} mode={meta.get('streaming_mode')} len={len(text)}")
         except Exception as e:
@@ -236,8 +238,8 @@ def agent_status():
 def persona_models():
     """🎭 Show and manage persona model assignments."""
     load_env()
-    adapter = OrchestratorAdapter(
-        model=os.getenv("AGENTIC_DEFAULT_MODEL", "openai:gpt-4o"),
+    adapter = SimpleAgentAdapter(
+        model=os.getenv("AGENTIC_DEFAULT_MODEL", "groq:moonshotai/kimi-k2-instruct"),
     )
 
     async def show_assignments():
@@ -277,7 +279,8 @@ def persona_models():
     asyncio.run(show_assignments())
 
 
-@app.command()
+@app.command(name="chat")
+@app.callback(invoke_without_command=True)
 def chat(
     model: Optional[str] = typer.Option(None, "--model", help="Model to use (provider:model); default from orchestrator"),
     persona: Optional[str] = typer.Option(None, "--persona", help="Persona key (orchestrator personas)"),
@@ -301,8 +304,8 @@ def chat(
 
     diag = DiagnosticsRecorder(debug=debug, trace=trace, dump_payloads=dump_payloads, stats=stats)
 
-    adapter = OrchestratorAdapter(
-        model=model or os.getenv("AGENTIC_DEFAULT_MODEL", "openai:gpt-4o"),
+    adapter = SimpleAgentAdapter(
+        model=model or os.getenv("AGENTIC_DEFAULT_MODEL", "gemini-2.5-flash"),
         user_id=os.getenv("AGENTIC_USER_ID", "cli-user"),
         persona_key=persona or "system",
         system_override=sys_override,
@@ -318,7 +321,11 @@ def chat(
     async def aiter_to_text(async_iter):
         text_parts: List[str] = []
         async for part in async_iter:
-            text_parts.append(part)
+            # Handle both string chunks and dict chunks
+            if isinstance(part, dict):
+                text_parts.append(part.get('content', ''))
+            else:
+                text_parts.append(str(part))
         return "".join(text_parts)
 
     def cmd_help():
@@ -328,6 +335,7 @@ def chat(
         console.print("/use <model> — switch model live")
         console.print("/personas — list available personas; current")
         console.print("/persona <key-or-path> — switch persona")
+        console.print("/tools — list available tools from orchestrator")
         console.print("/timeout <sec> — set streaming timeout per event")
         console.print("/sys [text] — view or set system override")
         console.print("/save [path] — save current transcript")
@@ -342,7 +350,7 @@ def chat(
         # Start session and load orchestrator capabilities
         caps = await adapter.get_capabilities()
         current_model = caps.get("default_model")
-        current_persona = persona or "system"
+        current_persona = adapter.persona_key
         current_sys = sys_override
         console.print(f"[dim]Using model: {current_model} (default: {caps.get('default_model')})[/]")
 
@@ -417,6 +425,35 @@ def chat(
                             console.print(f"System prompt updated (hash): [bold]{(status or {}).get('system_hash')}[/bold]")
                         else:
                             console.print("[red]Failed to update system prompt.[/]")
+                elif cmd == "/tools":
+                    try:
+                        tools = await adapter.list_orchestrator_tools()
+                        if tools:
+                            t = Table(title="Available Tools", box=box.SIMPLE_HEAVY)
+                            t.add_column("Tool Name")
+                            t.add_column("Description")
+
+                            # Add descriptions for known tools
+                            tool_descriptions = {
+                                "search_knowledge": "Search the knowledge base using LightRAG",
+                                "insert_knowledge": "Insert new knowledge into the knowledge base",
+                                "get_knowledge_graph": "Retrieve knowledge graph structure",
+                                "search_bimba": "Search the Bimba graph database",
+                                "create_bimba_node": "Create new nodes in Bimba graph",
+                                "update_bimba_node": "Update existing Bimba graph nodes",
+                                "create_graphiti_edge": "Create edges in Graphiti temporal graph",
+                                "search_graphiti_nodes": "Search Graphiti temporal nodes",
+                                "get_session_context": "Retrieve current session context"
+                            }
+
+                            for tool in tools:
+                                description = tool_descriptions.get(tool, "Tool from orchestrator")
+                                t.add_row(tool, description)
+                            console.print(t)
+                        else:
+                            console.print("[yellow]No tools available or failed to fetch tools.[/]")
+                    except Exception as e:
+                        console.print(f"[red]Failed to get tools:[/] {e}")
                 elif cmd == "/status":
                     status = await adapter.orch.get_session_status(adapter.session_id)
                     if not status:

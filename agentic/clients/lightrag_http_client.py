@@ -39,13 +39,13 @@ class LightRAGHttpClient(BackendHttpClient):
         logger.info(f"Ingesting document: {source_id} (coordinate: {source_coordinate})")
         return await self.post("/api/lightrag/documents/ingest", json_data=request_data)
     
-    async def search_documents(
+    async def search_gnostic_space(
         self,
         query: str,
         coordinate_filter: str = None,
         limit: int = 10
     ) -> Dict[str, Any]:
-        """Search documents in LightRAG using semantic similarity"""
+        """Search the Gnostic namespace (pedagogical document pool) using LightRAG"""
         request_data = {
             "query": query,
             "coordinate_filter": coordinate_filter,

@@ -33,6 +33,7 @@ export default function SimpleChatPage() {
   const [currentModel, setCurrentModel] = useState('');
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [toolCount, setToolCount] = useState<number>(0);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -45,8 +46,9 @@ export default function SimpleChatPage() {
   }, [messages]);
 
   useEffect(() => {
-    // Load available models
+    // Load available models and capabilities
     loadModels();
+    loadCapabilities();
   }, []);
 
   const loadModels = async () => {
@@ -93,6 +95,21 @@ export default function SimpleChatPage() {
       
       setAvailableModels([fallbackModel]);
       setCurrentModel(fallbackModel.id);
+    }
+  };
+
+  const loadCapabilities = async () => {
+    try {
+      const response = await fetch('http://localhost:8001/api/v1/orchestrator/capabilities');
+      const result = await response.json();
+      
+      if (result.success) {
+        setToolCount(result.tools ? result.tools.length : 0);
+        console.log(`Loaded ${result.tools ? result.tools.length : 0} tools from orchestrator`);
+      }
+    } catch (error) {
+      console.error('Failed to load capabilities:', error);
+      setToolCount(0);
     }
   };
 
@@ -438,6 +455,7 @@ export default function SimpleChatPage() {
               <div>• Pydantic AI: ✅</div>
               <div>• Model: {currentModel}</div>
               <div>• Available Models: {availableModels.filter(m => m.available).length}</div>
+              <div>• Tools: {toolCount}</div>
               <div>• Messages: {messages.length}</div>
               <div>• Session: {sessionId ? sessionId.substring(0, 8) + '...' : 'New'}</div>
             </div>

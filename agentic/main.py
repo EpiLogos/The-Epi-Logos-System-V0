@@ -131,11 +131,77 @@ async def orchestrator_status():
         "persona_coordination": "ready"
     }
 
+@app.get("/api/v1/orchestrator/sessions/{session_id}/status")
+async def get_session_status(session_id: str):
+    """Get real session status from Redis"""
+    from .orchestrator.redis_session_tools import RealRedisSessionClient
+    
+    try:
+        redis_client = RealRedisSessionClient()
+        await redis_client.connect()
+        
+        session_data = await redis_client.get_session(session_id)
+        if session_data:
+            return {
+                "session_id": session_id,
+                "active_model": session_data.get("model", "unknown"),
+                "active_persona": session_data.get("persona", "system"), 
+                "user_id": session_data.get("user_id", "unknown"),
+                "conversation_length": len(session_data.get("messages", [])),
+                "last_activity": session_data.get("updated_at"),
+                "system_override": session_data.get("system_override", ""),
+                "status": "active"
+            }
+        else:
+            return {
+                "session_id": session_id,
+                "status": "not_found",
+                "message": "Session not found in Redis"
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting session status: {e}")
+        return {
+            "session_id": session_id,
+            "status": "error", 
+            "message": str(e)
+        }
+
+@app.get("/api/v1/orchestrator/capabilities")
+async def get_orchestrator_capabilities():
+    """Get orchestrator capabilities including tools from Pydantic AI agent"""
+    from .agents.orchestrator_agent import get_agent_info, create_orchestrator_agent
+
+    # Get agent info
+    agent_info = get_agent_info()
+
+    # Return the actual tool names defined in setup_agent_tools
+    tools = [
+        "resolve_coordinate",
+        "search_gnostic_space", 
+        "get_session_context",
+        "check_context_window_status",
+        "ingest_wisdom",
+        "get_gnostic_workspace_info",
+        "remember_episode", 
+        "search_memory_patterns",
+        "form_memory_community",
+        "retrieve_session_continuity",
+        "access_agent_ruminations"
+    ]
+
+    return {
+        "success": True,
+        "tools": tools,
+        "agent_info": agent_info,
+        "tools_count": len(tools)
+    }
+
 @app.get("/api/v1/orchestrator/models")
 async def get_available_models():
     """Get available models for the orchestrator agent"""
     from .agents.orchestrator_agent import get_agent_info
-    
+
     # Get agent info which includes available models
     agent_info = get_agent_info()
     available_models = agent_info.get("available_models", {})
@@ -146,16 +212,20 @@ async def get_available_models():
     
     # Map environment variables to user-friendly model info
     model_mappings = {
+        "groq": {
+            "moonshotai/kimi-k2-instruct": {"name": "Kimi K2 Instruct", "provider": "Groq"},
+        },
         "gemini": {
             "gemini-2.5-flash": {"name": "Gemini 2.5 Flash", "provider": "Google"},
             "gemini-2.5-pro": {"name": "Gemini 2.5 Pro", "provider": "Google"},
             "gemini-1.5-pro": {"name": "Gemini 1.5 Pro", "provider": "Google"},
         },
-        "openai": {
-            "gpt-4o": {"name": "GPT-4o", "provider": "OpenAI"},
-            "gpt-4o-mini": {"name": "GPT-4o Mini", "provider": "OpenAI"},
-            "gpt-4-turbo": {"name": "GPT-4 Turbo", "provider": "OpenAI"},
-        },
+        # OpenAI commented out - streaming blocked by OpenAI biometric data collection
+        # "openai": {
+        #     "gpt-4o": {"name": "GPT-4o", "provider": "OpenAI"},
+        #     "gpt-4o-mini": {"name": "GPT-4o Mini", "provider": "OpenAI"},
+        #     "gpt-4-turbo": {"name": "GPT-4 Turbo", "provider": "OpenAI"},
+        # },
         "anthropic": {
             "claude-3-5-sonnet-20241022": {"name": "Claude 3.5 Sonnet", "provider": "Anthropic"},
             "claude-3-haiku-20240307": {"name": "Claude 3 Haiku", "provider": "Anthropic"},
@@ -167,36 +237,37 @@ async def get_available_models():
         }
     }
     
-    # Process available models - only include tested working ones
-    for provider, model_id in available_models.items():
-        if model_id:  # Only include models that have API keys configured
-            # Handle special cases for model format
-            if provider == "gemini":
-                # Gemini models work without provider prefix in Pydantic AI
-                full_model_id = model_id
-                clean_model_id = model_id
-            else:
-                # Other providers need provider:model format
-                if ":" not in model_id:
-                    full_model_id = f"{provider}:{model_id}"
+    # Process available models - only include providers with API keys configured
+    for provider, model_list in available_models.items():
+        if model_list:  # Only include providers that have API keys configured
+            for model_id in model_list:
+                # Handle special cases for model format
+                if provider == "gemini":
+                    # Gemini models work without provider prefix in Pydantic AI
+                    full_model_id = model_id
                     clean_model_id = model_id
                 else:
-                    full_model_id = model_id
-                    _, clean_model_id = model_id.split(":", 1)
-            
-            # Get model info from mappings
-            provider_models = model_mappings.get(provider, {})
-            model_info = provider_models.get(clean_model_id, {
-                "name": clean_model_id.title().replace("-", " "),
-                "provider": provider.title()
-            })
-            
-            models.append({
-                "id": full_model_id,  # Correct format for each provider
-                "name": model_info["name"],
-                "provider": model_info["provider"],
-                "available": True
-            })
+                    # Other providers need provider:model format
+                    if ":" not in model_id:
+                        full_model_id = f"{provider}:{model_id}"
+                        clean_model_id = model_id
+                    else:
+                        full_model_id = model_id
+                        _, clean_model_id = model_id.split(":", 1)
+                
+                # Get model info from mappings
+                provider_models = model_mappings.get(provider, {})
+                model_info = provider_models.get(clean_model_id, {
+                    "name": clean_model_id.title().replace("-", " "),
+                    "provider": provider.title()
+                })
+                
+                models.append({
+                    "id": full_model_id,  # Correct format for each provider
+                    "name": model_info["name"],
+                    "provider": model_info["provider"],
+                    "available": True
+                })
     
     # If no models are available, provide fallback
     if not models:

@@ -14,7 +14,7 @@ setup(
     install_requires=[
         # Core dependencies for CLI and orchestrator
         "typer",
-        "rich", 
+        "rich",
         "pydantic",
         "asyncio",
         # Add other dependencies as needed
@@ -22,6 +22,7 @@ setup(
     entry_points={
         'console_scripts': [
             'agentic-cli=agentic.cli.chat_cli:app',
+            'epii=agentic.cli.chat_cli:app',
         ],
     },
     include_package_data=True,

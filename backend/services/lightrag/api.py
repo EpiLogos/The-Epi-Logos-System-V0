@@ -100,7 +100,7 @@ async def ingest_document(
         )
         
         # Ingest document
-        result = service.ingest_document_with_coordinates_sync(doc)
+        result = await service.ingest_document_with_coordinates(doc)
         
         if result["success"]:
             return DocumentIngestionResponse(
@@ -129,7 +129,7 @@ async def search_documents(
 ):
     """Search documents with coordinate-based filtering"""
     try:
-        result = service.search_by_coordinates_sync(
+        result = await service.search_gnostic_space(
             query=request.query,
             coordinate_filter=request.coordinate_filter,
             limit=request.limit
@@ -213,46 +213,5 @@ async def list_workspace_documents(service: LightRAGService = Depends(get_servic
         }
 
 
-class CoordinateSearchRequest(BaseModel):
-    query: str
-    coordinate_filter: str
-    limit: int = 10
-    include_related: bool = True
 
 
-@router.post("/coordinates/search", response_model=SearchResponse)
-async def search_by_coordinate_advanced(
-    request: CoordinateSearchRequest,
-    service: LightRAGService = Depends(get_service)
-):
-    """Advanced coordinate-based search with related coordinate matching"""
-    try:
-        result = service.search_by_coordinates_sync(
-            query=request.query,
-            coordinate_filter=request.coordinate_filter,
-            limit=request.limit
-        )
-        
-        if result["success"]:
-            return SearchResponse(
-                success=True,
-                query=request.query,
-                coordinate_filter=request.coordinate_filter,
-                results=result["result"]
-            )
-        else:
-            return SearchResponse(
-                success=False,
-                query=request.query,
-                coordinate_filter=request.coordinate_filter,
-                error=result.get("error", "Unknown error")
-            )
-            
-    except Exception as e:
-        logger.error(f"Advanced coordinate search failed: {e}")
-        return SearchResponse(
-            success=False,
-            query=request.query,
-            coordinate_filter=request.coordinate_filter,
-            error=str(e)
-        )

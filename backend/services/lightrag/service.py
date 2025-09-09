@@ -75,8 +75,8 @@ class LightRAGService:
                 },
                 # Use Gemini embedding function
                 embedding_func=gemini_embedding_func,
-                # Database storage backends - NO LOCAL STORAGE
-                kv_storage="RedisKVStorage",  # Use Redis instead of local JSON files
+                # Database storage backends - JSON KV + Neo4j + Qdrant
+                kv_storage="JsonKVStorage",  # Local JSON file storage
                 graph_storage="Neo4JStorage",
                 vector_storage="QdrantVectorDBStorage",
                 # Pass configuration to vector storage backend
@@ -87,7 +87,6 @@ class LightRAGService:
                     "vector_size": self.qdrant_config["vector_size"]
                 }
                 # Neo4j configuration is handled via environment variables (no graph_storage_cls_kwargs parameter)
-                # Redis configuration should use REDIS_URL environment variable
             )
             self.database_enabled = True
             
@@ -207,22 +206,9 @@ class LightRAGService:
             print(f"Document ingestion error: {e}")
             return {"success": False, "error": str(e)}
     
-    def ingest_document_with_coordinates_sync(self, doc: BimbaDocument) -> Dict[str, Any]:
-        """
-        Synchronous wrapper - NOTE: Redis KV storage breaks LightRAG sync methods
-        Redis is async-only, so sync methods hang. Use async API instead.
-        """
-        return {
-            "success": False, 
-            "error": "Redis KV storage breaks sync methods. Use ingest_document_with_coordinates() async method instead.",
-            "document_id": doc.source_id,
-            "coordinates_requested": doc.metadata.source_coordinate,
-            "solution": "Call async method: await service.ingest_document_with_coordinates(doc)",
-            "reason": "Redis operations are async-only, LightRAG sync methods hang with Redis KV storage"
-        }
     
-    async def search_by_coordinates(self, query: str, coordinate_filter: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
-        """Search with coordinate-based filtering"""
+    async def search_gnostic_space(self, query: str, coordinate_filter: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
+        """Search the Gnostic namespace (pedagogical document pool) using LightRAG"""
         try:
             # Use proper QueryParam object
             query_param = QueryParam(mode="global", top_k=limit)
@@ -242,19 +228,6 @@ class LightRAGService:
             print(f"Search error: {e}")
             return {"success": False, "error": str(e)}
     
-    def search_by_coordinates_sync(self, query: str, coordinate_filter: Optional[str] = None, limit: int = 10) -> Dict[str, Any]:
-        """
-        Synchronous wrapper - NOTE: Redis KV storage breaks LightRAG sync methods
-        Redis is async-only, so sync methods hang. Use async API instead.
-        """
-        return {
-            "success": False,
-            "error": "Redis KV storage breaks sync methods. Use search_by_coordinates() async method instead.",
-            "query": query,
-            "coordinate_filter": coordinate_filter,
-            "solution": "Call async method: await service.search_by_coordinates(query, coordinate_filter, limit)",
-            "reason": "Redis operations are async-only, LightRAG sync methods hang with Redis KV storage"
-        }
     
     def _filter_by_coordinate(self, result: str, coordinate_filter: str) -> str:
         """Filter search results by Bimba coordinate"""
@@ -317,23 +290,6 @@ class LightRAGService:
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    def get_coordinate_context_sync(self, coordinate: str) -> Dict[str, Any]:
-        """Synchronous version of get coordinate context"""
-        try:
-            result = self.search_by_coordinates_sync(
-                query=f"content related to {coordinate}",
-                coordinate_filter=coordinate,
-                limit=50
-            )
-            
-            return {
-                "success": True,
-                "coordinate": coordinate,
-                "context": result.get("result", ""),
-                "workspace": self.workspace
-            }
-        except Exception as e:
-            return {"success": False, "error": str(e)}
     
     def list_workspace_documents(self) -> Dict[str, Any]:
         """List all documents in current workspace with coordinate metadata"""
