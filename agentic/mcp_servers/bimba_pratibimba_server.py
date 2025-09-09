@@ -1,24 +1,26 @@
 """
-Minimal Model Context Protocol (MCP) server for Bimba-Pratibimba coordinate resolution.
+Multi-client Model Context Protocol (MCP) server for Bimba-Pratibimba coordinate resolution.
 
 This MCP server provides a foundation tool that bridges orchestrator GraphQL 
-coordinate resolution capabilities to MCP format. It serves as a clean base
-for future orchestrator tool integrations.
+coordinate resolution capabilities to MCP format using SSE transport for 
+multiple concurrent client connections.
 
 Core tool:
 - resolve_coordinate: Resolve Epi-Logos coordinates via orchestrator's GraphQL client
 
-The server follows clean, minimal patterns and serves as foundation for 
-incremental addition of more orchestrator capabilities.
+The server uses HTTP+SSE transport to support multiple clients simultaneously,
+replacing the single-client STDIO transport limitation.
 """
 
 import asyncio
 import logging
-import re
 from typing import Any, Sequence
 
+from fastapi import FastAPI, Request
+from fastapi.routing import Mount
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
+from mcp.server.sse import SseServerTransport
 from mcp.types import (
     Resource, Tool, TextContent, ImageContent, EmbeddedResource,
     LoggingLevel, CallToolRequest, GetPromptRequest, ReadResourceRequest,
@@ -31,14 +33,15 @@ from agentic.clients.bimba_graphql_client import BimbaGraphQLClient
 logger = logging.getLogger(__name__)
 
 
-class BimbaPratibimbaMCPServer:
+class BimbaPratibimbaMCPServerSSE:
     """
-    Minimal MCP server for Bimba coordinate resolution.
+    Multi-client MCP server for Bimba coordinate resolution via SSE transport.
     
     Provides foundation for orchestrator capabilities in MCP format:
     - Single coordinate resolution tool using existing BimbaGraphQLClient
     - Clean error handling without system information leakage
     - Extensible structure for adding future orchestrator tools
+    - SSE transport supporting multiple concurrent client connections
     """
     
     def __init__(self):
@@ -49,20 +52,28 @@ class BimbaPratibimbaMCPServer:
         self.server = Server("bimba-pratibimba")
         self._setup_handlers()
         
-        logger.info("Initialized Bimba-Pratibimba MCP server")
+        # FastAPI app for SSE transport
+        self.app = FastAPI(
+            title="Bimba-Pratibimba MCP Server",
+            description="Multi-client Epi-Logos coordinate resolution MCP server",
+            version="1.0.0"
+        )
+        
+        # SSE transport
+        self.sse_transport = SseServerTransport("/messages")
     
     async def initialize(self):
-        """Initialize GraphQL client and prepare server for operation."""
+        """Initialize coordinate resolution client."""
         try:
-            # Initialize the BimbaGraphQLClient for coordinate resolution
             self.bimba_client = BimbaGraphQLClient()
+            logger.info("Initialized Bimba-Pratibimba MCP server with SSE transport")
             logger.info("BimbaGraphQLClient initialized successfully")
         except Exception as e:
             logger.error(f"Failed to initialize BimbaGraphQLClient: {e}")
             raise
     
     def _setup_handlers(self):
-        """Set up MCP server request handlers."""
+        """Setup MCP protocol handlers."""
         
         @self.server.list_tools()
         async def handle_list_tools() -> list[Tool]:
@@ -170,21 +181,25 @@ The tool returns comprehensive node information including name, subsystem, conte
                 response += f"Name: {result['name']}\n" 
                 response += f"Subsystem: {result['subsystem']}\n"
                 
-                if result.get("content"):
+                if result.get('content'):
                     response += f"Content: {result['content']}\n"
                 
                 # Add context information if available
-                context = result.get("context", {})
+                context = result.get('context', {})
                 if context:
                     response += "\nContext:\n"
                     for key, value in context.items():
-                        if value and key not in ['uuid', 'createdAt', 'updatedAt']:
-                            response += f"  {key}: {value}\n"
-                
-                # Add related coordinates if available
-                related = result.get("related_coordinates", [])
-                if related:
-                    response += f"\nRelated Coordinates: {len(related)} found"
+                        if value and key not in ['description']:  # Skip None values and avoid duplicate description
+                            if key == 'operationalEssence':
+                                response += f"  operationalEssence: {value}\n"
+                            elif key == 'coreNature':
+                                response += f"  coreNature: {value}\n"
+                            elif key == 'function':
+                                response += f"  function: {value}\n"
+                            elif key == 'symbol':
+                                response += f"  symbol: {value}\n"
+                            elif key == 'nodeType':
+                                response += f"  nodeType: {value}\n"
                 
                 return [TextContent(
                     type="text",
@@ -192,7 +207,7 @@ The tool returns comprehensive node information including name, subsystem, conte
                 )]
             else:
                 # Handle resolution failure
-                error_msg = result.get("error", "Coordinate resolution failed")
+                error_msg = result.get('error', 'Unknown error occurred during coordinate resolution')
                 return [TextContent(
                     type="text",
                     text=f"Resolution failed: {error_msg}"
@@ -210,75 +225,124 @@ The tool returns comprehensive node information including name, subsystem, conte
     def _get_schema_resource(self) -> str:
         """Get coordinate schema resource."""
         schema = {
-            "coordinate_format": "#N or #N.N (e.g., '#1', '#2.1', '#3.2.4')",
-            "subsystems": {
-                "#0": "Anuttara - Proto-logical processing (Neo4j core)",
-                "#1": "Paramasiva - Quaternal Logic engine (MongoDB)", 
-                "#2": "Parashakti - Vibrational processing (LightRAG)",
-                "#3": "Mahamaya - Symbolic transcription (Graphiti MCP)",
-                "#4": "Nara - Personal interface (Qdrant)",
-                "#5": "Epii - Orchestration synthesis (Redis + Notion)"
-            },
-            "response_fields": [
-                "coordinate", "name", "subsystem", "content", 
-                "context", "related_coordinates"
+            "coordinate_formats": [
+                {
+                    "format": "#",
+                    "description": "System root coordinate"
+                },
+                {
+                    "format": "#N",
+                    "description": "Primary subsystem coordinate (0-5)"
+                },
+                {
+                    "format": "#N-N-N",
+                    "description": "Hyphen-linked coordinate chain"
+                },
+                {
+                    "format": "#N.N",
+                    "description": "Dot-linked coordinate (typically after #4)"
+                }
             ],
-            "context_fields": [
-                "description", "operationalEssence", "coreNature", 
-                "function", "symbol", "nodeType"
-            ]
+            "subsystems": {
+                "0": "Anuttara - Proto-logical processing",
+                "1": "Paramasiva - Quaternal Logic engine",
+                "2": "Parashakti - Vibrational processing", 
+                "3": "Mahamaya - Symbolic transcription",
+                "4": "Nara - Personal interface",
+                "5": "Epii - Synthesis & orchestration"
+            },
+            "examples": ["#", "#0", "#1", "#1-2", "#3-4-5", "#4.2", "#2-3-5-4.2"]
         }
-        return str(schema)
-    
-    async def serve_stdio(self):
-        """Start the MCP server with stdio transport."""
-        from mcp.server.stdio import stdio_server
         
-        async with stdio_server() as (read_stream, write_stream):
-            await self.server.run(
-                read_stream,
-                write_stream,
-                InitializationOptions(
-                    server_name="bimba-pratibimba",
-                    server_version="1.0.0",
-                    capabilities=self.server.get_capabilities(
-                        notification_options=NotificationOptions(),
-                        experimental_capabilities={}
+        import json
+        return json.dumps(schema, indent=2)
+    
+    def setup_fastapi_routes(self):
+        """Setup FastAPI routes for health checks and info."""
+        
+        @self.app.get("/")
+        async def root():
+            return {
+                "name": "Bimba-Pratibimba MCP Server",
+                "version": "1.0.0",
+                "transport": "SSE",
+                "tools": ["resolve_coordinate"],
+                "resources": ["bimba://schema"],
+                "clients_supported": "Multiple concurrent connections"
+            }
+        
+        @self.app.get("/health")
+        async def health():
+            return {
+                "status": "healthy",
+                "bimba_client": "initialized" if self.bimba_client else "not_initialized"
+            }
+    
+    def connect_sse(self):
+        """Connect MCP server to FastAPI app via SSE transport."""
+        # Setup FastAPI routes
+        self.setup_fastapi_routes()
+        
+        # Add SSE routes to FastAPI app for message handling
+        self.app.router.routes.append(
+            Mount("/messages", app=self.sse_transport.handle_post_message)
+        )
+        
+        # Add SSE endpoint for connections
+        @self.app.get("/sse")
+        async def handle_sse(request: Request):
+            async with self.sse_transport.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
+                await self.server.run(
+                    streams[0], streams[1], 
+                    InitializationOptions(
+                        server_name="bimba-pratibimba",
+                        server_version="1.0.0",
+                        capabilities=self.server.get_capabilities()
                     )
                 )
-            )
-    
-    async def close(self):
-        """Close the MCP server and any resources."""
-        # Note: BimbaGraphQLClient doesn't require explicit closing
-        logger.info("Bimba-Pratibimba MCP server closed")
+        
+        logger.info("MCP server connected to SSE transport at /sse and /messages")
 
 
-# Entry point for running as a standalone MCP server
+# Global server instance for uvicorn
+mcp_server = BimbaPratibimbaMCPServerSSE()
+
+
+async def create_app() -> FastAPI:
+    """Create and initialize the FastAPI application."""
+    await mcp_server.initialize()
+    mcp_server.connect_sse()
+    return mcp_server.app
+
+
+# For direct execution
 async def main():
-    """Main entry point for standalone MCP server."""
-    import sys
+    """Main entry point for development testing."""
+    app = await create_app()
     
-    # Create and initialize MCP server
-    server = BimbaPratibimbaMCPServer()
+    # Use uvicorn for development
+    import uvicorn
+    config = uvicorn.Config(
+        app,
+        host="localhost",
+        port=8004,
+        log_level="info"
+    )
+    server = uvicorn.Server(config)
     
-    try:
-        # Initialize the server
-        await server.initialize()
-        logger.info("Starting Bimba-Pratibimba MCP server...")
-        
-        # Start serving
-        await server.serve_stdio()
-        
-    except KeyboardInterrupt:
-        logger.info("Shutting down MCP server...")
-    except Exception as e:
-        logger.error(f"MCP server error: {e}")
-        sys.exit(1)
-    finally:
-        await server.close()
+    logger.info("Starting Bimba-Pratibimba MCP server on http://localhost:8004")
+    logger.info("SSE endpoint: http://localhost:8004/sse")
+    logger.info("Messages endpoint: http://localhost:8004/messages") 
+    logger.info("Health check: http://localhost:8004/health")
+    
+    await server.serve()
 
 
 if __name__ == "__main__":
-    # Run as standalone MCP server
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
     asyncio.run(main())

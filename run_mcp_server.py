@@ -1,24 +1,31 @@
 #!/usr/bin/env python3
 """
-Convenient script to run the Bimba-Pratibimba MCP Server from project root.
+Multi-client MCP server startup script using SSE transport.
+
+This script starts the Bimba-Pratibimba MCP Server with HTTP+SSE transport,
+supporting multiple concurrent client connections unlike the single-client
+STDIO transport.
 
 Usage from project root:
-    python run_mcp_server.py
+    python run_mcp_server_sse.py
 
-This script ensures proper path setup and runs the MCP server using the 
-project's virtual environment and dependencies.
+Server endpoints:
+    - SSE: http://localhost:8004/sse/events (for MCP clients)
+    - Health: http://localhost:8004/health (monitoring)
+    - Info: http://localhost:8004/ (server details)
 """
 
 import asyncio
 import logging
 import sys
+import uvicorn
 from pathlib import Path
 
 # Ensure we're using the correct Python path
 project_root = Path(__file__).parent.absolute()
 sys.path.insert(0, str(project_root))
 
-from agentic.mcp_servers.bimba_pratibimba_server import main
+from agentic.mcp_servers.bimba_pratibimba_server import create_app
 
 if __name__ == "__main__":
     # Set up logging
@@ -27,16 +34,29 @@ if __name__ == "__main__":
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
     
-    print("🏃 Starting Bimba-Pratibimba MCP Server from project root...")
+    print("🌐 Starting Bimba-Pratibimba MCP Server (Multi-Client SSE)")
     print("📍 Working directory:", project_root)
     print("🔧 Using virtual environment:", sys.executable)
-    print("📡 Press Ctrl+C to stop the server")
-    print("=" * 60)
+    print("🔗 SSE endpoint: http://localhost:8004/sse")
+    print("📮 Messages endpoint: http://localhost:8004/messages")
+    print("💚 Health check: http://localhost:8004/health")
+    print("📡 Supports multiple concurrent clients")
+    print("🛑 Press Ctrl+C to stop the server")
+    print("=" * 80)
     print()
     
     try:
-        # Run the MCP server
-        asyncio.run(main())
+        # Create FastAPI app with MCP server
+        app = asyncio.run(create_app())
+        
+        # Run with uvicorn
+        uvicorn.run(
+            app,
+            host="localhost",
+            port=8004,
+            log_level="info",
+            access_log=True
+        )
     except KeyboardInterrupt:
         print("\n🛑 Server stopped by user")
     except Exception as e:

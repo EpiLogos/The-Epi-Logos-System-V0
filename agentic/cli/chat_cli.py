@@ -193,7 +193,7 @@ def agent_status():
     console.print("🤖 Checking Canonical Pydantic AI Agent Status...\n")
 
     try:
-        from ..agents.orchestrator_agent import get_agent_info
+        from ..agents.orchestrator.orchestrator_agent import get_agent_info
 
         info = get_agent_info()
 

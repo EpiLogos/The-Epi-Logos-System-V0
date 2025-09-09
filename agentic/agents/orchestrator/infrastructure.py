@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from .session import OrchestratorSessionManager
-from .conversation import ConversationManager
+from .session.session import OrchestratorSessionManager
+from .conversation.conversation import ConversationManager
 
 
 def get_default_managers() -> Tuple[OrchestratorSessionManager, ConversationManager]:

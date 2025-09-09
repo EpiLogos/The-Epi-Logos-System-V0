@@ -16,7 +16,7 @@ from .base import (
     WorkflowExecutionContext, 
     WorkflowExecutionResult
 )
-from ...orchestrator.core import PersonaType
+from ...agents.orchestrator.core import PersonaType
 
 
 class NaraAgentDependencies(BaseModel):

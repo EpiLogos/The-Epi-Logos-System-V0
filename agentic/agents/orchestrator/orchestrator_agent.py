@@ -33,7 +33,7 @@ except ImportError:
 import httpx
 
 # Import modular system prompt components
-from .orchestrator.system_prompt import get_complete_system_foundation
+from .system_prompt import get_complete_system_foundation
 
 logger = logging.getLogger(__name__)
 
@@ -278,7 +278,7 @@ if PYDANTIC_AI_AVAILABLE:
                 # Get current conversation messages from agent's context
                 # Note: This is a simplified approach - in full implementation 
                 # we'd access the actual message history
-                from ..agents.simple_context_processor import get_context_status, MODEL_LIMITS
+                from ..simple_context_processor import get_context_status, MODEL_LIMITS
                 
                 # Simulate current context status (in real implementation, we'd get actual messages)
                 model_name = ctx.deps.state.get('model', 'test') if ctx.deps.state else 'test'

@@ -32,8 +32,27 @@ export default function SimpleChatPage() {
   const [currentPersona, setCurrentPersona] = useState('system');
   const [currentModel, setCurrentModel] = useState('');
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [toolCount, setToolCount] = useState<number>(0);
+  
+  // Fetch session info from dedicated session API
+  const fetchSessionInfo = async (threadId: string) => {
+    try {
+      const response = await fetch(`http://localhost:8001/api/v1/sessions/${threadId}`);
+      if (response.ok) {
+        const sessionInfo = await response.json();
+        setSessionId(sessionInfo.session_id);
+        console.log('📝 Session info fetched:', sessionInfo);
+      } else if (response.status === 404) {
+        console.log('ℹ️ No session found for thread:', threadId);
+        setSessionId('Not created');
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch session info:', error);
+      setSessionId('Error');
+    }
+  };
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
@@ -136,7 +155,7 @@ export default function SimpleChatPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          thread_id: sessionId || `thread-${Date.now()}`,
+          thread_id: threadId || `thread-${Date.now()}`,
           run_id: `run-${Date.now()}`,
           messages: [
             // Send entire conversation history for native AG-UI context
@@ -167,11 +186,15 @@ export default function SimpleChatPage() {
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
         
-        // Set session ID from thread_id if this is a new session
-        const thread_id = sessionId || `thread-${Date.now()}`;
-        if (!sessionId) {
-          setSessionId(thread_id);
+        // Set thread ID if this is a new session
+        const current_thread_id = threadId || `thread-${Date.now()}`;
+        if (!threadId) {
+          setThreadId(current_thread_id);
         }
+        
+        // Fetch session info after chat interaction (session should exist now)
+        setTimeout(() => fetchSessionInfo(current_thread_id), 1000);
+        
         
         let messageContent = '';
         let messageId = '';
@@ -457,7 +480,8 @@ export default function SimpleChatPage() {
               <div>• Available Models: {availableModels.filter(m => m.available).length}</div>
               <div>• Tools: {toolCount}</div>
               <div>• Messages: {messages.length}</div>
-              <div>• Session: {sessionId ? sessionId.substring(0, 8) + '...' : 'New'}</div>
+              <div>• Thread: {threadId ? threadId.substring(0, 12) + '...' : 'New'}</div>
+              <div>• Session: {sessionId ? sessionId.substring(0, 8) + '...' : 'Pending'}</div>
             </div>
           </div>
 

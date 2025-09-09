@@ -12,6 +12,9 @@ export * from './auth';
 // Navigation subsystem domain logic (#0-#5 All coordinates)
 export * from './navigation';
 
+// Chat subsystem domain logic (#4/#5 Nara/Epii - Dialogical interface)
+export * from './chat';
+
 // AGUI subsystem domain logic (#5 Epii - Synthesis & orchestration) 
 export * from './agui';
 

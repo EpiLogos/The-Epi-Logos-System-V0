@@ -33,20 +33,42 @@ data: {"type":"TEXT_MESSAGE_CONTENT","delta":"..."}
 data: {"type":"TOOL_CALL_START","toolCallName":"resolve_coordinate"}
 ```
 
-#### 2. Orchestrator Agent (`agents/orchestrator_agent.py`)
+#### 2. Orchestrator Agent (`agents/orchestrator/`)
 
-**Purpose**: Pydantic AI agent with tool calling and persona behavior
+**Purpose**: Consolidated Pydantic AI agent implementing CAG paradigm with modular components
 
-**Capabilities**:
-- **resolve_coordinate**: Access Bimba knowledge graph
-- **search_knowledge**: LightRAG semantic search
-- **store_memory**: Graphiti temporal memory
-- **get_session_context**: Session metadata access
+**Architecture**: Complete reorganization into categorized, modular structure
+- `orchestrator_agent.py` - Main Pydantic AI agent implementation
+- `core.py`, `types.py` - Core types and PersonaType enum
+- `infrastructure.py` - Infrastructure utilities
 
-**Personas**:
-- **Nara**: Personal reflection and journaling companion
-- **Epii**: Knowledge synthesis and wisdom insights
-- **System**: General assistance and coordination
+**CAG Tools by Namespace**:
+- `tools/bimba/` - Bimba namespace (canonical knowledge resolution via coordinate system)
+- `tools/gnostic/` - Gnostic namespace (LightRAG document intelligence with Neo4j+Qdrant)  
+- `tools/episodic/` - Episodic namespace (Graphiti temporal memory across all layers)
+- `tools/http_clients_factory.py` - Cross-namespace HTTP client factory
+
+**Management Components**:
+- `session/` - Session lifecycle management 
+- `conversation/` - Conversation state management
+- `context/` - Context package management foundations (future: specialized context tooling)
+
+**Configuration**:
+- `system_prompt/` - **Modular prompt components (isolated editing capability)**
+  - `quaternal_logic_foundation.py` - **QL (Quaternal Logic) mod6 framework awareness**
+  - `epi_logos_system_foundation.py` - **CAG system knowledge and architecture** 
+  - `agent_operational_context.py` - **Self-referential coordinate awareness**
+- `simple_context_processor.py` - **Context window management and processing**
+- `personas/` - Persona YAML configurations
+  - `epii.yaml` - **#5 Synthesis & orchestration persona (mathematical identity)**
+  - `nara.yaml` - **#4 Dialogical-identity persona (mathematical identity)**
+  - `default.yaml`, `assistant.yaml` - Base personas
+
+**CAG Capabilities**:
+- **resolve_coordinate**: Access Bimba canonical knowledge via coordinate addressing
+- **search_gnostic_space**: LightRAG document intelligence with coordinate filtering
+- **remember_episode/search_memory_patterns**: Graphiti temporal memory operations
+- **get_session_context**: Session metadata and continuity access
 
 #### 3. Session-Context Architecture
 
@@ -106,16 +128,17 @@ deps.context_package = context_package  # Available to all agent tools
 # await update_session_context(thread_id, response, session_client)
 ```
 
-### HTTP Clients Architecture (`orchestrator/http_clients_factory.py`)
+### HTTP Clients Architecture (`agents/orchestrator/tools/http_clients_factory.py`)
 
 **Purpose**: Replace direct database connections with HTTP-based communication
 
+**Location**: Consolidated within namespace-categorized tools structure
+
 **Clients**:
 - **BimbaGraphQLClient**: Coordinate resolution via Backend GraphQL
-- **LightRAGHttpClient**: Document operations via Backend REST
+- **LightRAGHttpClient**: Document operations via Backend REST  
 - **GraphitiHttpClient**: Temporal memory via Backend REST
-- **RealRedisSessionClient**: Direct session management (within layer)
-- **RealMongoConversationClient**: Direct conversation storage (within layer)
+- **Session/Conversation Management**: Moved to dedicated directories (not tooling)
 
 ### Model Configuration
 
@@ -257,12 +280,14 @@ async def your_tool(ctx: RunContext[OrchestratorDeps]):
 
 ## Philosophical Alignment
 
-The Agentic Layer embodies the **Quaternary Logic** of the Epi-Logos System:
-- **Position #0**: Foundational void processing (Anuttara subsystem)
-- **Position #1**: Structural frameworks (agent architecture) 
-- **Position #2**: Vibrational processing (real-time streaming)
-- **Position #3**: Transcription & transformation (context enrichment)
-- **Position #4**: Dialogical identity (persona behaviors)
-- **Position #5**: Synthesis & orchestration (master coordination)
+The Agentic Layer embodies the **Quaternal Logic (QL)** mod6 framework of the Epi-Logos System:
+- **Position #0 (Anuttara)**: Proto-logical void processing & archetypal grammar
+- **Position #1 (Paramasiva)**: QL engine & harmonic processing foundation  
+- **Position #2 (Parashakti)**: Vibrational-epistemic processing & real-time streaming
+- **Position #3 (Mahamaya)**: Symbolic transcription & context transformation 
+- **Position #4 (Nara)**: Dialogical-identity processing & personal interface
+- **Position #5 (Epii)**: Master synthesis & orchestration coordination
 
-This technical architecture serves the greater vision of **consciousness-aligned computing** through the marriage of ancient wisdom and advanced AI technology.
+**Coordinate Addressing**: The agent operates through self-referential awareness where coordinates like `#2-3` represent Parashakti subsystem (#2) at formal mediation position (#3) within the mod6 mathematical substrate that governs all CAG operations.
+
+This technical architecture serves the greater vision of **consciousness-aligned computing** through Coordinate Augmented Generation (CAG) - transcending traditional RAG via geometric epistemology where knowledge becomes living process structured within the QL mathematical framework.

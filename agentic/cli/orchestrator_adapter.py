@@ -56,7 +56,7 @@ class OrchestratorAdapter:
     @property
     def orch(self):
         if self._orch is None:
-            core_mod = importlib.import_module('agentic.orchestrator.core')
+            core_mod = importlib.import_module('agentic.agents.orchestrator.core')
             UnifiedOrchestrator = getattr(core_mod, 'UnifiedOrchestrator')
             self._orch = UnifiedOrchestrator(
                 redis_url=self.redis_url,
@@ -74,7 +74,7 @@ class OrchestratorAdapter:
     async def set_persona_model(self, persona: str, model: str) -> bool:
         """Set model for a specific persona"""
         try:
-            core_mod = importlib.import_module('agentic.orchestrator.core')
+            core_mod = importlib.import_module('agentic.agents.orchestrator.core')
             PersonaType = getattr(core_mod, 'PersonaType')
             persona_type = PersonaType(persona.upper())
             return self.orch.set_persona_model(persona_type, model)

@@ -5,16 +5,72 @@ This is the main entry point for the agentic layer (Nervous System)
 of the tri-laminar architecture.
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
 import os
+import subprocess
+import httpx
+import asyncio
 from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env files
 load_dotenv()  # loads .env from project root
+
+
+async def check_mcp_server() -> bool:
+    """Check if MCP server is running on port 8004."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get("http://localhost:8004/health", timeout=2.0)
+            return response.status_code == 200
+    except Exception:
+        return False
+
+
+async def start_mcp_server():
+    """Start MCP server in a separate terminal if not running."""
+    if await check_mcp_server():
+        print("✅ MCP server already running")
+        return
+    
+    print("🚀 Starting MCP server in background...")
+    try:
+        # Start MCP server directly in background process
+        process = subprocess.Popen(
+            ["npm", "run", "dev:mcp"],
+            cwd=os.getcwd(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        
+        # Wait for server to start
+        for i in range(10):  # Wait up to 10 seconds
+            await asyncio.sleep(1)
+            if await check_mcp_server():
+                print("✅ MCP server started successfully")
+                return
+        
+        print("⚠️ MCP server may still be starting...")
+        print("💡 For observability, run in separate terminal: npm run dev:mcp")
+    except Exception as e:
+        print(f"⚠️ Could not auto-start MCP server: {e}")
+        print("💡 Please run manually: npm run dev:mcp")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup and shutdown."""
+    # Startup
+    print("🔄 Agentic Layer starting up...")
+    await start_mcp_server()
+    yield
+    # Shutdown - no special cleanup needed
+
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -22,7 +78,8 @@ app = FastAPI(
     description="Agentic AI layer for the Epi-Logos System V0.1",
     version="0.1.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS middleware
@@ -121,6 +178,10 @@ async def list_personas():
 from .api.ag_ui import router as ag_ui_router
 app.include_router(ag_ui_router)
 
+# Include session metadata API
+from .api.sessions import router as sessions_router
+app.include_router(sessions_router)
+
 @app.get("/api/v1/orchestrator/status")
 async def orchestrator_status():
     """Get orchestrator status"""
@@ -134,10 +195,10 @@ async def orchestrator_status():
 @app.get("/api/v1/orchestrator/sessions/{session_id}/status")
 async def get_session_status(session_id: str):
     """Get real session status from Redis"""
-    from .orchestrator.redis_session_tools import RealRedisSessionClient
+    from shared.database.redis_client import RedisClient
     
     try:
-        redis_client = RealRedisSessionClient()
+        redis_client = RedisClient()
         await redis_client.connect()
         
         session_data = await redis_client.get_session(session_id)
@@ -170,7 +231,7 @@ async def get_session_status(session_id: str):
 @app.get("/api/v1/orchestrator/capabilities")
 async def get_orchestrator_capabilities():
     """Get orchestrator capabilities including tools from Pydantic AI agent"""
-    from .agents.orchestrator_agent import get_agent_info, create_orchestrator_agent
+    from .agents.orchestrator.orchestrator_agent import get_agent_info, create_orchestrator_agent
 
     # Get agent info
     agent_info = get_agent_info()
@@ -200,7 +261,7 @@ async def get_orchestrator_capabilities():
 @app.get("/api/v1/orchestrator/models")
 async def get_available_models():
     """Get available models for the orchestrator agent"""
-    from .agents.orchestrator_agent import get_agent_info
+    from .agents.orchestrator.orchestrator_agent import get_agent_info
 
     # Get agent info which includes available models
     agent_info = get_agent_info()

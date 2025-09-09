@@ -1,6 +1,6 @@
 from .types import PersonaType
-from .session import OrchestratorSession, OrchestratorSessionManager
-from .conversation import ConversationManager
+from .session.session import OrchestratorSession, OrchestratorSessionManager
+from .conversation.conversation import ConversationManager
 
 __all__ = [
     "PersonaType",

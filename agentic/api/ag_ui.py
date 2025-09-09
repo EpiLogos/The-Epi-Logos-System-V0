@@ -16,37 +16,14 @@ from ag_ui.core import RunAgentInput
 from pydantic_ai.ag_ui import handle_ag_ui_request, run_ag_ui
 
 # Use the canonical orchestrator agent and HTTP-based deps
-from ..agents.orchestrator_agent import orchestrator_agent
-from ..orchestrator.http_clients_factory import create_enhanced_orchestrator_deps
+from ..agents.orchestrator.orchestrator_agent import orchestrator_agent
+from ..agents.orchestrator.tools.http_clients_factory import create_enhanced_orchestrator_deps
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/ag-ui", tags=["ag-ui-protocol"])
 
 
-async def ensure_session_lifecycle(thread_id: str, session_client, is_new_chat: bool = False) -> None:
-    """
-    Simple session lifecycle management for Redis.
-    Creates session on new chat, maintains it during conversation.
-    """
-    if not session_client:
-        return
-        
-    try:
-        if is_new_chat:
-            # Create new session for new chat
-            await session_client.create_session(user_id="web-user", session_data={"thread_id": thread_id})
-            logger.info(f"🆕 Created new session: {thread_id}")
-        else:
-            # Ensure session exists (create if not)
-            session = await session_client.get_session(thread_id)
-            if not session:
-                await session_client.create_session(user_id="web-user", session_data={"thread_id": thread_id})
-                logger.info(f"🆕 Created session: {thread_id}")
-            else:
-                logger.info(f"📖 Session active: {thread_id}")
-    except Exception as e:
-        logger.warning(f"⚠️ Session lifecycle failed: {e}")
 
 
 @router.post("/run")
@@ -89,11 +66,8 @@ async def run_agent(request: Request) -> Response:
             model_config=model_config
         )
         
-        # Simple session lifecycle management
-        await ensure_session_lifecycle(thread_id, deps.redis_client, is_new_chat)
-
         # Create orchestrator agent with selected model
-        from ..agents.orchestrator_agent import create_orchestrator_agent
+        from ..agents.orchestrator.orchestrator_agent import create_orchestrator_agent
         dynamic_agent = create_orchestrator_agent(model_config)
         
         # Use Pydantic AI's native AG-UI integration (original request, enriched deps)
@@ -136,7 +110,7 @@ async def run_agent_direct(run_input: RunAgentInput):
         )
 
         # Create orchestrator agent with selected model
-        from ..agents.orchestrator_agent import create_orchestrator_agent
+        from ..agents.orchestrator.orchestrator_agent import create_orchestrator_agent
         dynamic_agent = create_orchestrator_agent(model_config)
 
         # Use Pydantic AI's run_ag_ui for direct control

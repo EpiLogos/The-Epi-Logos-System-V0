@@ -44,10 +44,12 @@ class GraphitiHttpClient(BackendHttpClient):
         session_id: str = None,
         episode_type: str = None,
         limit: int = 10,
-        time_range_hours: int = None
+        time_range_hours: int = None,
+        group_id: str = "default"
     ) -> Dict[str, Any]:
         """Search episodes using semantic similarity"""
         params = {
+            "group_id": group_id,
             "query": query,
             "limit": limit
         }
@@ -57,7 +59,7 @@ class GraphitiHttpClient(BackendHttpClient):
             params["episode_type"] = episode_type
         if time_range_hours:
             params["time_range_hours"] = time_range_hours
-        
+
         logger.info(f"Searching episodes: '{query[:50]}...' (session: {session_id})")
         return await self.get("/api/graphiti/episodes/search", params=params)
     

@@ -42,5 +42,27 @@
     "create_time": 1757430532,
     "update_time": 1757430532,
     "_id": "global:keywords:25a0e69e63defaa7d150f62deeaed156"
+  },
+  "global:keywords:27a0a8adb9f8081513c2da24673b63e4": {
+    "return": "{\"high_level_keywords\": [\"Ontological shift\", \"Transformation\"], \"low_level_keywords\": [\"Chicken wing\", \"Aether\", \"Aether transformation\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "chicken wing aether transformation ontological shift",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "hl_keywords": [],
+      "ll_keywords": [],
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1757437031,
+    "update_time": 1757437031,
+    "_id": "global:keywords:27a0a8adb9f8081513c2da24673b63e4"
   }
 }

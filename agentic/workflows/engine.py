@@ -13,8 +13,8 @@ from pydantic import BaseModel
 from .state import WorkflowStateManager, WorkflowState, WorkflowStatus, WorkflowCheckpoint
 from .templates.base import PersonaWorkflow, WorkflowExecutionContext, WorkflowExecutionResult
 from .tools.registry import MCPToolRegistry
-from ..orchestrator.session import OrchestratorSession
-from ..orchestrator.core import PersonaType
+from ..agents.orchestrator.session.session import OrchestratorSession
+from ..agents.orchestrator.core import PersonaType
 
 
 class WorkflowEngineConfig(BaseModel):

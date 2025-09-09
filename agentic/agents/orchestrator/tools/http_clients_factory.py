@@ -11,14 +11,15 @@ import os
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 
-from ..clients import (
+from ....clients import (
     BackendHttpClient,
     LightRAGHttpClient, 
     GraphitiHttpClient,
     BimbaGraphQLClient
 )
-from .redis_session_tools import create_redis_session_client, RealRedisSessionClient
-from .mongo_conversation_tools import create_mongo_conversation_client, RealMongoConversationClient
+# Note: redis_session_tools and mongo_conversation_tools have been deprecated
+# as they mistakenly made session/conversation management part of tooling
+# Session/conversation management is now in dedicated directories
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +34,8 @@ class HttpClientsContainer:
         self.graphiti_client: Optional[GraphitiHttpClient] = None
         
         # Session management can still be direct since it's within agentic layer
-        self.redis_client: Optional[RealRedisSessionClient] = None
-        self.mongo_client: Optional[RealMongoConversationClient] = None
+        self.redis_client: Optional[Any] = None  # AsyncOrchestratorSessionManager
+        self.mongo_client: Optional[Any] = None  # ConversationManager
         
         self.connected_services = set()
         self.failed_services = set()
@@ -110,13 +111,14 @@ class HttpClientsContainer:
                 self.failed_services.add('graphiti')
                 results['graphiti'] = False
         
-        # Initialize Redis session client (direct connection within agentic layer)
+        # Initialize Redis session client (async manager for AG-UI compatibility)
         if 'redis' in required_services:
             try:
-                self.redis_client = await create_redis_session_client()
+                from ..session.async_session import create_async_session_manager
+                self.redis_client = await create_async_session_manager()
                 self.connected_services.add('redis')
                 results['redis'] = True
-                logger.info("✅ Redis session client connected")
+                logger.info("✅ Async Redis session manager connected")
             except Exception as e:
                 logger.warning(f"❌ Redis client failed: {e}")
                 self.failed_services.add('redis')
@@ -125,10 +127,15 @@ class HttpClientsContainer:
         # Initialize MongoDB conversation client (direct connection within agentic layer)
         if 'mongo' in required_services:
             try:
-                self.mongo_client = await create_mongo_conversation_client()
-                self.connected_services.add('mongo')
-                results['mongo'] = True
-                logger.info("✅ MongoDB conversation client connected")
+                from ..conversation.conversation import ConversationManager
+                self.mongo_client = ConversationManager()
+                # Test underlying MongoDB connection via the conversation manager
+                if self.mongo_client._mongo.test_connection():
+                    self.connected_services.add('mongo')
+                    results['mongo'] = True
+                    logger.info("✅ MongoDB conversation manager connected")
+                else:
+                    raise Exception("MongoDB conversation manager connection test failed")
             except Exception as e:
                 logger.warning(f"❌ MongoDB client failed: {e}")
                 self.failed_services.add('mongo')
@@ -203,7 +210,7 @@ async def create_enhanced_orchestrator_deps(
     
     Returns OrchestratorDeps for Pydantic AI StateHandler protocol compatibility.
     """
-    from ..agents.orchestrator_agent import OrchestratorDeps
+    from ..orchestrator_agent import OrchestratorDeps
     
     # Create HTTP clients container
     container = HttpClientsContainer()

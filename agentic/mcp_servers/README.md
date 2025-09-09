@@ -6,6 +6,12 @@ Minimal Model Context Protocol (MCP) server that bridges Epi-Logos orchestrator 
 
 This MCP server provides a foundation tool for resolving Epi-Logos coordinates using the existing orchestrator GraphQL client. It serves as a clean, extensible base for adding more orchestrator capabilities to MCP clients.
 
+**Key Benefits:**
+- ✅ **Multiple Client Support**: SSE transport allows Claude Desktop, VS Code, and other MCP clients simultaneously
+- ✅ **Single Server Instance**: One running server serves all clients (no duplicate processes)
+- ✅ **HTTP-Based**: Proper networking with health checks and monitoring endpoints
+- ✅ **Legacy Compatible**: Still supports single-client STDIO for simple scenarios
+
 ## Features
 
 ### Core Tool: `resolve_coordinate`
@@ -36,27 +42,36 @@ Resolves Epi-Logos coordinates to get node data, context, and relationships.
 
 ### Development Server
 
-**Recommended**: Start from project root using the root venv:
+**Recommended**: Start from project root using npm:
 
 ```bash
-# From project root (uses .venv automatically)
-python run_mcp_server.py
+# Using npm script (recommended)
+npm run dev:mcp
 ```
 
-**Alternative methods**:
+**Stop the server**:
 
 ```bash
-# As module from project root
-python -m agentic.mcp_servers.run_server
+# Graceful shutdown
+npm run stop:mcp
+```
 
-# From agentic subdirectory  
-cd agentic
-python mcp_servers/run_server.py
+**Alternative direct execution**:
+
+```bash
+# Direct execution from project root
+python run_mcp_server.py
 ```
 
 ### MCP Client Configuration
 
-To connect any MCP-compatible client (Claude Desktop, VS Code, etc.) to this server, use this JSON configuration:
+The server supports **multiple concurrent client connections** via SSE transport. 
+
+**Auto-start**: The MCP server automatically starts when you run `npm run dev:agentic`
+
+**Manual start**: Use `npm run dev:mcp` for dedicated terminal observability
+
+Configure your clients to connect to the running server:
 
 #### Claude Desktop Configuration
 
@@ -66,13 +81,8 @@ Add to your Claude Desktop `claude_desktop_config.json`:
 {
   "mcpServers": {
     "bimba-pratibimba": {
-      "command": "python",
-      "args": [
-        "/Users/admin/Documents/The Epi-Logos System V0/run_mcp_server.py"
-      ],
-      "env": {
-        "PYTHONPATH": "/Users/admin/Documents/The Epi-Logos System V0"
-      }
+      "url": "http://localhost:8004/sse",
+      "type": "sse"
     }
   }
 }
@@ -87,12 +97,8 @@ Add to your VS Code settings or MCP extension config:
   "mcp.servers": [
     {
       "name": "bimba-pratibimba",
-      "command": "python",
-      "args": ["/Users/admin/Documents/The Epi-Logos System V0/run_mcp_server.py"],
-      "cwd": "/Users/admin/Documents/The Epi-Logos System V0",
-      "env": {
-        "PYTHONPATH": "/Users/admin/Documents/The Epi-Logos System V0"
-      }
+      "url": "http://localhost:8004/sse",
+      "type": "sse"
     }
   ]
 }
@@ -106,9 +112,8 @@ For any MCP-compatible client:
 {
   "name": "bimba-pratibimba",
   "description": "Epi-Logos Coordinate Resolution MCP Server - 6-fold CAG system with Bimba coordinate mapping",
-  "command": "python",
-  "args": ["/Users/admin/Documents/The Epi-Logos System V0/run_mcp_server.py"],
-  "transport": "stdio",
+  "url": "http://localhost:8004/sse",
+  "type": "sse",
   "capabilities": {
     "tools": ["resolve_coordinate"],
     "resources": ["bimba://schema"]
@@ -128,7 +133,7 @@ For any MCP-compatible client:
 }
 ```
 
-**Note**: The paths above are configured for the current system. Update paths if you move the project directory.
+**Note**: Make sure the MCP server is running before connecting clients.
 
 ### LLM Usage Examples
 

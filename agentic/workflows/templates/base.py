@@ -9,9 +9,9 @@ from typing import Dict, Any, Optional, List
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 
-from ...orchestrator.core import PersonaType
-from ...orchestrator.session import OrchestratorSession
-from ...orchestrator.context_package import ContextPackage
+from ...agents.orchestrator.core import PersonaType
+from ...agents.orchestrator.session.session import OrchestratorSession
+from ...agents.orchestrator.context.context_package import ContextPackage
 
 
 class WorkflowExecutionContext(BaseModel):

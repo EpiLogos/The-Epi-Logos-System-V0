@@ -11,7 +11,7 @@ from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 from enum import Enum
 
-from ..orchestrator.core import PersonaType
+from ..agents.orchestrator.core import PersonaType
 
 
 class WorkflowStatus(str, Enum):

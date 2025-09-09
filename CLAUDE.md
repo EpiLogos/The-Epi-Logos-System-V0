@@ -266,14 +266,46 @@ async def graphql_endpoint(
     return JSONResponse(content=result)
 ```
 
-## Project Structure Highlights
+## Project Structure 
 
-### Workspaces
+### Trilaminar Architecture
+- `frontend/`: Next.js application (port 3000)
+- `backend/`: FastAPI backend service (port 8000)  
+- `agentic/`: Pydantic AI agent service (port 8001)
 - `packages/*`: Shared packages and components
-- `frontend/`: Next.js application
-- `backend/`: FastAPI backend service
-- `agentic/`: Pydantic AI agent service
 - `shared/`: Shared database clients and utilities
+
+### Agent Architecture
+
+#### Orchestrator Agent (`/agentic/agents/orchestrator/`)
+The core Pydantic AI agent implementing CAG paradigm with modular, categorized components:
+
+**Core Agent:**
+- `orchestrator_agent.py` - Main Pydantic AI agent implementation
+- `core.py`, `types.py` - Core types and PersonaType enum
+- `infrastructure.py` - Infrastructure utilities
+
+**CAG Tools by Namespace:**
+- `tools/bimba/` - Bimba namespace (canonical knowledge resolution via coordinate system)
+- `tools/gnostic/` - Gnostic namespace (LightRAG document intelligence with Neo4j+Qdrant)
+- `tools/episodic/` - Episodic namespace (Graphiti temporal memory across all layers)
+- `tools/http_clients_factory.py` - Cross-namespace HTTP client factory
+
+**Management Components:**
+- `session/` - Session lifecycle management 
+- `conversation/` - Conversation state management
+- `context/` - Context package management foundations (future: specialized context tooling)
+
+**Configuration:**
+- `system_prompt/` - Modular prompt components (isolated editing capability)
+  - `quaternal_logic_foundation.py` - QL (Quaternal Logic) mod6 framework awareness  
+  - `epi_logos_system_foundation.py` - CAG system knowledge and architecture
+  - `agent_operational_context.py` - Self-referential coordinate awareness
+- `simple_context_processor.py` - Context window management and processing
+- `personas/` - Persona YAML configurations
+  - `epii.yaml` - #5 Synthesis & orchestration persona
+  - `nara.yaml` - #4 Dialogical-identity persona
+  - `default.yaml`, `assistant.yaml` - Base personas
 
 ### Key Directories
 - `backend/subsystems/`: Six-coordinate subsystem implementations

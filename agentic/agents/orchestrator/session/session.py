@@ -18,7 +18,7 @@ import os
 import uuid
 
 from shared.database.redis_client import RedisClient
-from .types import PersonaType
+from ..types import PersonaType
 
 
 SESSION_TTL_SECONDS = int(os.getenv("ORCHESTRATOR_SESSION_TTL", "86400"))  # default 24h
