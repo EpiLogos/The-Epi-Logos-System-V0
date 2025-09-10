@@ -1,0 +1,177 @@
+graph TB
+    %% Agentic Layer Orchestration Architecture
+    
+    subgraph "Pydantic AI Application (Port 8001)"
+        direction TB
+        MAIN[main.py<br/>Agentic Entry Point]
+        
+        subgraph "AG-UI Protocol Integration"
+            AGUI_API[AG-UI API<br/>/api/ag-ui/*]
+            AGUI_STREAM[SSE Streaming<br/>Real-time Events]
+            AGUI_HANDLER[Request Handler<br/>Native Integration]
+        end
+        
+        subgraph "Orchestrator Agent"
+            ORCH_AGENT[Orchestrator Agent<br/>Pydantic AI Core]
+            ORCH_DEPS[Dependencies<br/>Client Injection]
+            ORCH_CONTEXT[Context Processor<br/>Window Management]
+            ORCH_PROMPTS[System Prompts<br/>Persona Behaviors]
+        end
+        
+        MAIN --> AGUI_API
+        AGUI_API --> AGUI_STREAM
+        AGUI_API --> AGUI_HANDLER
+        AGUI_HANDLER --> ORCH_AGENT
+        
+        ORCH_AGENT --> ORCH_DEPS
+        ORCH_AGENT --> ORCH_CONTEXT
+        ORCH_AGENT --> ORCH_PROMPTS
+    end
+    
+    subgraph "Tool Architecture (CAG Paradigm)"
+        direction TB
+        
+        subgraph "Bimba Namespace Tools"
+            BIMBA_RESOLVE[resolve_coordinate<br/>Canonical Knowledge]
+            BIMBA_SEARCH[search_coordinates<br/>Discovery Operations]
+            BIMBA_SUBSYSTEM[get_subsystem<br/>Coordinate Context]
+        end
+        
+        subgraph "Gnostic Namespace Tools"
+            GNOSTIC_INGEST[ingest_wisdom<br/>Document Processing]
+            GNOSTIC_SEARCH[search_gnostic_space<br/>Semantic Retrieval]
+            GNOSTIC_CONTEXT[get_coordinate_context<br/>Contextual Intelligence]
+        end
+        
+        subgraph "Episodic Namespace Tools"
+            EPISODIC_REMEMBER[remember_episode<br/>Memory Storage]
+            EPISODIC_SEARCH[search_memory_patterns<br/>Temporal Retrieval]
+            EPISODIC_SESSION[get_session_context<br/>Continuity Tracking]
+        end
+        
+        BIMBA_RESOLVE --> BIMBA_SEARCH
+        BIMBA_SEARCH --> BIMBA_SUBSYSTEM
+        
+        GNOSTIC_INGEST --> GNOSTIC_SEARCH
+        GNOSTIC_SEARCH --> GNOSTIC_CONTEXT
+        
+        EPISODIC_REMEMBER --> EPISODIC_SEARCH
+        EPISODIC_SEARCH --> EPISODIC_SESSION
+    end
+    
+    subgraph "MCP Server Integration"
+        direction TB
+        
+        subgraph "Bimba MCP Server"
+            
+            BIMBA_TOOLS[MCP Tool Handlers<br/>Coordinate Operations]
+            BIMBA_SCHEMA[Tool Schema<br/>Parameter Validation]
+        end
+        
+        subgraph "LightRAG MCP Server"
+            
+            LIGHT_TOOLS[MCP Tool Handlers<br/>Intelligence Operations]
+            LIGHT_SCHEMA[Tool Schema<br/>Document Validation]
+        end
+        
+        subgraph "Graphiti MCP Server"
+            
+            GRAPH_TOOLS[MCP Tool Handlers<br/>Episode Operations]
+            GRAPH_SCHEMA[Tool Schema<br/>Memory Validation]
+        end
+        
+  
+        BIMBA_TOOLS --> BIMBA_SCHEMA
+        
+       
+        LIGHT_TOOLS --> LIGHT_SCHEMA
+        
+        
+        GRAPH_TOOLS --> GRAPH_SCHEMA
+    end
+    
+    subgraph "Client Architecture"
+        direction TB
+        
+        subgraph "Backend HTTP Clients"
+            BACKEND_CLIENT[Backend HTTP Client<br/>Base Communication]
+            BIMBA_CLIENT[Bimba GraphQL Client<br/>Coordinate Resolution]
+            LIGHTRAG_CLIENT[LightRAG Client<br/>Document Operations]
+            GRAPHITI_CLIENT[Graphiti Client<br/>Memory Operations]
+        end
+        
+        subgraph "Model Integration"
+            MODEL_FACTORY[Model Factory<br/>Dynamic Selection]
+            GEMINI_CLIENT[Gemini Client<br/>Google AI]
+            OPENAI_CLIENT[OpenAI Client<br/>GPT Models]
+            ANTHROPIC_CLIENT[Anthropic Client<br/>Claude Models]
+        end
+        
+        BACKEND_CLIENT --> BIMBA_CLIENT
+        BACKEND_CLIENT --> LIGHTRAG_CLIENT
+        BACKEND_CLIENT --> GRAPHITI_CLIENT
+        
+        MODEL_FACTORY --> GEMINI_CLIENT
+        MODEL_FACTORY --> OPENAI_CLIENT
+        MODEL_FACTORY --> ANTHROPIC_CLIENT
+    end
+    
+    subgraph "Persona System"
+        direction TB
+        
+        subgraph "PersonaType Enum"
+            PERSONA_ANUTTARA[ANUTTARA<br/>Proto-logical Processing]
+            PERSONA_PARAMASIVA[PARAMASIVA<br/>QL Engine]
+            PERSONA_PARASHAKTI[PARASHAKTI<br/>Vibrational Processing]
+            PERSONA_MAHAMAYA[MAHAMAYA<br/>Symbolic Transcription]
+            PERSONA_NARA[NARA<br/>Personal Interface]
+            PERSONA_EPII[EPII<br/>Synthesis Orchestration]
+        end
+        
+        subgraph "Dynamic Routing"
+            PERSONA_ROUTER[Persona Router<br/>Context-aware Selection]
+            PERSONA_PROMPTS[Persona Prompts<br/>Behavioral Adaptation]
+            PERSONA_TOOLS[Persona Tools<br/>Capability Mapping]
+        end
+        
+        PERSONA_ROUTER --> PERSONA_ANUTTARA
+        PERSONA_ROUTER --> PERSONA_PARAMASIVA
+        PERSONA_ROUTER --> PERSONA_PARASHAKTI
+        PERSONA_ROUTER --> PERSONA_MAHAMAYA
+        PERSONA_ROUTER --> PERSONA_NARA
+        PERSONA_ROUTER --> PERSONA_EPII
+        
+        PERSONA_PROMPTS --> PERSONA_ROUTER
+        PERSONA_TOOLS --> PERSONA_ROUTER
+    end
+    
+    %% Tool Integration
+    ORCH_AGENT --> BIMBA_RESOLVE
+    ORCH_AGENT --> GNOSTIC_INGEST
+    ORCH_AGENT --> EPISODIC_REMEMBER
+    
+    %% Client Dependencies
+    ORCH_DEPS --> BIMBA_CLIENT
+    ORCH_DEPS --> LIGHTRAG_CLIENT
+    ORCH_DEPS --> GRAPHITI_CLIENT
+    ORCH_DEPS --> MODEL_FACTORY
+    
+    
+    %% Backend Communication
+    BIMBA_CLIENT -.->|GraphQL| BACKEND_CLIENT
+    LIGHTRAG_CLIENT -.->|HTTP API| BACKEND_CLIENT
+    GRAPHITI_CLIENT -.->|HTTP API| BACKEND_CLIENT
+    
+    %% Persona Integration
+    ORCH_PROMPTS --> PERSONA_PROMPTS
+    ORCH_AGENT --> PERSONA_ROUTER
+    
+    classDef agent fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#ffffff
+    classDef tool fill:#059669,stroke:#047857,stroke-width:2px,color:#ffffff
+    classDef client fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#ffffff
+    classDef persona fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#ffffff
+    
+    class ORCH_AGENT,ORCH_DEPS,ORCH_CONTEXT,ORCH_PROMPTS,AGUI_API,AGUI_STREAM,AGUI_HANDLER agent
+    class BIMBA_RESOLVE,BIMBA_SEARCH,BIMBA_SUBSYSTEM,GNOSTIC_INGEST,GNOSTIC_SEARCH,GNOSTIC_CONTEXT,EPISODIC_REMEMBER,EPISODIC_SEARCH,EPISODIC_SESSION tool
+    class BACKEND_CLIENT,BIMBA_CLIENT,LIGHTRAG_CLIENT,GRAPHITI_CLIENT,MODEL_FACTORY,GEMINI_CLIENT,OPENAI_CLIENT,ANTHROPIC_CLIENT client
+    class PERSONA_ANUTTARA,PERSONA_PARAMASIVA,PERSONA_PARASHAKTI,PERSONA_MAHAMAYA,PERSONA_NARA,PERSONA_EPII,PERSONA_ROUTER,PERSONA_PROMPTS,PERSONA_TOOLS persona

@@ -1,0 +1,156 @@
+graph TB
+    %% Backend Services Architecture
+    
+    subgraph "FastAPI Application (Port 8000)"
+        direction TB
+        MAIN[main.py<br/>Application Entry]
+        
+        subgraph "API Layer"
+            REST[REST Endpoints<br/>/api/*]
+            GRAPHQL[GraphQL Endpoint<br/>/graphql]
+            HEALTH[Health Checks<br/>/api/health]
+            SECURITY[Security Endpoints<br/>/api/security]
+        end
+        
+        subgraph "Core Services"
+            USER_SVC[User Service<br/>Authentication & Profiles]
+            JWT_SVC[JWT Service<br/>Token Management]
+            MFA_SVC[MFA Service<br/>Multi-factor Auth]
+            BILLING_SVC[Billing Service<br/>Subscription Management]
+        end
+        
+        MAIN --> REST
+        MAIN --> GRAPHQL
+        MAIN --> HEALTH
+        MAIN --> SECURITY
+        
+        REST --> USER_SVC
+        REST --> JWT_SVC
+        REST --> MFA_SVC
+        REST --> BILLING_SVC
+    end
+    
+    subgraph "Microservice Architecture"
+        direction TB
+        
+        subgraph "LightRAG Service"
+            LIGHT_API[LightRAG API<br/>Document Operations]
+            LIGHT_SVC[LightRAG Service<br/>Core Intelligence]
+            LIGHT_MCP[LightRAG MCP<br/>Agent Integration]
+            LIGHT_MODELS[Document Models<br/>Bimba Metadata]
+        end
+        
+        subgraph "Graphiti Service"
+            GRAPH_API[Graphiti API<br/>Memory Operations]
+            GRAPH_SVC[Graphiti Service<br/>Temporal Memory]
+            GRAPH_MCP[Graphiti MCP<br/>Episode Management]
+            GRAPH_MODELS[Memory Models<br/>Episode & Community]
+        end
+        
+        subgraph "Coordinate Resolution"
+            COORD_SCHEMA[GraphQL Schema<br/>Bimba Queries]
+            COORD_RESOLVERS[GraphQL Resolvers<br/>Node Operations]
+            COORD_REPO[Node Repository<br/>Database Access]
+            COORD_SVC[Node Service<br/>Business Logic]
+        end
+        
+        LIGHT_API --> LIGHT_SVC
+        LIGHT_SVC --> LIGHT_MCP
+        LIGHT_SVC --> LIGHT_MODELS
+        
+        GRAPH_API --> GRAPH_SVC
+        GRAPH_SVC --> GRAPH_MCP
+        GRAPH_SVC --> GRAPH_MODELS
+        
+        COORD_SCHEMA --> COORD_RESOLVERS
+        COORD_RESOLVERS --> COORD_REPO
+        COORD_REPO --> COORD_SVC
+    end
+    
+    subgraph "Authentication Architecture"
+        direction TB
+        
+        subgraph "OAuth Integration"
+            GOOGLE_OAUTH[Google OAuth Client<br/>PKCE + OIDC]
+            OAUTH_STATE[OAuth State Manager<br/>Security Validation]
+            NONCE_MGR[Nonce Manager<br/>Replay Protection]
+            TOKEN_REV[Token Revocation<br/>Security Monitoring]
+        end
+        
+        subgraph "Session Management"
+            JWT_HANDLER[JWT Handler<br/>Token Operations]
+            SESSION_STORE[Session Storage<br/>Redis Integration]
+            AUTH_MIDDLEWARE[Auth Middleware<br/>Request Validation]
+        end
+        
+        GOOGLE_OAUTH --> OAUTH_STATE
+        OAUTH_STATE --> NONCE_MGR
+        NONCE_MGR --> TOKEN_REV
+        
+        JWT_HANDLER --> SESSION_STORE
+        SESSION_STORE --> AUTH_MIDDLEWARE
+    end
+    
+    subgraph "Database Integration"
+        direction TB
+        
+        subgraph "Shared Database Clients"
+            NEO4J_CLIENT[Neo4j Client<br/>Unified Graph Access]
+            MONGO_CLIENT[MongoDB Client<br/>User Data Access]
+            REDIS_CLIENT[Redis Client<br/>Cache & Streams]
+            QDRANT_CLIENT[Qdrant Client<br/>Vector Operations]
+        end
+        
+        subgraph "Repository Pattern"
+            USER_REPO[User Repository<br/>MongoDB Operations]
+            NODE_REPO[Node Repository<br/>Neo4j Operations]
+            CACHE_REPO[Cache Repository<br/>Redis Operations]
+        end
+        
+        NEO4J_CLIENT --> NODE_REPO
+        MONGO_CLIENT --> USER_REPO
+        REDIS_CLIENT --> CACHE_REPO
+        REDIS_CLIENT --> SESSION_STORE
+    end
+    
+    %% Service Dependencies
+    USER_SVC --> USER_REPO
+    USER_SVC --> JWT_HANDLER
+    USER_SVC --> GOOGLE_OAUTH
+    
+    LIGHT_SVC --> NEO4J_CLIENT
+    LIGHT_SVC --> QDRANT_CLIENT
+    
+    GRAPH_SVC --> NEO4J_CLIENT
+    
+    COORD_SVC --> NODE_REPO
+    COORD_RESOLVERS --> COORD_SVC
+    
+    GRAPHQL --> COORD_RESOLVERS
+    REST --> LIGHT_API
+    REST --> GRAPH_API
+    
+    %% External Integrations
+    subgraph "External Services"
+        NEO4J_LOCAL[Neo4j Local<br/>Local Graph Database]
+        MONGO_ATLAS[MongoDB Atlas<br/>Cloud Database]
+        REDIS_CLOUD[Redis Cloud<br/>Cache Service]
+        QDRANT_LOCAL[Qdrant<br/>Local Vector DB]
+    end
+    
+    NEO4J_CLIENT -.->|Connection| NEO4J_Local
+    MONGO_CLIENT -.->|Connection| MONGO_ATLAS
+    REDIS_CLIENT -.->|Connection| REDIS_CLOUD
+    QDRANT_CLIENT -.->|Connection| QDRANT_LOCAL
+    
+    classDef api fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#ffffff
+    classDef service fill:#059669,stroke:#047857,stroke-width:2px,color:#ffffff
+    classDef auth fill:#dc2626,stroke:#b91c1c,stroke-width:2px,color:#ffffff
+    classDef database fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#ffffff
+    classDef external fill:#64748b,stroke:#475569,stroke-width:2px,color:#ffffff
+    
+    class REST,GRAPHQL,HEALTH,SECURITY,LIGHT_API,GRAPH_API,COORD_SCHEMA api
+    class USER_SVC,JWT_SVC,MFA_SVC,BILLING_SVC,LIGHT_SVC,GRAPH_SVC,COORD_SVC service
+    class GOOGLE_OAUTH,OAUTH_STATE,NONCE_MGR,TOKEN_REV,JWT_HANDLER,SESSION_STORE,AUTH_MIDDLEWARE auth
+    class NEO4J_CLIENT,MONGO_CLIENT,REDIS_CLIENT,QDRANT_CLIENT,USER_REPO,NODE_REPO,CACHE_REPO database
+    class NEO4J_LOCAL,MONGO_ATLAS,REDIS_CLOUD,QDRANT_LOCAL external

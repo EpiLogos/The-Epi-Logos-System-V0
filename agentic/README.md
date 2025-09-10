@@ -1,18 +1,38 @@
-# Epi-Logos Agentic Layer
+# Agentic Layer - Nervous System
 
-## Overview
+The Agentic Layer serves as the **Nervous System** of the Epi-Logos System, orchestrating AI agent behaviors, persona management, and intelligent context processing through the trilaminar architecture.
 
-The Agentic Layer is the **Nervous System** of the Epi-Logos trilaminar architecture, responsible for AI agent orchestration, persona management, and intelligent context processing. It operates independently on port 8001 and communicates with the Backend Layer via HTTP/GraphQL APIs.
+## Architecture Overview
 
-## Architecture
+### Core Principles
+- **Pydantic AI Integration** - Native agent framework with tool calling
+- **CAG Paradigm Implementation** - Coordinate-Augmented Generation
+- **MCP Protocol Support** - Model Context Protocol for tool integration
+- **AG-UI Streaming** - Real-time agent communication
+- **Persona-Aware Processing** - Dynamic behavioral adaptation
 
-### Trilaminar Separation
+### Port Configuration
+- **Primary Service**: Port 8001
+- **AG-UI Protocol**: `/api/ag-ui/*`
+- **Health Monitoring**: `/health`
 
-The Agentic Layer maintains strict architectural boundaries:
+## Agent Architecture
 
-- **Frontend (Port 3000)**: UI/UX → calls Agentic APIs
-- **Agentic (Port 8001)**: AI agents & orchestration → calls Backend APIs  
-- **Backend (Port 8000)**: Database operations only
+### Trilaminar Integration
+
+The Agentic Layer maintains clear architectural boundaries while enabling seamless integration:
+
+- **Frontend → Agentic** - AG-UI protocol for user interactions
+- **Agentic → Backend** - HTTP/GraphQL for data operations
+- **Agentic ↔ MCP Servers** - Tool protocol for capability extension
+
+### Pydantic AI Foundation
+
+Built on Pydantic AI's native capabilities:
+- **Agent Framework** - Structured agent definitions with dependency injection
+- **Tool Integration** - Native tool calling with validation
+- **Streaming Support** - Real-time response generation
+- **Context Management** - Conversation history and window management
 
 ### Core Components
 

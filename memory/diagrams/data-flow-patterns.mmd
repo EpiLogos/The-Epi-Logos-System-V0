@@ -1,0 +1,133 @@
+sequenceDiagram
+    participant F as Frontend<br/>(Port 3000)
+    participant A as Agentic<br/>(Port 8001)
+    participant B as Backend<br/>(Port 8000)
+    participant N as Neo4j<br/>(Unified Graph)
+    participant M as MongoDB<br/>(User Data)
+    participant R as Redis<br/>(Cache/Streams)
+    participant Q as Qdrant<br/>(Vectors)
+
+    Note over F,Q: Trilaminar Data Flow Patterns
+
+    %% Authentication Flow
+    rect rgb(220, 38, 38, 0.1)
+        Note over F,M: Authentication Flow
+        F->>B: POST /api/users/login
+        B->>M: Validate credentials
+        M-->>B: User data
+        B->>R: Store session
+        B-->>F: JWT tokens + user profile
+        F->>F: Update auth context
+    end
+
+    %% Coordinate Resolution Flow
+    rect rgb(59, 130, 246, 0.1)
+        Note over F,N: Coordinate Resolution Flow
+        F->>A: POST /api/ag-ui/run (resolve #2-3-1)
+        A->>A: Create orchestrator agent
+        A->>B: GraphQL coordinate query
+        B->>N: MATCH (n:BimbaNode {coordinate: "#2-3-1"})
+        N-->>B: Node data + relationships
+        B-->>A: GraphQL response
+        A->>R: Cache coordinate result
+        A-->>F: SSE stream with coordinate data
+    end
+
+    %% Document Intelligence Flow
+    rect rgb(5, 150, 105, 0.1)
+        Note over F,Q: Document Intelligence Flow
+        F->>A: POST /api/ag-ui/run (ingest wisdom)
+        A->>A: Activate gnostic tools
+        A->>B: POST /api/lightrag/ingest
+        B->>N: Store document graph
+        B->>Q: Store vector embeddings
+        B->>R: Cache document metadata
+        B-->>A: Ingestion confirmation
+        A-->>F: SSE stream with processing status
+    end
+
+    %% Episodic Memory Flow
+    rect rgb(124, 58, 237, 0.1)
+        Note over F,N: Episodic Memory Flow
+        F->>A: POST /api/ag-ui/run (remember episode)
+        A->>A: Activate episodic tools
+        A->>B: POST /api/graphiti/episodes
+        B->>N: Create episode node + relationships
+        B->>R: Update session context
+        B-->>A: Episode creation confirmation
+        A-->>F: SSE stream with memory status
+    end
+
+    %% Real-time Streaming Flow
+    rect rgb(245, 158, 11, 0.1)
+        Note over F,R: Real-time Streaming Flow
+        F->>A: GET /api/ag-ui/stream (SSE connection)
+        A->>A: Process with streaming agent
+        loop Agent Processing
+            A->>B: Tool calls (coordinate/document/memory)
+            B->>N: Database operations
+            B-->>A: Tool responses
+            A->>R: Stream event to Redis
+            A-->>F: SSE event (tool_call_start/content/tool_call_end)
+        end
+        A-->>F: SSE event (run_finished)
+    end
+
+    %% Cross-layer Caching Flow
+    rect rgb(16, 185, 129, 0.1)
+        Note over F,R: Cross-layer Caching Flow
+        F->>A: Request with cache key
+        A->>R: Check cache first
+        alt Cache Hit
+            R-->>A: Cached data
+            A-->>F: Immediate response
+        else Cache Miss
+            A->>B: Backend API call
+            B->>N: Database query
+            N-->>B: Fresh data
+            B-->>A: API response
+            A->>R: Store in cache
+            A-->>F: Response with fresh data
+        end
+    end
+
+    %% User Profile Synchronization
+    rect rgb(220, 38, 38, 0.1)
+        Note over F,M: User Profile Synchronization
+        F->>B: PUT /api/users/profile
+        B->>M: Update user document
+        B->>R: Invalidate user cache
+        B->>N: Update user-coordinate relationships
+        B-->>F: Profile update confirmation
+        F->>F: Update local auth state
+    end
+
+    %% Multi-database Coordination
+    rect rgb(100, 116, 139, 0.1)
+        Note over B,Q: Multi-database Coordination
+        Note over B: Backend coordinates all databases
+        B->>N: Primary graph operations
+        B->>M: User data operations
+        B->>R: Cache & stream operations
+        B->>Q: Vector search operations
+        Note over B: Maintains consistency across constellation
+    end
+
+    %% Error Handling & Fallbacks
+    rect rgb(239, 68, 68, 0.1)
+        Note over F,B: Error Handling & Fallbacks
+        F->>A: Request with potential failure
+        A->>B: Backend API call
+        alt Backend Available
+            B-->>A: Success response
+            A-->>F: Normal flow
+        else Backend Unavailable
+            A->>R: Check cache fallback
+            alt Cache Available
+                R-->>A: Cached data
+                A-->>F: Degraded but functional
+            else No Cache
+                A-->>F: Error with graceful degradation
+            end
+        end
+    end

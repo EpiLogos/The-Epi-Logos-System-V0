@@ -1,0 +1,259 @@
+%%{init: {
+  'theme': 'light',
+  'themeVariables': {
+    'primaryColor': '#059669',
+    'primaryTextColor': '#000000',
+    'primaryBorderColor': '#047857',
+    'lineColor': '#6b7280',
+    'secondaryColor': '#f3f4f6',
+    'tertiaryColor': '#e5e7eb'
+  },
+  'flowchart': {
+    'rankdir': 'TB',
+    'nodeSpacing': 60,
+    'rankSpacing': 80,
+    'curve': 'basis',
+    'useMaxWidth': true,
+    'htmlLabels': true
+  }
+}}%%
+
+graph TB
+    %% Service Integration Patterns Across Trilaminar Architecture
+    
+    subgraph "Frontend Service Integration (Port 3000)"
+        direction TB
+        
+        subgraph "Domain Services"
+            AUTH_DOMAIN[Auth Domain<br/>Pure Business Logic]
+            NAV_DOMAIN[Navigation Domain<br/>Coordinate Logic]
+            AGUI_DOMAIN[AGUI Domain<br/>Streaming Logic]
+        end
+        
+        subgraph "Infrastructure Services"
+            AUTH_CLIENT[Auth API Client<br/>Backend Communication]
+            AGUI_CLIENT[AGUI Client<br/>Agentic Communication]
+            GRAPHQL_CLIENT[GraphQL Client<br/>Coordinate Queries]
+            STORAGE_CLIENT[Storage Client<br/>Browser Persistence]
+        end
+        
+        subgraph "React Integration"
+            AUTH_HOOKS[Auth Hooks<br/>React State Bridge]
+            NAV_HOOKS[Navigation Hooks<br/>Route Management]
+            AGUI_HOOKS[AGUI Hooks<br/>Streaming Bridge]
+        end
+        
+        AUTH_DOMAIN --> AUTH_HOOKS
+        NAV_DOMAIN --> NAV_HOOKS
+        AGUI_DOMAIN --> AGUI_HOOKS
+        
+        AUTH_HOOKS --> AUTH_CLIENT
+        NAV_HOOKS --> GRAPHQL_CLIENT
+        AGUI_HOOKS --> AGUI_CLIENT
+        
+        AUTH_CLIENT --> STORAGE_CLIENT
+    end
+    
+    subgraph "Agentic Service Integration (Port 8001)"
+        direction TB
+        
+        subgraph "Agent Orchestration"
+            ORCH_AGENT[Orchestrator Agent<br/>Pydantic AI Core]
+            PERSONA_ROUTER[Persona Router<br/>Dynamic Behavior]
+            CONTEXT_PROC[Context Processor<br/>Window Management]
+        end
+        
+        subgraph "Tool Services"
+            BIMBA_TOOLS[Bimba Tools<br/>Coordinate Resolution]
+            GNOSTIC_TOOLS[Gnostic Tools<br/>Document Intelligence]
+            EPISODIC_TOOLS[Episodic Tools<br/>Memory Management]
+        end
+        
+        subgraph "Client Services"
+            BACKEND_HTTP[Backend HTTP Client<br/>API Communication]
+            MODEL_FACTORY[Model Factory<br/>AI Provider Selection]
+            MCP_CLIENT[MCP Client<br/>Tool Protocol]
+        end
+        
+        %% Infrastructure flows TO agents (corrected direction)
+        BACKEND_HTTP --> ORCH_AGENT
+        MODEL_FACTORY --> ORCH_AGENT
+
+        %% Tools flow FROM infrastructure TO orchestrator
+        BIMBA_TOOLS --> ORCH_AGENT
+        GNOSTIC_TOOLS --> ORCH_AGENT
+        EPISODIC_TOOLS --> ORCH_AGENT
+
+        %% Agent internal flow
+        ORCH_AGENT --> PERSONA_ROUTER
+        ORCH_AGENT --> CONTEXT_PROC
+
+        %% Direct HTTP clients for orchestrator (primary path)
+        BACKEND_HTTP --> BIMBA_TOOLS
+        BACKEND_HTTP --> GNOSTIC_TOOLS
+        BACKEND_HTTP --> EPISODIC_TOOLS
+    end
+    
+    subgraph "Backend Service Integration (Port 8000)"
+        direction TB
+        
+        subgraph "API Services"
+            REST_API[REST API<br/>User & Auth Operations]
+            GRAPHQL_API[GraphQL API<br/>Coordinate Resolution]
+            HEALTH_API[Health API<br/>Service Monitoring]
+        end
+        
+        subgraph "Business Services"
+            USER_SERVICE[User Service<br/>Profile Management]
+            AUTH_SERVICE[Auth Service<br/>JWT & OAuth]
+            COORD_SERVICE[Coordinate Service<br/>Bimba Operations]
+        end
+        
+        subgraph "Integration Services"
+            LIGHTRAG_SERVICE[LightRAG Service<br/>Document Intelligence]
+            GRAPHITI_SERVICE[Graphiti Service<br/>Episodic Memory]
+            BILLING_SERVICE[Billing Service<br/>Subscription Management]
+        end
+        
+        REST_API --> USER_SERVICE
+        REST_API --> AUTH_SERVICE
+        REST_API --> BILLING_SERVICE
+        
+        GRAPHQL_API --> COORD_SERVICE
+        
+        LIGHTRAG_SERVICE --> COORD_SERVICE
+        GRAPHITI_SERVICE --> COORD_SERVICE
+        
+        HEALTH_API --> USER_SERVICE
+        HEALTH_API --> LIGHTRAG_SERVICE
+        HEALTH_API --> GRAPHITI_SERVICE
+    end
+    
+    subgraph "Database Service Layer"
+        direction TB
+        
+        subgraph "Database Clients"
+            NEO4J_CLIENT[Neo4j Client<br/>Unified Graph Access]
+            MONGO_CLIENT[MongoDB Client<br/>User Data Access]
+            REDIS_CLIENT[Redis Client<br/>Cache & Streams]
+            QDRANT_CLIENT[Qdrant Client<br/>Vector Operations]
+        end
+        
+        subgraph "Repository Services"
+            USER_REPO[User Repository<br/>MongoDB Operations]
+            NODE_REPO[Node Repository<br/>Neo4j Operations]
+            CACHE_REPO[Cache Repository<br/>Redis Operations]
+            VECTOR_REPO[Vector Repository<br/>Qdrant Operations]
+        end
+        
+        NEO4J_CLIENT --> NODE_REPO
+        MONGO_CLIENT --> USER_REPO
+        REDIS_CLIENT --> CACHE_REPO
+        QDRANT_CLIENT --> VECTOR_REPO
+        
+        COORD_SERVICE --> NODE_REPO
+        USER_SERVICE --> USER_REPO
+        AUTH_SERVICE --> CACHE_REPO
+        LIGHTRAG_SERVICE --> VECTOR_REPO
+        GRAPHITI_SERVICE --> NODE_REPO
+    end
+    
+    subgraph "External Service Integration"
+        direction TB
+        
+        subgraph "Local Databases"
+            NEO4J_LOCAL[Neo4j Local<br/>Graph Database]
+            QDRANT_LOCAL[Qdrant Local<br/>Vector Database]
+        end
+
+        subgraph "Cloud Databases"
+            MONGO_ATLAS[MongoDB Atlas<br/>Document Database]
+            REDIS_CLOUD[Redis Cloud<br/>Cache Service]
+        end
+        
+        subgraph "AI Providers"
+            OPENAI[OpenAI<br/>GPT Models]
+            ANTHROPIC[Anthropic<br/>Claude Models]
+            GOOGLE_AI[Google AI<br/>Gemini Models]
+        end
+        
+        subgraph "OAuth Providers"
+            GOOGLE_OAUTH[Google OAuth<br/>Authentication]
+            STRIPE[Stripe<br/>Payment Processing]
+        end
+        
+        NEO4J_CLIENT -.->|Local Connection| NEO4J_LOCAL
+        MONGO_CLIENT -.->|Connection Pool| MONGO_ATLAS
+        REDIS_CLIENT -.->|Connection Pool| REDIS_CLOUD
+        QDRANT_CLIENT -.->|Local HTTP API| QDRANT_LOCAL
+        
+        MODEL_FACTORY -.->|API Calls| OPENAI
+        MODEL_FACTORY -.->|API Calls| ANTHROPIC
+        MODEL_FACTORY -.->|API Calls| GOOGLE_AI
+        
+        AUTH_SERVICE -.->|OAuth Flow| GOOGLE_OAUTH
+        BILLING_SERVICE -.->|Payment API| STRIPE
+    end
+    
+    %% Cross-Layer Service Communication
+    
+    %% Frontend to Agentic
+    AGUI_CLIENT -.->|AG-UI Protocol| ORCH_AGENT
+    AGUI_CLIENT -.->|SSE Streaming| ORCH_AGENT
+    
+    %% Frontend to Backend
+    AUTH_CLIENT -.->|HTTP API| REST_API
+    GRAPHQL_CLIENT -.->|GraphQL| GRAPHQL_API
+    
+    %% Agentic to Backend
+    BACKEND_HTTP -.->|HTTP API| REST_API
+    BACKEND_HTTP -.->|GraphQL| GRAPHQL_API
+    BACKEND_HTTP -.->|Service APIs| LIGHTRAG_SERVICE
+    BACKEND_HTTP -.->|Service APIs| GRAPHITI_SERVICE
+    
+    %% MCP Integration (External Agent Flexibility)
+    subgraph "MCP Service Layer"
+        direction TB
+        BIMBA_MCP[Bimba MCP Server<br/>External Agent Access]
+        LIGHTRAG_MCP[LightRAG MCP Server<br/>External Agent Access]
+        GRAPHITI_MCP[Graphiti MCP Server<br/>External Agent Access]
+
+        MCP_NOTE[Note: MCPs provide flexible<br/>access for external agents.<br/>Orchestrator uses direct HTTP.]
+    end
+
+    %% MCP servers provide alternative access (not primary orchestrator path)
+    BIMBA_MCP -.->|Backend API| COORD_SERVICE
+    LIGHTRAG_MCP -.->|Backend API| LIGHTRAG_SERVICE
+    GRAPHITI_MCP -.->|Backend API| GRAPHITI_SERVICE
+
+    %% External agents can use MCP (future capability)
+    MCP_CLIENT -.->|MCP Protocol<br/>(External Agents)| BIMBA_MCP
+    MCP_CLIENT -.->|MCP Protocol<br/>(External Agents)| LIGHTRAG_MCP
+    MCP_CLIENT -.->|MCP Protocol<br/>(External Agents)| GRAPHITI_MCP
+    
+    %% Service Health Monitoring
+    subgraph "Health Monitoring"
+        HEALTH_MONITOR[Health Monitor<br/>Service Status]
+        METRICS_COLLECTOR[Metrics Collector<br/>Performance Data]
+        LOG_AGGREGATOR[Log Aggregator<br/>Centralized Logging]
+    end
+    
+    HEALTH_API --> HEALTH_MONITOR
+    HEALTH_MONITOR --> METRICS_COLLECTOR
+    HEALTH_MONITOR --> LOG_AGGREGATOR
+    
+    classDef frontend fill:#2563eb,stroke:#1e40af,stroke-width:2px,color:#ffffff
+    classDef agentic fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#ffffff
+    classDef backend fill:#059669,stroke:#047857,stroke-width:2px,color:#ffffff
+    classDef database fill:#dc2626,stroke:#b91c1c,stroke-width:2px,color:#ffffff
+    classDef external fill:#64748b,stroke:#475569,stroke-width:2px,color:#ffffff
+    classDef mcp fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#ffffff
+    classDef monitoring fill:#10b981,stroke:#059669,stroke-width:2px,color:#ffffff
+    
+    class AUTH_DOMAIN,NAV_DOMAIN,AGUI_DOMAIN,AUTH_CLIENT,AGUI_CLIENT,GRAPHQL_CLIENT,STORAGE_CLIENT,AUTH_HOOKS,NAV_HOOKS,AGUI_HOOKS frontend
+    class ORCH_AGENT,PERSONA_ROUTER,CONTEXT_PROC,BIMBA_TOOLS,GNOSTIC_TOOLS,EPISODIC_TOOLS,BACKEND_HTTP,MODEL_FACTORY,MCP_CLIENT agentic
+    class REST_API,GRAPHQL_API,HEALTH_API,USER_SERVICE,AUTH_SERVICE,COORD_SERVICE,LIGHTRAG_SERVICE,GRAPHITI_SERVICE,BILLING_SERVICE backend
+    class NEO4J_CLIENT,MONGO_CLIENT,REDIS_CLIENT,QDRANT_CLIENT,USER_REPO,NODE_REPO,CACHE_REPO,VECTOR_REPO database
+    class NEO4J_LOCAL,QDRANT_LOCAL,MONGO_ATLAS,REDIS_CLOUD,OPENAI,ANTHROPIC,GOOGLE_AI,GOOGLE_OAUTH,STRIPE external
+    class BIMBA_MCP,LIGHTRAG_MCP,GRAPHITI_MCP mcp
+    class HEALTH_MONITOR,METRICS_COLLECTOR,LOG_AGGREGATOR monitoring

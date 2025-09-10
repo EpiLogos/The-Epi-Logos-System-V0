@@ -1,0 +1,131 @@
+%%{init: {
+  'theme': 'light',
+  'themeVariables': {
+    'primaryColor': '#059669',
+    'primaryTextColor': '#000000',
+    'primaryBorderColor': '#047857',
+    'lineColor': '#6b7280',
+    'secondaryColor': '#f3f4f6',
+    'tertiaryColor': '#e5e7eb'
+  },
+  'flowchart': {
+    'rankdir': 'TB',
+    'nodeSpacing': 60,
+    'rankSpacing': 80,
+    'curve': 'basis',
+    'useMaxWidth': true,
+    'htmlLabels': true
+  }
+}}%%
+
+graph TB
+    %% Epi-Logos System Trilaminar Architecture Overview
+    
+    subgraph "Frontend Layer (Experience Vessel) - Port 3000"
+        direction TB
+        FE[Next.js 15 + React 19 PWA]
+        
+        subgraph "Domain Architecture"
+            DOM[Domain Logic<br/>Pure TypeScript Functions]
+            HOOKS[Orchestration Hooks<br/>React State Management]
+            COMP[UI Components<br/>Presentation Layer]
+        end
+        
+        subgraph "Subsystem Views"
+            SYS0[#0 Anuttara<br/>Proto-logical UI]
+            SYS1[#1 Paramasiva<br/>QL Interface]
+            SYS2[#2 Parashakti<br/>Vibrational UI]
+            SYS3[#3 Mahamaya<br/>Symbolic Interface]
+            SYS4[#4 Nara<br/>Personal Dashboard]
+            SYS5[#5 Epii<br/>Synthesis Hub]
+        end
+        
+        FE --> DOM
+        DOM --> HOOKS
+        HOOKS --> COMP
+        COMP --> SYS0
+        COMP --> SYS1
+        COMP --> SYS2
+        COMP --> SYS3
+        COMP --> SYS4
+        COMP --> SYS5
+    end
+    
+    subgraph "Agentic Layer (Nervous System) - Port 8001"
+        direction TB
+        AG[Pydantic AI Orchestrator]
+        
+        subgraph "Agent Architecture"
+            ORCH[Orchestrator Agent<br/>Dynamic Persona Routing]
+            TOOLS[Tool Integration<br/>MCP Protocol]
+            STREAM[AG-UI Streaming<br/>SSE Protocol]
+        end
+        
+        subgraph "Tool Namespaces"
+            BIMBA[Bimba Tools<br/>Coordinate Resolution]
+            GNOSTIC[Gnostic Tools<br/>LightRAG Intelligence]
+            EPISODIC[Episodic Tools<br/>Graphiti Memory]
+        end
+        
+        AG --> ORCH
+        ORCH --> TOOLS
+        ORCH --> STREAM
+        TOOLS --> BIMBA
+        TOOLS --> GNOSTIC
+        TOOLS --> EPISODIC
+    end
+    
+    subgraph "Backend Layer (Deep Engine Room) - Port 8000"
+        direction TB
+        BE[FastAPI Microservices]
+        
+        subgraph "Service Architecture"
+            API[REST + GraphQL APIs]
+            AUTH[Authentication Service]
+            USER[User Management]
+            COORD[Coordinate Resolution]
+        end
+        
+        subgraph "Database Constellation"
+            NEO4J[Neo4j Local<br/>Unified Graph]
+            MONGO[MongoDB Atlas<br/>User Data]
+            REDIS[Redis Cloud<br/>Caching]
+            QDRANT[Qdrant Local<br/>Vector Search]
+        end
+        
+        BE --> API
+        BE --> AUTH
+        BE --> USER
+        BE --> COORD
+        API --> NEO4J
+        AUTH --> MONGO
+        USER --> MONGO
+        COORD --> NEO4J
+        API --> REDIS
+        API --> QDRANT
+    end
+    
+    %% Inter-layer Communication
+    FE -.->|HTTP/GraphQL| AG
+    AG -.->|HTTP/GraphQL| BE
+    FE -.->|Direct API Calls| BE
+    
+    %% Streaming Connections
+    FE -.->|SSE Streaming| AG
+    AG -.->|MCP Protocol| BE
+    
+    %% Data Flow (Corrected Direction: Database → Tools)
+    NEO4J -.->|Provides Bimba Data| BIMBA
+    NEO4J -.->|Provides Document Data| GNOSTIC
+    NEO4J -.->|Provides Memory Data| EPISODIC
+    QDRANT -.->|Provides Vector Data| GNOSTIC
+    
+    classDef frontend fill:#2563eb,stroke:#1e40af,stroke-width:2px,color:#ffffff
+    classDef agentic fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#ffffff
+    classDef backend fill:#059669,stroke:#047857,stroke-width:2px,color:#ffffff
+    classDef database fill:#dc2626,stroke:#b91c1c,stroke-width:2px,color:#ffffff
+    
+    class FE,DOM,HOOKS,COMP,SYS0,SYS1,SYS2,SYS3,SYS4,SYS5 frontend
+    class AG,ORCH,TOOLS,STREAM,BIMBA,GNOSTIC,EPISODIC agentic
+    class BE,API,AUTH,USER,COORD backend
+    class NEO4J,MONGO,REDIS,QDRANT database

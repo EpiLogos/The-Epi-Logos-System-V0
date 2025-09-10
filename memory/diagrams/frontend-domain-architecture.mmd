@@ -1,0 +1,348 @@
+%%{init: {
+  'theme': 'light',
+  'themeVariables': {
+    'primaryColor': '#059669',
+    'primaryTextColor': '#ffffff',
+    'primaryBorderColor': '#047857',
+    'lineColor': '#6b7280',
+    'secondaryColor': '#374151',
+    'tertiaryColor': '#1f2937'
+  },
+  'flowchart': {
+    'rankdir': 'TB',
+    'nodeSpacing': 60,
+    'rankSpacing': 80,
+    'curve': 'basis',
+    'useMaxWidth': true,
+    'htmlLabels': true
+  }
+}}%%
+
+graph TB
+    %% Frontend Domain-Driven Architecture
+    
+    subgraph "Next.js 15 Application (Port 3000)"
+        direction TB
+        APP[app/<br/>App Router]
+        
+        subgraph "Route Structure"
+            HOME["/<br/>Landing Page / Overture"]
+            AUTH["/auth<br/>Authentication"]
+            ACCOUNT["/account<br/>User Dashboard"]
+            SYSTEM["/system<br/>Application Hub"]
+        end
+
+        subgraph "Six Subsystem Routes"
+            ANUTTARA["/system/anuttara<br/>Metaphysical OS"]
+            PARAMASIVA["/system/paramasiva<br/>Logical Foundation"]
+            PARASHAKTI["/system/parashakti<br/>Vibrational Engine"]
+            MAHAMAYA["/system/mahamaya<br/>Transcription Engine"]
+            NARA["/system/nara<br/>Personal Engine"]
+            EPII["/system/epii<br/>Meta-Cognitive Framework"]
+        end
+        
+        subgraph "Layout System"
+            ROOT_LAYOUT[Root Layout<br/>Global Providers]
+            AUTH_LAYOUT[Auth Layout<br/>Authentication Flow]
+            SYSTEM_LAYOUT[System Layout<br/>Navigation Context]
+        end
+        
+        APP --> HOME
+        APP --> AUTH
+        APP --> ACCOUNT
+        APP --> SYSTEM
+
+        SYSTEM --> ANUTTARA
+        SYSTEM --> PARAMASIVA
+        SYSTEM --> PARASHAKTI
+        SYSTEM --> MAHAMAYA
+        SYSTEM --> NARA
+        SYSTEM --> EPII
+        
+        ROOT_LAYOUT --> AUTH_LAYOUT
+        ROOT_LAYOUT --> SYSTEM_LAYOUT
+    end
+    
+    subgraph "Domain Layer (Power Plant)"
+        direction TB
+
+        subgraph "Auth Domain"
+            AUTH_TYPES[Auth Types<br/>User, AuthState, Tokens]
+            AUTH_LOGIC[Auth Logic<br/>Pure Functions]
+            AUTH_VALIDATION[Auth Validation<br/>Business Rules]
+            AUTH_SESSION[Session Management<br/>State Transitions]
+        end
+
+        subgraph "Navigation Domain"
+            NAV_TYPES[Navigation Types<br/>Route, Breadcrumb]
+            NAV_LOGIC[Navigation Logic<br/>Hexagonal Navigation]
+            NAV_VALIDATION[Navigation Validation<br/>Access Control]
+            NAV_CONTEXT[Context Management<br/>Navigation State]
+        end
+
+        subgraph "Coordinate Domain"
+            COORD_TYPES[Coordinate Types<br/>Bimba, Subsystem]
+            COORD_LOGIC[Coordinate Logic<br/>Position Resolution]
+            COORD_VALIDATION[Coordinate Validation<br/>Valid Coordinates]
+            COORD_DISPLAY[Display Logic<br/>Persistent UI]
+        end
+
+        subgraph "AGUI Domain"
+            AGUI_TYPES[AGUI Types<br/>Message, Stream, Event]
+            AGUI_LOGIC[AGUI Logic<br/>Protocol Handling]
+            AGUI_VALIDATION[AGUI Validation<br/>Message Validation]
+            AGUI_STREAMING[Streaming Logic<br/>SSE Management]
+        end
+        
+        %% Internal Domain Logic Flow (within each domain)
+        AUTH_TYPES --> AUTH_LOGIC
+        AUTH_LOGIC --> AUTH_VALIDATION
+        AUTH_VALIDATION --> AUTH_SESSION
+
+        NAV_TYPES --> NAV_LOGIC
+        NAV_LOGIC --> NAV_VALIDATION
+        NAV_VALIDATION --> NAV_CONTEXT
+
+        COORD_TYPES --> COORD_LOGIC
+        COORD_LOGIC --> COORD_VALIDATION
+        COORD_VALIDATION --> COORD_DISPLAY
+
+        AGUI_TYPES --> AGUI_LOGIC
+        AGUI_LOGIC --> AGUI_VALIDATION
+        AGUI_VALIDATION --> AGUI_STREAMING
+    end
+    
+    subgraph "Orchestration Layer (Wall Sockets)"
+        direction TB
+        
+        subgraph "Auth Hooks"
+            USE_AUTH[useAuth<br/>Primary Auth Hook]
+            USE_OAUTH[useOAuth<br/>OAuth Flow Hook]
+            USE_SESSION[useSession<br/>Session Hook]
+            USE_PROFILE[useProfile<br/>Profile Hook]
+        end
+        
+        subgraph "Navigation Hooks"
+            USE_NAV[useNavigation<br/>Primary Nav Hook]
+            USE_SUBSYSTEM[useSubsystem<br/>Subsystem Hook]
+            USE_BREADCRUMB[useBreadcrumb<br/>Breadcrumb Hook]
+        end
+
+        subgraph "Coordinate Hooks"
+            USE_COORDINATE[useCoordinate<br/>Coordinate Hook]
+            USE_POSITION[usePosition<br/>Position Display]
+            USE_BIMBA[useBimba<br/>Bimba Resolution]
+        end
+        
+        subgraph "AGUI Hooks"
+            USE_AGUI[useAGUI<br/>Primary AGUI Hook]
+            USE_STREAM[useStream<br/>Streaming Hook]
+            USE_CHAT[useChat<br/>Chat Hook]
+            USE_MODELS[useModels<br/>Model Selection Hook]
+        end
+        
+        %% Internal Hook Composition (within each hook family)
+        USE_AUTH --> USE_OAUTH
+        USE_AUTH --> USE_SESSION
+        USE_AUTH --> USE_PROFILE
+
+        USE_NAV --> USE_SUBSYSTEM
+        USE_NAV --> USE_BREADCRUMB
+
+        USE_COORDINATE --> USE_POSITION
+        USE_COORDINATE --> USE_BIMBA
+
+        USE_AGUI --> USE_STREAM
+        USE_AGUI --> USE_CHAT
+        USE_AGUI --> USE_MODELS
+    end
+    
+    subgraph "Component Layer (Appliances)"
+        direction TB
+        
+        subgraph "Auth Components"
+            AUTH_PROVIDER[UnifiedAuthProvider<br/>Context Provider]
+            SIGN_IN[SignInForm<br/>Authentication UI]
+            PROFILE_CARD[ProfileCard<br/>User Display]
+            ROUTE_GUARD[RouteGuard<br/>Access Protection]
+        end
+        
+        subgraph "Navigation Components"
+            NAV_BAR[NavigationBar<br/>Global Navigation]
+            SUBSYSTEM_NAV[SubsystemNav<br/>Coordinate Navigation]
+            BREADCRUMB[Breadcrumb<br/>Path Display]
+            HEXAGON_NAV[HexagonNav<br/>Visual Navigation]
+        end
+        
+        subgraph "AGUI Components"
+            CHAT_INTERFACE[ChatInterface<br/>Conversation UI]
+            STREAM_DISPLAY[StreamDisplay<br/>Real-time Updates]
+            MODEL_SELECTOR[ModelSelector<br/>AI Model Selection]
+            RESPONSE_VIEWER[ResponseViewer<br/>Agent Output]
+        end
+        
+        AUTH_PROVIDER --> SIGN_IN
+        AUTH_PROVIDER --> PROFILE_CARD
+        AUTH_PROVIDER --> ROUTE_GUARD
+        
+        NAV_BAR --> SUBSYSTEM_NAV
+        NAV_BAR --> BREADCRUMB
+        NAV_BAR --> HEXAGON_NAV
+        
+        CHAT_INTERFACE --> STREAM_DISPLAY
+        CHAT_INTERFACE --> MODEL_SELECTOR
+        CHAT_INTERFACE --> RESPONSE_VIEWER
+    end
+    
+    subgraph "Infrastructure Layer"
+        direction TB
+        
+        subgraph "API Clients"
+            AUTH_CLIENT[Auth API Client<br/>Backend Communication]
+            AGUI_CLIENT[AGUI API Client<br/>Agentic Communication]
+            GRAPHQL_CLIENT[GraphQL Client<br/>Coordinate Queries]
+        end
+        
+        subgraph "Storage Adapters"
+            SESSION_STORAGE[Session Storage<br/>Browser Storage]
+            LOCAL_STORAGE[Local Storage<br/>Persistent Data]
+            CACHE_ADAPTER[Cache Adapter<br/>Query Caching]
+        end
+        
+        subgraph "External Integrations"
+            GOOGLE_OAUTH[Google OAuth<br/>Authentication Provider]
+            STRIPE_CLIENT[Stripe Client<br/>Payment Processing]
+            ANALYTICS[Analytics<br/>Usage Tracking]
+        end
+        
+        AUTH_CLIENT --> SESSION_STORAGE
+        AGUI_CLIENT --> CACHE_ADAPTER
+        GRAPHQL_CLIENT --> CACHE_ADAPTER
+        
+        SESSION_STORAGE --> LOCAL_STORAGE
+        
+        GOOGLE_OAUTH --> AUTH_CLIENT
+        STRIPE_CLIENT --> AUTH_CLIENT
+    end
+    
+    %% Layer Dependencies (Decoupled Domain Pattern)
+    %% Infrastructure → Domain → Hooks → Components → App Structure
+
+    %% Infrastructure feeds Domain Logic
+    AUTH_CLIENT --> AUTH_LOGIC
+    GRAPHQL_CLIENT --> NAV_LOGIC
+    GRAPHQL_CLIENT --> COORD_LOGIC
+    AGUI_CLIENT --> AGUI_LOGIC
+
+    %% Domain Logic feeds Hooks
+    AUTH_LOGIC --> USE_AUTH
+    NAV_LOGIC --> USE_NAV
+    COORD_LOGIC --> USE_COORDINATE
+    AGUI_LOGIC --> USE_AGUI
+
+    %% Hooks feed Components
+    USE_AUTH --> AUTH_PROVIDER
+    USE_NAV --> NAV_BAR
+    USE_COORDINATE --> SUBSYSTEM_NAV
+    USE_AGUI --> CHAT_INTERFACE
+    
+    subgraph "36 Experience Pages"
+        direction TB
+
+        subgraph "Anuttara #0 Pages"
+            A0_0["#0-0: 4-Fold Zero"]
+            A0_1["#0-1: Brimming Void"]
+            A0_2["#0-2: The Real"]
+            A0_3["#0-3: Archetypal Number Language"]
+            A0_4["#0-4: Contextual Nesting"]
+            A0_5["#0-5: Recursive Return"]
+        end
+
+        subgraph "Paramasiva #1 Pages"
+            P1_0["#1-0: Bimba - The Original"]
+            P1_1["#1-1: Pratibimba - The Reflection"]
+            P1_2["#1-2: Ananda - The Harmonics"]
+            P1_3["#1-3: Spanda - The Dynamics"]
+            P1_4["#1-4: QL Flowering"]
+            P1_5["#1-5: 3D Visual-Contemplative Tool"]
+        end
+
+        subgraph "Parashakti #2 Pages"
+            P2_0["#2-0: Seed Matrix"]
+            P2_1["#2-1: MEF Explainer"]
+            P2_2["#2-2: 36 Tattvas System"]
+            P2_3["#2-3: Decans System"]
+            P2_4["#2-4: Vibrational Arena"]
+            P2_5["#2-5: The Cymascope"]
+        end
+
+        subgraph "Mahamaya #3 Pages"
+            M3_0["#3-0: Primordial Relational Ground"]
+            M3_1["#3-1: I-Ching Explorer"]
+            M3_2["#3-2: Nucleotide Architecture"]
+            M3_3["#3-3: Biological Pathway"]
+            M3_4["#3-4: Tarot Explorer"]
+            M3_5["#3-5: Mythic Synthesis Wheel"]
+        end
+
+        subgraph "Nara #4 Pages"
+            N4_0["#4-0: Identity Seeding"]
+            N4_1["#4-1: State Assessment"]
+            N4_2["#4-2: Symbolic Inquiry"]
+            N4_3["#4-3: Actionable Protocol"]
+            N4_4["#4-4: Phenomenological Recording"]
+            N4_5["#4-5: Journal & Dia-logos Chat"]
+        end
+
+        subgraph "Epii #5 Pages"
+            E5_0["#5-0: Bimba Map Explorer & Editor"]
+            E5_1["#5-1: Knowledge Hub & Lab"]
+            E5_2["#5-2: Backend Codebase View"]
+            E5_3["#5-3: Frontend Codebase View"]
+            E5_4["#5-4: Agentic Codebase View"]
+            E5_5["#5-5: Wisdom Synthesis Dashboard"]
+        end
+    end
+
+    subgraph "AI Agent Integration"
+        EPI_LOGOS_AGENT[Epi-Logos AI Agent<br/>Global Orchestrator]
+        CHAT_INTERFACE[Chat Interface<br/>Floating Global UI]
+    end
+
+    %% Route Integration
+    AUTH --> AUTH_PROVIDER
+    ACCOUNT --> PROFILE_CARD
+    SYSTEM --> NAV_BAR
+
+    %% Subsystem Page Integration
+    ANUTTARA --> A0_0 & A0_1 & A0_2 & A0_3 & A0_4 & A0_5
+    PARAMASIVA --> P1_0 & P1_1 & P1_2 & P1_3 & P1_4 & P1_5
+    PARASHAKTI --> P2_0 & P2_1 & P2_2 & P2_3 & P2_4 & P2_5
+    MAHAMAYA --> M3_0 & M3_1 & M3_2 & M3_3 & M3_4 & M3_5
+    NARA --> N4_0 & N4_1 & N4_2 & N4_3 & N4_4 & N4_5
+    EPII --> E5_0 & E5_1 & E5_2 & E5_3 & E5_4 & E5_5
+
+    %% User Account in #4-4 Space
+    ACCOUNT --> N4_4
+
+    %% AI Agent Integration
+    AGUI_STREAMING --> EPI_LOGOS_AGENT
+    EPI_LOGOS_AGENT --> CHAT_INTERFACE
+    EPI_LOGOS_AGENT --> SYSTEM
+    CHAT_INTERFACE --> N4_5
+    
+    classDef domain fill:#059669,stroke:#047857,stroke-width:2px,color:#ffffff
+    classDef hook fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#ffffff
+    classDef component fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#ffffff
+    classDef infrastructure fill:#dc2626,stroke:#b91c1c,stroke-width:2px,color:#ffffff
+    classDef route fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#ffffff
+    classDef page fill:#64748b,stroke:#475569,stroke-width:2px,color:#ffffff
+    classDef agent fill:#10b981,stroke:#059669,stroke-width:2px,color:#ffffff
+
+    class AUTH_TYPES,AUTH_LOGIC,AUTH_VALIDATION,AUTH_SESSION,NAV_TYPES,NAV_LOGIC,NAV_VALIDATION,NAV_CONTEXT,COORD_TYPES,COORD_LOGIC,COORD_VALIDATION,COORD_DISPLAY,AGUI_TYPES,AGUI_LOGIC,AGUI_VALIDATION,AGUI_STREAMING domain
+    class USE_AUTH,USE_OAUTH,USE_SESSION,USE_PROFILE,USE_NAV,USE_SUBSYSTEM,USE_BREADCRUMB,USE_COORDINATE,USE_POSITION,USE_BIMBA,USE_AGUI,USE_STREAM,USE_CHAT,USE_MODELS hook
+    class AUTH_PROVIDER,SIGN_IN,PROFILE_CARD,ROUTE_GUARD,NAV_BAR,SUBSYSTEM_NAV,BREADCRUMB,HEXAGON_NAV,CHAT_INTERFACE,STREAM_DISPLAY,MODEL_SELECTOR,RESPONSE_VIEWER component
+    class AUTH_CLIENT,AGUI_CLIENT,GRAPHQL_CLIENT,SESSION_STORAGE,LOCAL_STORAGE,CACHE_ADAPTER,GOOGLE_OAUTH,STRIPE_CLIENT,ANALYTICS infrastructure
+    class HOME,AUTH,ACCOUNT,SYSTEM,ANUTTARA,PARAMASIVA,PARASHAKTI,MAHAMAYA,NARA,EPII,ROOT_LAYOUT,AUTH_LAYOUT,SYSTEM_LAYOUT route
+    class A0_0,A0_1,A0_2,A0_3,A0_4,A0_5,P1_0,P1_1,P1_2,P1_3,P1_4,P1_5,P2_0,P2_1,P2_2,P2_3,P2_4,P2_5,M3_0,M3_1,M3_2,M3_3,M3_4,M3_5,N4_0,N4_1,N4_2,N4_3,N4_4,N4_5,E5_0,E5_1,E5_2,E5_3,E5_4,E5_5 page
+    class EPI_LOGOS_AGENT agent

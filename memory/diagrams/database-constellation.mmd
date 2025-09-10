@@ -1,0 +1,124 @@
+graph TB
+    %% Database Constellation Architecture
+    
+    subgraph "Neo4j Aura Unified Graph"
+        direction TB
+        
+        subgraph "Bimba Namespace"
+            BIMBA_NODES[Bimba Nodes<br/>Coordinate System]
+            BIMBA_REL[Relationships<br/>Coordinate Links]
+            BIMBA_META[Metadata<br/>Subsystem Context]
+        end
+        
+        subgraph "LightRAG Namespace"
+            LIGHT_DOCS[Document Nodes<br/>Wisdom Content]
+            LIGHT_CHUNKS[Chunk Relationships<br/>Semantic Links]
+            LIGHT_ENTITIES[Entity Extraction<br/>Knowledge Graph]
+        end
+        
+        subgraph "Graphiti Namespace"
+            GRAPH_EPISODES[Episode Nodes<br/>Temporal Memory]
+            GRAPH_COMM[Community Nodes<br/>Clustered Context]
+            GRAPH_SESSIONS[Session Tracking<br/>Continuity Links]
+        end
+        
+        BIMBA_NODES --> BIMBA_REL
+        BIMBA_REL --> BIMBA_META
+        LIGHT_DOCS --> LIGHT_CHUNKS
+        LIGHT_CHUNKS --> LIGHT_ENTITIES
+        GRAPH_EPISODES --> GRAPH_COMM
+        GRAPH_COMM --> GRAPH_SESSIONS
+    end
+    
+    subgraph "MongoDB Atlas"
+        direction TB
+        
+        subgraph "User Collections"
+            USER_PROFILES[User Profiles<br/>Personal Data]
+            USER_PREFS[User Preferences<br/>Settings & Config]
+            USER_SESSIONS[Auth Sessions<br/>Token Management]
+        end
+        
+        subgraph "Pratibimba Collections"
+            PRAT_PERSONAL[Personal Pratibimba<br/>User-specific Nodes]
+            PRAT_CUSTOM[Custom Coordinates<br/>User Extensions]
+            PRAT_HISTORY[Interaction History<br/>Usage Patterns]
+        end
+        
+        USER_PROFILES --> USER_PREFS
+        USER_PREFS --> USER_SESSIONS
+        PRAT_PERSONAL --> PRAT_CUSTOM
+        PRAT_CUSTOM --> PRAT_HISTORY
+    end
+    
+    subgraph "Redis Cloud"
+        direction TB
+        
+        subgraph "Caching Layer"
+            CACHE_COORD[Coordinate Cache<br/>Fast Resolution]
+            CACHE_SESSION[Session Cache<br/>Auth State]
+            CACHE_QUERY[Query Cache<br/>GraphQL Results]
+        end
+        
+        subgraph "Streaming Layer"
+            STREAM_EVENTS[Event Streams<br/>Real-time Updates]
+            STREAM_CHAT[Chat Streams<br/>Conversation Flow]
+            STREAM_AGUI[AG-UI Streams<br/>Agent Communication]
+        end
+        
+        CACHE_COORD --> CACHE_SESSION
+        CACHE_SESSION --> CACHE_QUERY
+        STREAM_EVENTS --> STREAM_CHAT
+        STREAM_CHAT --> STREAM_AGUI
+    end
+    
+    subgraph "Qdrant Vector Database"
+        direction TB
+        
+        subgraph "Vector Collections"
+            VEC_DOCS[Document Vectors<br/>Semantic Search]
+            VEC_CHUNKS[Chunk Embeddings<br/>Contextual Retrieval]
+            VEC_ENTITIES[Entity Vectors<br/>Knowledge Matching]
+        end
+        
+        VEC_DOCS --> VEC_CHUNKS
+        VEC_CHUNKS --> VEC_ENTITIES
+    end
+    
+    %% Cross-database Relationships
+    BIMBA_NODES -.->|Coordinate Tags| LIGHT_DOCS
+    LIGHT_DOCS -.->|Document References| GRAPH_EPISODES
+    USER_PROFILES -.->|User Context| PRAT_PERSONAL
+    BIMBA_NODES -.->|Cache Keys| CACHE_COORD
+    LIGHT_DOCS -.->|Vector Embeddings| VEC_DOCS
+    
+    %% Service Access Patterns
+    subgraph "Service Access"
+        BACKEND[Backend Services<br/>Primary Access]
+        AGENTIC[Agentic Layer<br/>Tool Access]
+        FRONTEND[Frontend<br/>API Access]
+    end
+    
+    BACKEND --> USER_PROFILES
+    BACKEND --> BIMBA_NODES
+    BACKEND --> CACHE_COORD
+    
+    AGENTIC --> BIMBA_NODES
+    AGENTIC --> LIGHT_DOCS
+    AGENTIC --> GRAPH_EPISODES
+   
+    
+    FRONTEND -.->|Via Backend| BACKEND
+    FRONTEND -.->|Via Agentic| AGENTIC
+    
+    classDef neo4j fill:#4ade80,stroke:#22c55e,stroke-width:2px,color:#000000
+    classDef mongodb fill:#10b981,stroke:#059669,stroke-width:2px,color:#ffffff
+    classDef redis fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#ffffff
+    classDef qdrant fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#ffffff
+    classDef service fill:#64748b,stroke:#475569,stroke-width:2px,color:#ffffff
+    
+    class BIMBA_NODES,BIMBA_REL,BIMBA_META,LIGHT_DOCS,LIGHT_CHUNKS,LIGHT_ENTITIES,GRAPH_EPISODES,GRAPH_COMM,GRAPH_SESSIONS neo4j
+    class USER_PROFILES,USER_PREFS,USER_SESSIONS,PRAT_PERSONAL,PRAT_CUSTOM,PRAT_HISTORY mongodb
+    class CACHE_COORD,CACHE_SESSION,CACHE_QUERY,STREAM_EVENTS,STREAM_CHAT,STREAM_AGUI redis
+    class VEC_DOCS,VEC_CHUNKS,VEC_ENTITIES qdrant
+    class BACKEND,AGENTIC,FRONTEND service
