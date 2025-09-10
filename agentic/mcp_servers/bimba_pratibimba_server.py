@@ -21,6 +21,7 @@ from fastapi.routing import Mount
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
+from mcp.server.stdio import stdio_server
 from mcp.types import (
     Resource, Tool, TextContent, ImageContent, EmbeddedResource,
     LoggingLevel, CallToolRequest, GetPromptRequest, ReadResourceRequest,
@@ -309,6 +310,22 @@ The tool returns comprehensive node information including name, subsystem, conte
 
         logger.info("MCP server connected to SSE transport at /sse and /messages/")
 
+    async def serve_stdio(self):
+        """Start the MCP server with stdio transport for Claude Desktop compatibility."""
+        async with stdio_server() as (read_stream, write_stream):
+            await self.server.run(
+                read_stream,
+                write_stream,
+                InitializationOptions(
+                    server_name="bimba-pratibimba",
+                    server_version="1.0.0",
+                    capabilities=self.server.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={}
+                    )
+                )
+            )
+
 
 # Global server instance for uvicorn
 mcp_server = BimbaPratibimbaMCPServerSSE()
@@ -323,25 +340,43 @@ async def create_app() -> FastAPI:
 
 # For direct execution
 async def main():
-    """Main entry point for development testing."""
-    app = await create_app()
-    
-    # Use uvicorn for development
-    import uvicorn
-    config = uvicorn.Config(
-        app,
-        host="localhost",
-        port=8004,
-        log_level="info"
+    """Main entry point with transport selection."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Bimba-Pratibimba MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["sse", "stdio"],
+        default="sse",
+        help="Transport type: 'sse' for web clients (default), 'stdio' for Claude Desktop"
     )
-    server = uvicorn.Server(config)
-    
-    logger.info("Starting Bimba-Pratibimba MCP server on http://localhost:8004")
-    logger.info("SSE endpoint: http://localhost:8004/sse")
-    logger.info("Messages endpoint: http://localhost:8004/messages") 
-    logger.info("Health check: http://localhost:8004/health")
-    
-    await server.serve()
+    args = parser.parse_args()
+
+    if args.transport == "stdio":
+        logger.info("Starting MCP server with STDIO transport for Claude Desktop")
+        server = BimbaPratibimbaMCPServerSSE()
+        await server.initialize()
+        await server.serve_stdio()
+    else:
+        logger.info("Starting MCP server with SSE transport for web clients")
+        app = await create_app()
+
+        # Use uvicorn for development
+        import uvicorn
+        config = uvicorn.Config(
+            app,
+            host="localhost",
+            port=8004,
+            log_level="info"
+        )
+        uvicorn_server = uvicorn.Server(config)
+
+        logger.info("Starting Bimba-Pratibimba MCP server on http://localhost:8004")
+        logger.info("SSE endpoint: http://localhost:8004/sse")
+        logger.info("Messages endpoint: http://localhost:8004/messages")
+        logger.info("Health check: http://localhost:8004/health")
+
+        await uvicorn_server.serve()
 
 
 if __name__ == "__main__":

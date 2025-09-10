@@ -2,6 +2,56 @@
 
 Minimal Model Context Protocol (MCP) server that bridges Epi-Logos orchestrator coordinate resolution to MCP format.
 
+## Claude Desktop Configuration
+
+**Recommended:** Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "bimba-pratibimba": {
+      "command": "/usr/local/bin/python3",
+      "args": [
+        "/Users/admin/Documents/The Epi-Logos System V0/agentic/mcp_servers/run_bimba_stdio.py"
+      ],
+      "env": {}
+    }
+  }
+}
+```
+
+**Alternative (requires PYTHONPATH):**
+
+```json
+{
+  "mcpServers": {
+    "bimba-pratibimba": {
+      "command": "/usr/local/bin/python3",
+      "args": [
+        "/Users/admin/Documents/The Epi-Logos System V0/agentic/mcp_servers/bimba_pratibimba_server.py",
+        "--transport",
+        "stdio"
+      ],
+      "env": {
+        "PYTHONPATH": "/Users/admin/Documents/The Epi-Logos System V0"
+      }
+    }
+  }
+}
+```
+
+## Other MCP Clients (VS Code, Web, etc.)
+
+For non-Claude Desktop clients that support SSE transport:
+- **SSE Endpoint**: `http://localhost:8004/sse`
+- **Messages Endpoint**: `http://localhost:8004/messages/`
+
+Start the SSE server with:
+```bash
+python agentic/mcp_servers/bimba_pratibimba_server.py --transport sse
+# or just: python agentic/mcp_servers/bimba_pratibimba_server.py
+```
+
 ## Overview
 
 This MCP server provides a foundation tool for resolving Epi-Logos coordinates using the existing orchestrator GraphQL client. It serves as a clean, extensible base for adding more orchestrator capabilities to MCP clients.
