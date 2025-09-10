@@ -180,10 +180,10 @@ export const hasError = (session: ChatSession): boolean =>
 export const isSessionActive = (session: ChatSession): boolean => 
   session.threadId !== null;
 
-export const getMessageCount = (session: ChatSession): number => 
+export const getSessionMessageCount = (session: ChatSession): number =>
   session.messages.length;
 
-export const getLastMessage = (session: ChatSession): ChatMessage | null =>
+export const getLastSessionMessage = (session: ChatSession): ChatMessage | null =>
   session.messages.length > 0 ? session.messages[session.messages.length - 1] : null;
 
 export const canSendMessage = (session: ChatSession, input: string): boolean =>
@@ -206,7 +206,7 @@ export const getDefaultModel = (models: ModelInfo[]): ModelInfo | null => {
 
 // Session state queries for UI
 export const getSessionDisplayInfo = (session: ChatSession) => ({
-  messageCount: session.messages.length,
+  messageCount: getSessionMessageCount(session),
   currentPersona: session.config.persona,
   currentModel: session.config.model,
   threadId: session.threadId ? session.threadId.substring(0, 12) + '...' : 'New',

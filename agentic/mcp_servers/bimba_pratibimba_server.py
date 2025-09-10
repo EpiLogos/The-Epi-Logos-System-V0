@@ -59,8 +59,8 @@ class BimbaPratibimbaMCPServerSSE:
             version="1.0.0"
         )
         
-        # SSE transport
-        self.sse_transport = SseServerTransport("/messages")
+        # SSE transport (with trailing slash to match mount)
+        self.sse_transport = SseServerTransport("/messages/")
     
     async def initialize(self):
         """Initialize coordinate resolution client."""
@@ -278,32 +278,36 @@ The tool returns comprehensive node information including name, subsystem, conte
                 "bimba_client": "initialized" if self.bimba_client else "not_initialized"
             }
     
-    def connect_sse(self):
+    async def connect_sse(self):
         """Connect MCP server to FastAPI app via SSE transport."""
         # Setup FastAPI routes
         self.setup_fastapi_routes()
-        
-        # Add SSE routes to FastAPI app for message handling
-        self.app.router.routes.append(
-            Mount("/messages", app=self.sse_transport.handle_post_message)
-        )
-        
+
         # Add SSE endpoint for connections
         @self.app.get("/sse")
         async def handle_sse(request: Request):
             async with self.sse_transport.connect_sse(
                 request.scope, request.receive, request._send
             ) as streams:
-                await self.server.run(
-                    streams[0], streams[1], 
-                    InitializationOptions(
-                        server_name="bimba-pratibimba",
-                        server_version="1.0.0",
-                        capabilities=self.server.get_capabilities()
+                # Create initialization options
+                init_options = InitializationOptions(
+                    server_name="bimba-pratibimba",
+                    server_version="1.0.0",
+                    capabilities=self.server.get_capabilities(
+                        notification_options=NotificationOptions(),
+                        experimental_capabilities={}
                     )
                 )
-        
-        logger.info("MCP server connected to SSE transport at /sse and /messages")
+
+                # Run the MCP server with proper initialization
+                await self.server.run(
+                    streams[0], streams[1], init_options
+                )
+
+        # Mount the SSE transport for message handling (with trailing slash)
+        self.app.mount("/messages/", self.sse_transport.handle_post_message)
+
+        logger.info("MCP server connected to SSE transport at /sse and /messages/")
 
 
 # Global server instance for uvicorn
@@ -313,7 +317,7 @@ mcp_server = BimbaPratibimbaMCPServerSSE()
 async def create_app() -> FastAPI:
     """Create and initialize the FastAPI application."""
     await mcp_server.initialize()
-    mcp_server.connect_sse()
+    await mcp_server.connect_sse()
     return mcp_server.app
 
 

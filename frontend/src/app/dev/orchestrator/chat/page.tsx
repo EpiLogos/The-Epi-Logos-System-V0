@@ -1,424 +1,68 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { useSession } from '@/hooks/useSession';
+import { getSessionDisplayInfo } from '@/domains/chat';
 
 /**
  * Developer Chat Interface for Orchestrator Testing
  * 
- * This component provides web access to the comprehensive CLI functionality
- * built in agentic/cli/chat_cli.py, including:
- * - All 15+ CLI commands (/help, /models, /use, /personas, /persona, etc.)
- * - Real-time AG-UI Protocol streaming
- * - Session management and diagnostics
- * - Advanced debugging and monitoring
+ * Refactored to use domain-driven architecture:
+ * - Pure presentation layer (this component)
+ * - Business logic in domain layer
+ * - React orchestration via hooks
+ * - Zero duplication with simple-chat
  */
 
-interface Message {
-  id: string;
-  content: string;
-  role: 'user' | 'assistant' | 'system';
-  persona: string;
-  model: string;
-  timestamp: Date;
-  diagnostics?: {
-    trace_id: string;
-    first_token_ms?: number;
-    total_ms?: number;
-    sse_events: number;
-    sse_bytes: number;
-  };
-}
-
-interface SessionStatus {
-  session_id: string;
-  model_name: string;
-  active_persona: string;
-  system_hash: string;
-  streaming_enabled: boolean;
-  stream_timeout: number;
-}
-
-interface ModelInfo {
-  name: string;
-  provider: string;
-  ready: boolean;
-}
-
 export default function OrchestratorChatPage() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  // UI state
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentModel, setCurrentModel] = useState('gemini:gemini-2.5-flash');
-  const [currentPersona, setCurrentPersona] = useState('system');
-  const [streamingEnabled, setStreamingEnabled] = useState(true);
-  const [sessionStatus, setSessionStatus] = useState<SessionStatus | null>(null);
-  const [models, setModels] = useState<ModelInfo[]>([]);
-  const [personas, setPersonas] = useState<string[]>([]);
   const [showCommands, setShowCommands] = useState(false);
   
+  // Chat integration hook - handles all business logic
+  const chat = useChatIntegration({
+    persona: 'system',
+    model: 'gemini:gemini-2.5-flash',
+    streamingEnabled: true,
+    enableCLI: true
+  });
+  
+  // Session management
+  const sessionManager = useSession();
+  
+  // UI refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
+  // Get session display info
+  const sessionDisplay = getSessionDisplayInfo(chat.session);
+  
+  // Auto-scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [chat.session.messages]);
 
-  useEffect(() => {
-    // Load initial data
-    loadModels();
-    loadPersonas();
-    loadSessionStatus();
-  }, []);
-
-  const loadModels = async () => {
-    try {
-      const response = await fetch('/api/dev/orchestrator/models');
-      const result = await response.json();
-      if (result.success) {
-        const availableModels = result.models
-          .filter((m: any) => m.available)
-          .map((m: any) => ({
-            name: m.id,
-            provider: m.provider,
-            ready: m.available
-          }));
-        setModels(availableModels);
-        if (availableModels.length > 0) {
-          setCurrentModel(availableModels[0].name);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to load models:', error);
-      // Fallback to basic models
-      setModels([
-        { name: 'gemini-2.5-flash', provider: 'Google', ready: true },
-        { name: 'gemini-2.5-pro', provider: 'Google', ready: true }
-      ]);
-      setCurrentModel('gemini-2.5-flash');
-    }
-  };
-
-  const loadPersonas = async () => {
-    try {
-      const response = await fetch('/api/dev/orchestrator/cli-bridge?command=personas');
-      const result = await response.json();
-      if (result.success) {
-        setPersonas(result.data.personas || []);
-        setCurrentPersona(result.data.current_persona || 'system');
-      }
-    } catch (error) {
-      console.error('Failed to load personas:', error);
-    }
-  };
-
-  const loadSessionStatus = async () => {
-    try {
-      const response = await fetch('/api/dev/orchestrator/cli-bridge?command=status');
-      const result = await response.json();
-      if (result.success) {
-        setSessionStatus(result.data);
-        setStreamingEnabled(result.data.streaming_enabled ?? true);
-      }
-    } catch (error) {
-      console.error('Failed to load session status:', error);
-    }
-  };
-
-  const executeCommand = async (commandLine: string) => {
-    try {
-      // Parse command and arguments
-      const parts = commandLine.split(' ');
-      const command = parts[0];
-      const args = parts.slice(1);
-      
-      const response = await fetch('/api/dev/orchestrator/cli-bridge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command, args })
-      });
-      
-      const result = await response.json();
-      
-      if (result.success) {
-        // Format the command result based on command type
-        let content = '';
-        
-        switch (command) {
-          case 'models':
-            if (result.data.models) {
-              content = `Available Models:\n${result.data.models.map((m: ModelInfo) => 
-                `${m.name} (${m.provider}) - ${m.ready ? 'Ready' : 'Not Ready'}`
-              ).join('\n')}\n\nDefault: ${result.data.default_model}\nCurrent: ${result.data.current_model}`;
-              setModels(result.data.models);
-              setCurrentModel(result.data.current_model || result.data.default_model);
-            }
-            break;
-            
-          case 'personas':
-            if (result.data.personas) {
-              content = `Available Personas:\n${result.data.personas.join('\n')}\n\nCurrent: ${result.data.current_persona}`;
-              setPersonas(result.data.personas);
-              setCurrentPersona(result.data.current_persona);
-            }
-            break;
-            
-          case 'status':
-            content = `Session Status:\n${Object.entries(result.data).map(([key, value]) => 
-              `${key}: ${value}`
-            ).join('\n')}`;
-            setSessionStatus(result.data);
-            break;
-            
-          case 'doctor':
-            content = `Orchestrator Diagnostics:\n${Object.entries(result.data).map(([key, value]) => 
-              `${key}: ${Array.isArray(value) ? value.join(', ') : value}`
-            ).join('\n')}`;
-            break;
-            
-          case 'persona_models':
-            if (result.data.assignments && result.data.validation) {
-              content = `Persona Model Assignments:\n${Object.entries(result.data.assignments).map(([persona, model]) => 
-                `${persona}: ${model} ${result.data.validation[persona] ? '✅' : '❌'}`
-              ).join('\n')}`;
-            }
-            break;
-            
-          case 'use':
-            if (args.length > 0) {
-              content = `Switched to model: ${args[0]}`;
-              setCurrentModel(args[0]);
-              await loadSessionStatus(); // Refresh session status
-            } else {
-              content = 'Usage: /use <model>';
-            }
-            break;
-            
-          case 'persona':
-            if (args.length > 0) {
-              content = `Switched to persona: ${args[0]}`;
-              setCurrentPersona(args[0]);
-              await loadSessionStatus(); // Refresh session status
-            } else {
-              content = 'Usage: /persona <name>';
-            }
-            break;
-            
-          case 'stream':
-            if (args.length > 0) {
-              const enabled = args[0].toLowerCase() === 'on';
-              setStreamingEnabled(enabled);
-              content = `Streaming turned ${enabled ? 'on' : 'off'}`;
-            } else {
-              content = `Streaming is currently ${streamingEnabled ? 'on' : 'off'}`;
-            }
-            break;
-            
-          case 'clear':
-            setMessages([]);
-            content = 'Conversation cleared';
-            break;
-            
-          case 'help':
-            content = `Available CLI Commands:
-/help - Show this help
-/models - List available models
-/use <model> - Switch to a different model
-/personas - List available personas  
-/persona <name> - Switch to a different persona
-/status - Show session status and diagnostics
-/sys [prompt] - View or set system prompt override
-/stream [on|off] - Toggle streaming mode
-/timeout <sec> - Set streaming timeout
-/clear - Clear conversation history
-/config - Show current configuration
-/doctor - Run system diagnostics
-/persona_models - Show persona model assignments
-/persona_model <persona> <model> - Set persona model`;
-            break;
-            
-          default:
-            content = result.data.output || `Command executed: ${command}`;
-            break;
-        }
-        
-        // Add system message with formatted result
-        const systemMessage: Message = {
-          id: Date.now().toString(),
-          content,
-          role: 'system',
-          persona: 'system',
-          model: currentModel,
-          timestamp: new Date(),
-          diagnostics: result.diagnostics
-        };
-        
-        setMessages(prev => [...prev, systemMessage]);
-        
-      } else {
-        // Add error message
-        const errorMessage: Message = {
-          id: Date.now().toString(),
-          content: `Command failed: ${result.error}`,
-          role: 'system',
-          persona: 'system',
-          model: currentModel,
-          timestamp: new Date()
-        };
-        
-        setMessages(prev => [...prev, errorMessage]);
-      }
-    } catch (error) {
-      console.error('Command execution error:', error);
-      
-      // Add error message
-      const errorMessage: Message = {
-        id: Date.now().toString(),
-        content: `Command error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        role: 'system',
-        persona: 'system',
-        model: currentModel,
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input,
-      role: 'user',
-      persona: currentPersona,
-      model: currentModel,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+  // Handle message send
+  const handleSendMessage = async () => {
+    if (!chat.canSend(input)) return;
+    
+    await chat.sendMessage(input);
     setInput('');
-    setIsLoading(true);
-
-    // Check if this is a CLI command
-    if (input.startsWith('/')) {
-      const commandLine = input.slice(1); // Remove the leading slash
-      await executeCommand(commandLine);
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      if (streamingEnabled) {
-        // Use streaming endpoint
-        const response = await fetch('/api/dev/orchestrator/stream', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: input,
-            persona: currentPersona,
-            model: currentModel
-          })
-        });
-
-        if (response.body) {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          
-          let assistantMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            content: '',
-            role: 'assistant',
-            persona: currentPersona,
-            model: currentModel,
-            timestamp: new Date()
-          };
-
-          setMessages(prev => [...prev, assistantMessage]);
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  
-                  if (data.final) {
-                    // Update final diagnostics
-                    setMessages(prev => prev.map(msg => 
-                      msg.id === assistantMessage.id 
-                        ? { ...msg, diagnostics: data.diagnostics }
-                        : msg
-                    ));
-                  } else {
-                    // Append content
-                    assistantMessage.content += data.content;
-                    setMessages(prev => prev.map(msg => 
-                      msg.id === assistantMessage.id 
-                        ? { ...msg, content: assistantMessage.content, diagnostics: data.diagnostics }
-                        : msg
-                    ));
-                  }
-                } catch (e) {
-                  console.error('Failed to parse streaming data:', e);
-                }
-              }
-            }
-          }
-        }
-      } else {
-        // Non-streaming response using simple endpoint
-        const response = await fetch('/api/dev/orchestrator/simple', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            message: input,
-            persona: currentPersona,
-            model: currentModel
-          })
-        });
-
-        const result = await response.json();
-
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: result.response || result.error || 'No response received',
-          role: 'assistant',
-          persona: currentPersona,
-          model: currentModel,
-          timestamp: new Date(),
-          diagnostics: {
-            trace_id: `trace-${Date.now()}`,
-            total_ms: 500,
-            sse_events: 0,
-            sse_bytes: 0
-          }
-        };
-        setMessages(prev => [...prev, assistantMessage]);
-      }
-    } catch (error) {
-      console.error('Send message error:', error);
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
+  // CLI commands for reference
   const cliCommands = [
     { cmd: '/help', desc: 'Show all available commands' },
     { cmd: '/models', desc: 'List available models' },
@@ -444,7 +88,7 @@ export default function OrchestratorChatPage() {
                 Orchestrator Chat Interface
               </h1>
               <p className="text-gray-400">
-                Web portal for CLI testing capabilities • Model: {currentModel} • Persona: {currentPersona}
+                Web portal for CLI testing capabilities • Model: {chat.currentModel} • Persona: {chat.currentPersona}
               </p>
             </div>
             
@@ -473,7 +117,7 @@ export default function OrchestratorChatPage() {
             <div className="bg-gray-900/50 border border-gray-800 rounded-lg flex flex-col h-[600px]">
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
+                {chat.session.messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
@@ -488,12 +132,12 @@ export default function OrchestratorChatPage() {
                       }`}
                     >
                       <div className="text-sm text-gray-400 mb-1">
-                        {message.role} • {message.persona} • {message.model}
-                        {message.diagnostics && (
+                        {message.role} • {message.metadata?.persona || 'system'} • {message.metadata?.model || chat.currentModel}
+                        {message.metadata?.timing?.total_ms && (
                           <span className="ml-2">
-                            • {message.diagnostics.total_ms}ms
-                            {message.diagnostics.first_token_ms && (
-                              <> • first: {message.diagnostics.first_token_ms}ms</>
+                            • {message.metadata.timing.total_ms}ms
+                            {message.metadata.timing.first_token_ms && (
+                              <> • first: {message.metadata.timing.first_token_ms}ms</>
                             )}
                           </span>
                         )}
@@ -504,13 +148,13 @@ export default function OrchestratorChatPage() {
                     </div>
                   </div>
                 ))}
-                {isLoading && (
+                {chat.isLoading && (
                   <div className="flex justify-start">
                     <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
                       <div className="flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500" />
                         <span className="text-gray-400">
-                          {streamingEnabled ? 'Streaming...' : 'Processing...'}
+                          {chat.streamingEnabled ? 'Streaming...' : 'Processing...'}
                         </span>
                       </div>
                     </div>
@@ -529,11 +173,11 @@ export default function OrchestratorChatPage() {
                     placeholder="Type your message or CLI command (e.g., /help, /models, /status)..."
                     className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-blue-12 placeholder-gray-500 resize-none"
                     rows={2}
-                    disabled={isLoading}
+                    disabled={chat.isLoading}
                   />
                   <button
-                    onClick={sendMessage}
-                    disabled={!input.trim() || isLoading}
+                    onClick={handleSendMessage}
+                    disabled={!chat.canSend(input)}
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed rounded text-white font-medium"
                   >
                     Send
@@ -554,13 +198,13 @@ export default function OrchestratorChatPage() {
                 <div>
                   <label className="text-sm text-gray-400 block mb-1">Model</label>
                   <select
-                    value={currentModel}
-                    onChange={(e) => setCurrentModel(e.target.value)}
+                    value={chat.currentModel}
+                    onChange={(e) => chat.setCurrentModel(e.target.value)}
                     className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-blue-12"
                   >
-                    {models.map((model) => (
-                      <option key={model.name} value={model.name} disabled={!model.ready}>
-                        {model.name} {model.ready ? '' : '(not ready)'}
+                    {chat.availableModels.map((model) => (
+                      <option key={model.id} value={model.id} disabled={!model.available}>
+                        {model.name} {model.available ? '' : '(not ready)'}
                       </option>
                     ))}
                   </select>
@@ -570,15 +214,17 @@ export default function OrchestratorChatPage() {
                 <div>
                   <label className="text-sm text-gray-400 block mb-1">Persona</label>
                   <select
-                    value={currentPersona}
-                    onChange={(e) => setCurrentPersona(e.target.value)}
+                    value={chat.currentPersona}
+                    onChange={(e) => chat.setCurrentPersona(e.target.value)}
                     className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-blue-12"
                   >
-                    {personas.map((persona) => (
-                      <option key={persona} value={persona}>
-                        {persona}
-                      </option>
-                    ))}
+                    <option value="system">System</option>
+                    <option value="nara">Nara</option>
+                    <option value="epii">Epii</option>
+                    <option value="anuttara">Anuttara</option>
+                    <option value="paramasiva">Paramasiva</option>
+                    <option value="parashakti">Parashakti</option>
+                    <option value="mahamaya">Mahamaya</option>
                   </select>
                 </div>
 
@@ -587,8 +233,8 @@ export default function OrchestratorChatPage() {
                   <input
                     type="checkbox"
                     id="streaming"
-                    checked={streamingEnabled}
-                    onChange={(e) => setStreamingEnabled(e.target.checked)}
+                    checked={chat.streamingEnabled}
+                    onChange={(e) => chat.setStreamingEnabled(e.target.checked)}
                     className="rounded"
                   />
                   <label htmlFor="streaming" className="text-sm text-gray-400">
@@ -623,16 +269,19 @@ export default function OrchestratorChatPage() {
             </div>
 
             {/* Session Info */}
-            {sessionStatus && (
-              <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-12 mb-3">Session Status</h3>
-                <div className="space-y-1 text-xs">
-                  <div><span className="text-gray-400">ID:</span> {sessionStatus.session_id}</div>
-                  <div><span className="text-gray-400">Hash:</span> {sessionStatus.system_hash}</div>
-                  <div><span className="text-gray-400">Timeout:</span> {sessionStatus.stream_timeout}s</div>
-                </div>
+            <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-12 mb-3">Session Status</h3>
+              <div className="space-y-1 text-xs">
+                <div><span className="text-gray-400">Messages:</span> {sessionDisplay.messageCount}</div>
+                <div><span className="text-gray-400">Thread:</span> {sessionDisplay.threadId}</div>
+                <div><span className="text-gray-400">Session:</span> {sessionDisplay.sessionId}</div>
+                <div><span className="text-gray-400">Streaming:</span> {sessionDisplay.streamingEnabled ? 'On' : 'Off'}</div>
+                <div><span className="text-gray-400">Loading:</span> {sessionDisplay.isLoading ? 'Yes' : 'No'}</div>
+                {sessionDisplay.hasError && (
+                  <div><span className="text-red-400">Error:</span> {chat.error}</div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
