@@ -2,8 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+ESSENTIAL - WHEN WORKING FROM A PLAN, FOLLOW IT. BUILD YOUR TODO LIST TO MATCH THE PLAN. PROACTIVELY REFER BACK TO PLAN FILES IN TASKS TO ESNURE ALIGNMENT.
+
+IMPORTANT - DON'T ASSUME TASKS ARE FINISHED UNTIL USER VALIDATES FUNCTIONALITY. YOUR ENTHUSIASM IS BOTH ANNOYING AND CONSTRAINS YOU IN DOING A COMPREHENSIVE JOB.
+
 <critical_constraints>
 ## Development Partnership Approach
+
+**CRITICAL**
 
 **ALWAYS** engage in dialogue before implementation:
 - **Validate Approach**: Confirm architectural decisions with user before coding
@@ -105,6 +111,39 @@ The Epi-Logos System implements a tri-laminar microservice architecture with con
 
 *Full architecture*: `/memory/diagrams/database-constellation.mmd`
 
+### Backend Architecture (Current Structure)
+**Feature-Based Organization:**
+```
+backend/
+├── main.py                    # FastAPI application entry
+├── epi_logos_system/          # Core system modules
+│   ├── auth/                  # Authentication domain
+│   │   ├── api.py             # API endpoints
+│   │   ├── models.py          # Data models
+│   │   ├── oauth/             # OAuth implementation
+│   │   └── services/          # Business logic
+│   ├── users/                 # User management (domain pattern)
+│   │   ├── api.py
+│   │   ├── models/            # Domain entities
+│   │   ├── repositories/      # Data access layer
+│   │   └── services/          # Business logic
+│   ├── cag/                   # CAG coordinate system
+│   │   ├── bimba/             # Coordinate services
+│   │   └── lightrag/          # Document intelligence
+│   └── shared/                # Cross-feature utilities
+├── subsystems/                # Six-coordinate subsystems
+│   ├── anuttara/, paramasiva/, parashakti/
+│   ├── mahamaya/, nara/, epii/
+└── tests/unit/, tests/integration/
+```
+
+**Current Patterns:**
+- **Feature-Based Modules**: Authentication, users, CAG as separate packages
+- **Emerging Domain Structure**: Users module shows repository pattern
+- **Shared Infrastructure**: Dependency injection container, security utilities
+- **Coordinate System**: Subsystem placeholders for six-coordinate implementation
+- **Absolute Imports**: `from backend.epi_logos_system.auth.models import User`
+
 ### Service Integration Patterns
 **Inter-Layer Communication:**
 1. **Frontend ↔ Backend**: REST/GraphQL APIs with JWT authentication
@@ -156,7 +195,7 @@ cd backend && python main.py
 @tailwind base;     /* WRONG */
 ```
 
-### Coding Standards (Essential)
+### Coding Standards (ESSENTIAL)
 **User Validation Required**: Never make architectural decisions without explicit user approval
 **Standard Practices Only**: Exhaust all documented best practices before custom implementations
 **Architectural Discipline**: Files go in designated locations only - no scattered directory creation
@@ -228,7 +267,7 @@ from pydantic_ai.tools import tool
 ## Project Knowledge Architecture  
 
 ### Context Discovery Directories
-- **/.context/**: Subsystem epistemic knowledge and coordinate development insights
+- **/context/**: Subsystem epistemic knowledge and coordinate development insights
   - `dev_feature_contexts/#[0-5]-[coordinate]/`: Development insights by coordinate
   - `epistemic_systemic_contexts/`: Core system knowledge and QL foundations
 - **/memory/**: Sprint tracking, story research, and architectural evolution
@@ -283,6 +322,7 @@ The core Pydantic AI agent implementing CAG paradigm with coordinate-aware compo
 - `personas/` - Coordinate-aligned persona configurations
 
 **Agent Architecture Details**: `/memory/diagrams/agentic-orchestration.mmd`
+**Backend Structure Evolution**: Refactoring toward domain architecture in progress
 
 ---
 

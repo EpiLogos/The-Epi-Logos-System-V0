@@ -61,8 +61,8 @@ export const buildAGUIRequest = (
   session: ChatSession,
   newMessage: ChatMessage
 ): AGUIRequest => ({
-  thread_id: session.threadId || `thread-${Date.now()}`,
-  run_id: `run-${Date.now()}`,
+  thread_id: session.threadId || `thread-${crypto.randomUUID()}`,
+  run_id: `run-${crypto.randomUUID()}`,
   messages: [
     ...formatMessagesForAPI(session.messages),
     formatMessagesForAPI([newMessage])[0]

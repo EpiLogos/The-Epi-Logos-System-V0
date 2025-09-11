@@ -1,0 +1,25 @@
+---
+config:
+  layout: elk
+---
+flowchart TD
+    A0["Anuttara Agent #0: ground processing language"] --> V["Vimarsa Engine: bootstrap questioning"]
+    V --> B01["Binary Unity Resolver 0/1"]
+    B01 --> Z8["Void Ops Processor 8-fold 00"]
+    Z8 --> G18["Archetypal Matcher 18-fold"]
+    G18 --> CN["Contextual Nesting Map - O#, X#, N#, M#, #/##"]
+    CN --> R50["Recursive Integration Engine 5/0"]
+    V --- L0["Coordinate Access: GraphQL - Bimba"]
+    B01 --- L3["Ontology: Neosemantics"]
+    Z8 --- L1["Structural: APOC/GDS"]
+    G18 --- L1 & L2["Semantic: Embeddings Gnostic"]
+    CN --- L3 & L0
+    R50 --- L1 & L2 & L3
+    L0 --> NB["Bimba Namespace"] & C["Redis Context Cache"]
+    L1 --> NB & NE["Episodic Namespace"] & C
+    L2 --> NG["Gnostic Namespace"] & C
+    L3 --> NB & NG & C
+    NB --> C
+    NG --> C
+    NE --> C
+    C --> A0 & V & G18 & R50

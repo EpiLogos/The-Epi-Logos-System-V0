@@ -761,7 +761,7 @@ export default function SprintTestingPage() {
         <div data-testid="test-history" className="mt-8">
           <h3 className="text-xl font-semibold text-blue-12 mb-6">Test History</h3>
           <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-11">
                   {coordinateResults.length + authResults.length + integrationResults.length}
@@ -779,6 +779,16 @@ export default function SprintTestingPage() {
                   {[...coordinateResults, ...authResults, ...integrationResults].filter(r => !r.success).length}
                 </div>
                 <div className="text-sm text-gray-400">Failed Tests</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-2xl font-bold ${
+                  sprintNumber === 2.5 ? 'text-yellow-400' : 'text-purple-400'
+                }`}>
+                  {sprintNumber === 2.5 ? '64' : '0'}%
+                </div>
+                <div className="text-sm text-gray-400">
+                  {sprintNumber === 2.5 ? 'Bridge Progress' : 'Sprint Progress'}
+                </div>
               </div>
             </div>
           </div>

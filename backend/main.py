@@ -24,10 +24,9 @@ load_dotenv()  # loads .env
 
 # Import services - using shared database clients
 from shared.database import Neo4jClient
-from .config.environment import get_config
-from .auth.oauth_routes import oauth_router
-from .auth.oauth_exchange_routes import exchange_router
-from .app.services import NodeService, NodeRepository
+from backend.epi_logos_system.shared.config import get_config
+from backend.epi_logos_system.auth.oauth.routes import oauth_router
+from backend.epi_logos_system.cag.bimba.services import NodeService, NodeRepository
 
 
 # Configure logging
@@ -93,7 +92,7 @@ app.add_middleware(
 )
 
 # Add performance monitoring middleware
-from .middleware.performance import PerformanceMiddleware
+from backend.epi_logos_system.shared.middleware import PerformanceMiddleware
 app.add_middleware(PerformanceMiddleware, min_response_time_log=0.1)
 
 # Add custom exception handlers for better error reporting
@@ -151,38 +150,39 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # Include routers
 app.include_router(oauth_router)
-app.include_router(exchange_router)
 
 # Import and include users router - using relative import
-from .api.users import router as users_router
-app.include_router(users_router, prefix="/api")
+from backend.epi_logos_system.users.api import users_router, billing_router, webhooks_router
+app.include_router(users_router)
+app.include_router(billing_router) 
+app.include_router(webhooks_router)
 
 # Import and include auth router - new for Story 02.10.1
-from .api.auth import router as auth_router
+from backend.epi_logos_system.auth.api import router as auth_router
 app.include_router(auth_router, prefix="/api")
 
 # Import and include billing router - new for Story 02.10.2
-from .api.billing import router as billing_router
+from backend.epi_logos_system.users.api import billing_router
 app.include_router(billing_router, prefix="/api")
 
 # Import and include webhooks router - new for Story 02.10.2
-from .api.webhooks import router as webhooks_router
+from backend.epi_logos_system.users.api import webhooks_router
 app.include_router(webhooks_router, prefix="/api")
 
 # Import and include health router
-from .api.health import router as health_router
+from backend.epi_logos_system.shared.health import router as health_router
 app.include_router(health_router, prefix="/api/health")
 
 # Import and include security router - new for Story 02.10.4
-from .api.security import router as security_router
+from backend.epi_logos_system.shared.security import router as security_router
 app.include_router(security_router, prefix="/api")
 
 # Include LightRAG service router for document operations
-from .services.lightrag.api import router as lightrag_router
+from backend.epi_logos_system.cag.lightrag.api import router as lightrag_router
 app.include_router(lightrag_router)
 
 # Include Graphiti service router for temporal memory operations
-from .services.graphiti.api import router as graphiti_router
+from backend.epi_logos_system.cag.graphiti.api import router as graphiti_router
 app.include_router(graphiti_router)
 
 # AG-UI Protocol has been moved to Agentic layer (Trilaminar Architecture compliance)
@@ -191,12 +191,12 @@ app.include_router(graphiti_router)
 # Add GraphQL support
 import ariadne
 from ariadne.explorer import ExplorerGraphiQL
-from .subsystems.coordinate_resolution.resolvers import query
+from backend.epi_logos_system.cag.bimba.resolvers import query
 
 # Load GraphQL schema
 import pathlib
 BACKEND_DIR = pathlib.Path(__file__).parent
-type_defs = ariadne.load_schema_from_path(str(BACKEND_DIR / "subsystems/coordinate_resolution/schema.graphql"))
+type_defs = ariadne.load_schema_from_path(str(BACKEND_DIR / "epi_logos_system/cag/bimba/schema.graphql"))
 schema = ariadne.make_executable_schema(type_defs, query)
 
 # GraphiQL explorer

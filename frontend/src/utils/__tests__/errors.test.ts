@@ -18,7 +18,7 @@ describe('Error Utilities', () => {
   describe('generateErrorId', () => {
     it('generates ID in correct format', () => {
       const id = generateErrorId();
-      expect(id).toMatch(/^EEL-\d{4}-\d{2}-\d{2}-[A-Z0-9]{6}$/);
+      expect(id).toMatch(/^EEL-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     });
 
     it('generates unique IDs', () => {
@@ -31,7 +31,7 @@ describe('Error Utilities', () => {
   describe('generateSupportId', () => {
     it('generates support ID in correct format', () => {
       const id = generateSupportId();
-      expect(id).toMatch(/^SUP-[a-z0-9]+-[A-Z0-9]{8}$/);
+      expect(id).toMatch(/^SUP-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
     });
 
     it('generates unique support IDs', () => {

@@ -64,23 +64,19 @@ export interface ErrorClassification {
 }
 
 /**
- * Generate unique error ID
- * EXTRACTED FROM: utils/errors.ts:11-14
+ * Generate unique error ID using crypto UUID
+ * UPDATED: Replaced timestamp-based generation with crypto.randomUUID()
  */
 export const generateErrorId = (): string => {
-  const timestamp = new Date().toISOString().split('T')[0];
-  const random = Math.random().toString(36).substr(2, 6).toUpperCase();
-  return `EEL-${timestamp}-${random}`;
+  return `EEL-${crypto.randomUUID()}`;
 };
 
 /**
- * Generate support ID for system errors
- * EXTRACTED FROM: utils/errors.ts:20-23
+ * Generate support ID for system errors using crypto UUID
+ * UPDATED: Replaced timestamp-based generation with crypto.randomUUID()
  */
 export const generateSupportId = (): string => {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substr(2, 8).toUpperCase();
-  return `SUP-${timestamp}-${random}`;
+  return `SUP-${crypto.randomUUID()}`;
 };
 
 /**

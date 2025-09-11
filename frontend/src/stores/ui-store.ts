@@ -59,7 +59,7 @@ export const useUIStore = create<UIState>()(
           return { modals: next };
         }),
         pushToast: (toast) => {
-          const id = `t_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+          const id = `t_${crypto.randomUUID()}`;
           set((s) => ({ toasts: [...s.toasts, { id, createdAt: Date.now(), ...toast }] }));
           return id;
         },

@@ -76,6 +76,8 @@ export default function SprintProgressTracker({
         return 'Sprint 1: Core Communication Protocol';
       case 2:
         return 'Sprint 2: Orchestration Foundation';
+      case 2.5:
+        return 'Sprint 2→3 Transition: Inter-Sprint Bridge Tasks';
       case 3:
         return 'Sprint 3: Graph Operations Foundation';
       default:
@@ -97,17 +99,31 @@ export default function SprintProgressTracker({
   };
 
   return (
-    <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-6">
+    <div className={`rounded-lg p-6 ${
+      sprintNumber === 2.5 
+        ? 'bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-yellow-500/30' 
+        : 'bg-gray-900/50 border border-gray-800'
+    }`}>
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-semibold text-blue-12">
-          {getSprintTitle(sprintNumber)}
-        </h3>
+        <div className="flex items-center gap-3">
+          {sprintNumber === 2.5 && (
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-blue-400" />
+              <span className="text-sm text-blue-400">BRIDGE TASK</span>
+            </div>
+          )}
+          <h3 className="text-xl font-semibold text-blue-12">
+            {getSprintTitle(sprintNumber)}
+          </h3>
+        </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-blue-11">
+          <div className={`text-2xl font-bold ${
+            sprintNumber === 2.5 ? 'text-yellow-11' : 'text-blue-11'
+          }`}>
             {Math.round(overallCompletion)}% Complete
           </div>
           <div className="text-sm text-gray-400">
-            Overall Progress
+            {sprintNumber === 2.5 ? 'Transition Progress' : 'Overall Progress'}
           </div>
         </div>
       </div>
@@ -121,12 +137,21 @@ export default function SprintProgressTracker({
               <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="font-mono text-sm text-blue-10">
+                    <span className={`font-mono text-sm ${
+                      sprintNumber === 2.5 ? 'text-yellow-10' : 'text-blue-10'
+                    }`}>
                       {story.id}
                     </span>
                     <StatusBadge status={story.status} />
+                    {sprintNumber === 2.5 && story.id.includes('S2→S3') && (
+                      <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-full">
+                        BRIDGE
+                      </span>
+                    )}
                   </div>
-                  <h5 className="font-medium text-blue-12 mb-1">
+                  <h5 className={`font-medium mb-1 ${
+                    sprintNumber === 2.5 ? 'text-yellow-12' : 'text-blue-12'
+                  }`}>
                     {story.title}
                   </h5>
                   <p className="text-sm text-gray-400">
@@ -134,7 +159,9 @@ export default function SprintProgressTracker({
                   </p>
                 </div>
                 <div className="text-right ml-4">
-                  <div className="text-xl font-bold text-blue-11">
+                  <div className={`text-xl font-bold ${
+                    sprintNumber === 2.5 ? 'text-yellow-11' : 'text-blue-11'
+                  }`}>
                     {story.completion}%
                   </div>
                 </div>
@@ -143,7 +170,11 @@ export default function SprintProgressTracker({
               {/* Progress Bar */}
               <div className="w-full bg-gray-700 rounded-full h-2">
                 <div
-                  className="bg-gradient-to-r from-blue-500 to-blue-400 h-2 rounded-full transition-all duration-300"
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    sprintNumber === 2.5 
+                      ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' 
+                      : 'bg-gradient-to-r from-blue-500 to-blue-400'
+                  }`}
                   style={{ width: `${story.completion}%` }}
                   role="progressbar"
                   aria-valuenow={story.completion}

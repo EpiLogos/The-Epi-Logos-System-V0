@@ -6,21 +6,17 @@
 import type { BaseError, ErrorClassification } from '@/types/errors';
 
 /**
- * Generate unique error ID
+ * Generate unique error ID using crypto UUID
  */
 export function generateErrorId(): string {
-  const timestamp = new Date().toISOString().split('T')[0];
-  const random = Math.random().toString(36).substr(2, 6).toUpperCase();
-  return `EEL-${timestamp}-${random}`;
+  return `EEL-${crypto.randomUUID()}`;
 }
 
 /**
- * Generate support ID for system errors
+ * Generate support ID for system errors using crypto UUID
  */
 export function generateSupportId(): string {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substr(2, 8).toUpperCase();
-  return `SUP-${timestamp}-${random}`;
+  return `SUP-${crypto.randomUUID()}`;
 }
 
 /**

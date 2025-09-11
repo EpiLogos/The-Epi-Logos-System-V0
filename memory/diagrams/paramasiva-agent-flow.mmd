@@ -1,0 +1,26 @@
+---
+config:
+  layout: elk
+---
+flowchart TD
+    P1["Paramasiva Agent 1 generative logic and math foundation"] --> CD["Coordinate Decomposition service address resolution"]
+    CD --> QLO["QL Neosemantics ontology for numbers 0 to 5"]
+    QLO --> MEF["MEF six by six mapper per QL number"] & OUT["Structured result QL annotations frame outputs symbols"]
+    MEF --> CF["QL Context Frame engine process orchestration"] & OUT
+    CF --> VAL["Validation and error handling"] & OUT
+    CD -- story 1 dot 1 --> L0["Coordinate access GraphQL Bimba"]
+    CF -- story 1 dot 2 --> AP["APOC template library for frames and transforms"] & QLO
+    QLO -- infer and classify --> L3["Ontology Neosemantics"]
+    MEF -- expand meaning layers --> L3
+    CF -- run frame transforms --> AP
+    CF -- structural checks --> GD["GDS structural checks motifs communities topology"]
+    CF -- semantic enrichment --> EMB["Embedding bridge for semantic commentary"]
+    L0 --> NB["Bimba namespace"] & C["Redis context cache"]
+    L1["Structural APOC GDS"] --> NB & NE["Episodic namespace"] & C
+    L2["Semantic embeddings Gnostic"] --> NG["Gnostic namespace"] & C
+    L3 --> NB & NG & C
+    NB --> C
+    NG --> C
+    NE --> C
+    C --> P1 & CF & MEF & QLO
+    VAL --> OUT

@@ -9,10 +9,13 @@ from .neo4j_client import Neo4jClient
 from .mongodb_client import MongoDBClient
 from .redis_client import RedisClient
 from .qdrant_client import QdrantClient
+from .validation import validate_all_databases, DatabaseValidator
 
 __all__ = [
     "Neo4jClient",
     "MongoDBClient", 
     "RedisClient",
-    "QdrantClient"
+    "QdrantClient",
+    "validate_all_databases",
+    "DatabaseValidator"
 ]

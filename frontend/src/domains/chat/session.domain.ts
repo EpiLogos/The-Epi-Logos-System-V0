@@ -164,11 +164,11 @@ export const setSessionId = (session: ChatSession, sessionId: string): ChatSessi
   sessionId
 });
 
-export const generateThreadId = (): string => 
-  `thread-${Date.now()}`;
+export const generateThreadId = (): string =>
+  `thread-${crypto.randomUUID()}`;
 
-export const generateRunId = (): string => 
-  `run-${Date.now()}`;
+export const generateRunId = (): string =>
+  `run-${crypto.randomUUID()}`;
 
 // Session validation and queries
 export const hasMessages = (session: ChatSession): boolean => 

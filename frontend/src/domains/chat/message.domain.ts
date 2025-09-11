@@ -42,7 +42,7 @@ export const createMessage = (
   role: ChatMessage['role'],
   metadata?: ChatMessage['metadata']
 ): ChatMessage => ({
-  id: Date.now().toString(),
+  id: crypto.randomUUID(),
   content,
   role,
   timestamp: new Date(),
