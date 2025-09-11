@@ -1,0 +1,139 @@
+flowchart TD
+
+%% =========================
+%% Core Orchestrator
+%% =========================
+O[Orchestrator: routing, tool selection, synthesis]
+
+%% =========================
+%% Subagents (no access restrictions)
+%% =========================
+subgraph "Subagents (#0-#5)"
+  S0[#0 Agent: Anuttara]
+  S1[#1 Agent: Paramasiva]
+  S2[#2 Agent: Parashakti]
+  S3[#3 Agent: Mahamaya]
+  S4[#4 Agent: Nara]
+  S5[#5 Agent: Epii]
+end
+
+%% =========================
+%% Abstraction & Retrieval Layers (agentic access patterns)
+%% =========================
+subgraph "Retrieval Layers"
+  HUB[Access Hub: routes agent requests to layers]
+  L0[Coordinate Access: GraphQL]
+  L1[Structural Queries: APOC and GDS]
+  L2[Semantic Search: embeddings and vector]
+  L3[Ontology Lens: neosemantics and rules]
+end
+
+%% =========================
+%% Neo4j-based namespaces (Bimba Map)
+%% =========================
+subgraph "Bimba Map Namespaces"
+  B[Bimba: GraphQL endpoint for structural lookups]
+  G[Gnostic: LightRAG for docs and embeddings]
+  E[Episodic: Graphiti for temporal and narrative]
+end
+
+%% =========================
+%% Shared harmonizer and cache
+%% =========================
+H[Coordinate System Harmonizer: links across namespaces]
+C[Redis Context Cache: session context packets]
+
+%% =========================
+%% Orchestrator to Subagents
+%% =========================
+O --- S0
+O --- S1
+O --- S2
+O --- S3
+O --- S4
+O --- S5
+
+%% =========================
+%% Subagents to Access Hub (all agents can use any layer)
+%% =========================
+S0 --> HUB
+S1 --> HUB
+S2 --> HUB
+S3 --> HUB
+S4 --> HUB
+S5 --> HUB
+
+%% =========================
+%% Access Hub to Layers (fan-out)
+%% =========================
+HUB --> L0
+HUB --> L1
+HUB --> L2
+HUB --> L3
+
+%% =========================
+%% Layers to Namespaces (tool binding)
+%% =========================
+L0 --> B
+L1 --> B
+L1 --> E
+L2 --> G
+L3 --> B
+L3 --> G
+
+%% =========================
+%% Namespaces to Harmonizer
+%% =========================
+B --> H
+G --> H
+E --> H
+
+%% =========================
+%% Harmonizer to Layers (cross-namespace linking)
+%% =========================
+H --> L0
+H --> L1
+H --> L2
+H --> L3
+
+%% =========================
+%% Bi-directional returns from Layers to Access Hub and Agents
+%% =========================
+L0 --> HUB
+L1 --> HUB
+L2 --> HUB
+L3 --> HUB
+HUB --> S0
+HUB --> S1
+HUB --> S2
+HUB --> S3
+HUB --> S4
+HUB --> S5
+
+%% =========================
+%% Caching participation (non-deterministic reuse)
+%% =========================
+L0 --> C
+L1 --> C
+L2 --> C
+L3 --> C
+B --> C
+G --> C
+E --> C
+C --> O
+C --> S0
+C --> S1
+C --> S2
+C --> S3
+C --> S4
+C --> S5
+
+%% =========================
+%% Final aggregation to Orchestrator
+%% =========================
+S0 --> O
+S1 --> O
+S2 --> O
+S3 --> O
+S4 --> O
+S5 --> O

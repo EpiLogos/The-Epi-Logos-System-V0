@@ -102,7 +102,7 @@ The system operates on sophisticated mathematical principles:
 
 | Coordinate | Database | Purpose | Technology |
 |------------|----------|---------|------------|
-| **#0** | Neo4j Aura Cloud | Core CAG system, Bimba coordinate graph | Graph Database |
+| **#0** | Neo4j Local | Core CAG system, Bimba coordinate graph | Graph Database |
 | **#1** | MongoDB Atlas Cloud | Structural data, user profiles | Document Store |
 | **#2** | LightRAG | Vector + Graph semantic search | Hybrid Vector/Graph |
 | **#3** | Graphiti MCP | Temporal Graph episodic memory | Temporal Graph |

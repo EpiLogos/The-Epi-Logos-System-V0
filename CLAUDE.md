@@ -2,6 +2,53 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+<critical_constraints>
+## Development Partnership Approach
+
+**ALWAYS** engage in dialogue before implementation:
+- **Validate Approach**: Confirm architectural decisions with user before coding
+- **Seek Clarification**: Ask questions when requirements are unclear
+- **Partner, Don't Execute**: Be a development partner, not a code-writing service
+- **Show Patience**: Take time to understand rather than rushing to implement
+
+### Communication Standards
+1. **Before Any Code**: Present plan and get user validation
+2. **Architecture Decisions**: Never make structural changes without approval
+3. **Standard Practices First**: Exhaust all documentation-informed best practices before custom solutions
+4. **Uncertainty Response**: "Let me confirm this approach with you first..."
+5. **Honest Feedback**: Express concerns and alternative suggestions openly
+</critical_constraints>
+
+<philosophical_foundation>
+## Epi-Logos System Foundation
+
+### Core Philosophy
+- **Consciousness-First**: Technology serves consciousness evolution
+- **Theory is Function**: Philosophical models translate directly to code
+- **Sacred-Scientific Integration**: Ancient wisdom meets cutting-edge AI
+
+### Quaternal Logic (QL) Coordinate System
+**Mod6 foundational base with variant extensions:**
+- **#0 Anuttara**: Proto-logical processing (Neo4j core)
+- **#1 Paramasiva**: Quaternal Logic engine (MongoDB) 
+- **#2 Parashakti**: Vibrational processing (LightRAG)
+- **#3 Mahamaya**: Symbolic transcription (Graphiti MCP)
+- **#4 Nara**: Personal interface (Qdrant)
+- **#5 Epii**: Orchestration synthesis (Redis + Notion)
+
+### CAG (Coordinate Augmented Generation) Approach
+**Foundational to the project**: Single orchestrator with coordinate-aware context switching
+**Evolution Path**: Proto-multi-agent → Distributed consciousness computing
+**Details**: `/.context/epistemic_systemic_contexts/Epi-Logos System/`
+
+### Bimba-Driven Development (BDD)
+1. **Query Graph First**: Discover existing harmonic structures
+2. **Code as Translation**: Faithful implementation of structural patterns
+3. **Holographic Implementation**: Every coordinate contains 6-fold internal structure
+4. **Agentic Workflow**: Coordinate-aware context switching with specialized role adaptation
+</philosophical_foundation>
+
+<operational_commands>
 ## Development Commands
 
 ### Primary Development
@@ -13,12 +60,6 @@ npm run dev
 npm run dev:frontend    # Frontend (Next.js) - port 3000
 npm run dev:backend     # Backend (FastAPI) - port 8000  
 npm run dev:agentic     # Agentic layer - port 8001
-
-# Alternative service startup scripts
-./scripts/dev-start.sh      # Full setup and start
-./scripts/dev-quick-start.sh # Quick start without setup
-./scripts/dev-stop.sh       # Stop all services
-./scripts/dev-clean.sh      # Clean build artifacts
 ```
 
 ### Testing
@@ -27,8 +68,6 @@ npm test                    # Run all tests
 npm run test:frontend       # Frontend tests only
 npm run test:backend        # Backend tests (pytest)
 npm run test:agentic        # Agentic tests (pytest) 
-npm run test:e2e           # End-to-end tests (Playwright)
-npm run test:structure     # Project structure validation
 ```
 
 ### Code Quality
@@ -39,14 +78,13 @@ npm run check             # Type check + lint
 npm run fix               # Format + lint fix
 ```
 
-### Build & Deployment
-```bash
-npm run build             # Build all packages and frontend
-npm run docker:build      # Build Docker images
-npm run docker:up         # Run in Docker containers
-```
+**Full command reference**: `/scripts/` directory
+</operational_commands>
 
+<architectural_foundation>
 ## Architecture Overview
+
+**Architectural Reference**: `/memory/diagrams/` - Visual architecture documentation and system evolution tracking
 
 ### Tri-Laminar Architecture
 The Epi-Logos System implements a tri-laminar microservice architecture with consciousness-aligned computing:
@@ -55,14 +93,7 @@ The Epi-Logos System implements a tri-laminar microservice architecture with con
 - **Backend Layer**: FastAPI + Python 3.13 (port 8000)  
 - **Agentic Layer**: Pydantic AI agents (port 8001)
 
-### Six-Coordinate Subsystem Model
-The system is organized around six Bimba coordinates (#0-#5), each representing a subsystem:
-- **#0 Anuttara**: Proto-logical processing (Neo4j core)
-- **#1 Paramasiva**: Quaternal Logic engine (MongoDB)
-- **#2 Parashakti**: Vibrational processing (LightRAG)
-- **#3 Mahamaya**: Symbolic transcription (Graphiti MCP)
-- **#4 Nara**: Personal interface (Qdrant)
-- **#5 Epii**: Orchestration synthesis (Redis + Notion)
+*Full details*: `/memory/diagrams/trilaminar-overview.mmd`
 
 ### Database Constellation
 - **Neo4j Aura Cloud**: Primary graph database (multiple instances)
@@ -72,63 +103,46 @@ The system is organized around six Bimba coordinates (#0-#5), each representing 
 - **LightRAG**: Vector + Graph hybrid processing  
 - **Graphiti MCP**: Temporal graph memory
 
-## Import Standards (CRITICAL)
+*Full architecture*: `/memory/diagrams/database-constellation.mmd`
 
-### Backend Python Services
-**MANDATORY**: Use relative imports for all internal backend modules:
+### Service Integration Patterns
+**Inter-Layer Communication:**
+1. **Frontend ↔ Backend**: REST/GraphQL APIs with JWT authentication
+2. **Backend ↔ Agentic**: HTTP APIs for agent invocation and context retrieval
+3. **Frontend ↔ Agentic**: Proxied through backend (no direct connection)
+
+*Integration details*: `/memory/diagrams/service-integration.mmd`
+</architectural_foundation>
+
+<technical_constraints>
+## Import Standards & Technology Stack
+
+### Python Import Standards (CRITICAL)
+**MANDATORY**: Use absolute imports from project root (Python best practice):
 
 ```python
-# ✅ Correct - relative imports
-from .models.user import User
-from .services.user_service import UserService
-from .database.neo4j_client import Neo4jClient
-from ..config.environment import get_config
-
-# ❌ Wrong - absolute imports
-from models.user import User
+# ✅ Correct - absolute imports from project root
+from backend.models.user import User
 from backend.services.user_service import UserService
+from agentic.agents.orchestrator.core import OrchestratorAgent
+
+# ❌ Wrong - relative imports for internal modules
+from .models.user import User
+from ..services.user_service import UserService
 ```
 
-**Never use sys.path.append() hacks**. Services run as modules from project root.
+**Never use sys.path.append() hacks**. Services run as modules: `python -m backend.main`
 
 ### Service Execution Pattern
-Backend services MUST be run as modules from project root:
 ```bash
 # ✅ Correct
-python -m uvicorn backend.main:app --reload
+npm run dev:backend
 
 # ❌ Wrong  
 cd backend && python main.py
 ```
 
-## Technology Stack
-
-### Frontend (Next.js)
-- **React 18** + **Next.js 15** with TypeScript
-- **Tailwind CSS v4** (uses `@import "tailwindcss"` syntax)
-- **Three.js** + **@react-three/fiber** for 3D visualization
-- **Framer Motion** for animations
-- **Radix UI** for accessible components
-- **Apollo Client** for GraphQL
-- **Zustand** for state management
-
-### Backend (FastAPI)
-- **Python 3.13** with **FastAPI**
-- **Ariadne GraphQL** for schema-first GraphQL
-- **Pydantic** for data validation
-- **Neo4j** drivers for graph database
-- **pytest** for testing
-- **ruff** + **black** for formatting
-
-### Key Services
-- **LightRAG**: Document intelligence (port 8003/3003)
-- **Graphiti MCP**: Temporal memory (port 8002/3002)
-- **AG-UI Protocol**: Now integrated into Pydantic AI
-
-## Tailwind CSS v4 Configuration (CRITICAL)
-
-This project uses **Tailwind CSS v4** - DO NOT use v3 syntax:
-
+### Tailwind CSS v4 Configuration (CRITICAL)
 ```css
 /* ✅ Correct v4 syntax */
 @import "tailwindcss";
@@ -136,311 +150,140 @@ This project uses **Tailwind CSS v4** - DO NOT use v3 syntax:
 
 @theme {
   --color-primary: hsl(222.2 47.4% 11.2%);
-  --font-sans: var(--font-tourney-semibold), system-ui, sans-serif;
 }
 
 /* ❌ Never use v3 syntax */
 @tailwind base;     /* WRONG */
-@tailwind components;
-@tailwind utilities;
 ```
 
-- Configuration is in CSS `@theme` directive, NOT `tailwind.config.js`
-- PostCSS uses `'@tailwindcss/postcss': {}`
-- Minimal `tailwind.config.js` with only content paths
+### Coding Standards (Essential)
+**User Validation Required**: Never make architectural decisions without explicit user approval
+**Standard Practices Only**: Exhaust all documented best practices before custom implementations
+**Architectural Discipline**: Files go in designated locations only - no scattered directory creation
+**Trilaminar Boundaries**: Maintain strict service separation (Frontend/Backend/Agentic)
 
-## Development Environment
+**Complete Standards**: `/docs/architecture/coding-standards.md`
+**Technology Stack Details**: `/docs/architecture/tech-stack.md`
+</technical_constraints>
 
-### Prerequisites
-- **Node.js** ≥20.0.0
-- **Python** ≥3.13.0
-- **Docker** & **Docker Compose**
+<quality_standards>
+## Code Quality & Testing Strategy
 
-### Setup
-```bash
-npm run setup:full    # Complete setup with Python environment
-npm run setup         # Quick setup
-npm run setup:hooks   # Install pre-commit hooks
+### TDD Excellence Framework (Sprint 2 Proven)
+1. **RED Phase**: Comprehensive failing tests covering all acceptance criteria
+2. **GREEN Phase**: Functional implementation meeting all requirements
+3. **REFACTOR Phase**: Architectural elegance transformation + **test updating**
+
+### Test Evolution Through Development Cycle
+- **Test Rewriting**: Update tests as requirements evolve during development
+- **Test Refactoring**: Enhance test quality during REFACTOR phase
+- **Architectural Alignment**: Test structure mirrors production architecture
+
+### Test Organization Structure
+```
+/tests/
+├── unit/           # Isolated component/service logic
+├── integration/    # Service boundary validation  
+├── e2e/           # Complete user workflow validation
+└── [feature]/     # Feature-specific test organization
+    ├── unit/
+    ├── integration/
+    └── acceptance/
 ```
 
-### Environment Variables
-Required in `.env` file:
-- Neo4j: `NEO4J_URI`, `NEO4J_USERNAME`, `NEO4J_PASSWORD`
-- MongoDB: `MONGODB_URI`
-- Redis: `REDIS_URL`
-- JWT: `JWT_SECRET`
-- AI APIs: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`
-- OAuth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+### Quality Gates
+- **Unit Tests**: 90%+ coverage with 100% passing rate
+- **Integration Tests**: Complete API and authentication flow coverage
+- **Architectural Elegance**: Target 90+ quality scores through REFACTOR phase
 
-### Docker Development
-```bash
-# Profile-based development
-docker-compose --profile soft-launch up    # Core services only
-docker-compose --profile full-dev up       # All development services
-```
+**Sprint 2 Proven Patterns**: `/memory/sprint_tracking/sprint-2/sprint-2-claude-insights/`
+</quality_standards>
 
-## Philosophical Framework
-
-### Core Principles
-- **Consciousness-First**: Technology serves consciousness evolution
-- **Theory is Function**: Philosophical models translate directly to code
-- **Holographic Architecture**: Each subsystem contains the complete 6-fold structure
-- **Sacred-Scientific Integration**: Ancient wisdom meets cutting-edge AI
-
-### Bimba-Driven Development (BDD)
-1. **Query Graph First**: Discover existing harmonic structures
-2. **Code as Translation**: Faithful implementation of structural patterns
-3. **Holographic Implementation**: Every coordinate contains 6-fold internal structure
-4. **Agentic Workflow**: Single orchestrator with specialized role masks
-
-## Code Quality Standards
-
-### Python (ruff + black)
-- Line length: 88 characters
-- Target: Python 3.13
-- Auto-formatting with black
-- Linting with ruff
-
-### TypeScript/React
-- Strict TypeScript configuration
-- ESLint with Next.js config
-- Prettier formatting
-- Jest testing with React Testing Library
-
-### Performance Targets
-- **60 FPS animations** using anime.js
-- **<200ms response time** for chat interactions
-- **2,000+ node capability** for graph rendering
-- **Real-time WebGL** cymatic visualization
-
-## Testing Strategy
-
-### Backend Testing
-```bash
-cd backend && python -m pytest              # All backend tests
-python -m pytest tests/unit/               # Unit tests only
-python -m pytest tests/integration/        # Integration tests only
-```
-
-### Frontend Testing
-```bash
-cd frontend && npm test                     # Jest tests
-npm run test:coverage                       # Coverage report
-```
-
-### Key Test Patterns
-- **Unit tests**: Isolated component/service logic
-- **Integration tests**: Full request pipeline validation  
-- **E2E tests**: Complete user workflow validation
-- **Structure tests**: Architecture compliance validation
-
-## Service Architecture Patterns
-
-### Dependency Injection
-Use FastAPI's dependency injection with explicit resource lifecycle:
-
-```python
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup - initialize shared resources
-    app.state.neo4j_client = Neo4jClient(...)
-    yield
-    # Shutdown - cleanup resources
-    app.state.neo4j_client.close()
-
-def get_neo4j_client(request: Request) -> Neo4jClient:
-    return request.app.state.neo4j_client
-```
-
-### GraphQL Integration
-Use Ariadne with FastAPI dependency injection:
-
-```python
-@app.post("/graphql")
-async def graphql_endpoint(
-    request: Request,
-    neo4j_client: Neo4jClient = Depends(get_neo4j_client)
-):
-    context_value = {"service": node_service}
-    _, result = await ariadne.graphql(schema, data, context_value=context_value)
-    return JSONResponse(content=result)
-```
-
-## Project Structure 
-
-### Trilaminar Architecture
-- `frontend/`: Next.js application (port 3000)
-- `backend/`: FastAPI backend service (port 8000)  
-- `agentic/`: Pydantic AI agent service (port 8001)
-- `packages/*`: Shared packages and components
-- `shared/`: Shared database clients and utilities
-
-### Agent Architecture
-
-#### Orchestrator Agent (`/agentic/agents/orchestrator/`)
-The core Pydantic AI agent implementing CAG paradigm with modular, categorized components:
-
-**Core Agent:**
-- `orchestrator_agent.py` - Main Pydantic AI agent implementation
-- `core.py`, `types.py` - Core types and PersonaType enum
-- `infrastructure.py` - Infrastructure utilities
-
-**CAG Tools by Namespace:**
-- `tools/bimba/` - Bimba namespace (canonical knowledge resolution via coordinate system)
-- `tools/gnostic/` - Gnostic namespace (LightRAG document intelligence with Neo4j+Qdrant)
-- `tools/episodic/` - Episodic namespace (Graphiti temporal memory across all layers)
-- `tools/http_clients_factory.py` - Cross-namespace HTTP client factory
-
-**Management Components:**
-- `session/` - Session lifecycle management 
-- `conversation/` - Conversation state management
-- `context/` - Context package management foundations (future: specialized context tooling)
-
-**Configuration:**
-- `system_prompt/` - Modular prompt components (isolated editing capability)
-  - `quaternal_logic_foundation.py` - QL (Quaternal Logic) mod6 framework awareness  
-  - `epi_logos_system_foundation.py` - CAG system knowledge and architecture
-  - `agent_operational_context.py` - Self-referential coordinate awareness
-- `simple_context_processor.py` - Context window management and processing
-- `personas/` - Persona YAML configurations
-  - `epii.yaml` - #5 Synthesis & orchestration persona
-  - `nara.yaml` - #4 Dialogical-identity persona
-  - `default.yaml`, `assistant.yaml` - Base personas
-
-### Key Directories
-- `backend/subsystems/`: Six-coordinate subsystem implementations
-- `frontend/src/app/`: Next.js app router pages
-- `scripts/`: Development and deployment scripts
-- `docker-compose*.yml`: Container orchestration
-- `.venv/`: Python virtual environment
-
-## Security Considerations
-
-### Authentication
-- JWT + OAuth2 with multi-factor authentication
-- Freemium model with Patron tier subscriptions
-- Data sovereignty with personal Pratibimba storage
-
-### Privacy Architecture
-- Field-level encryption for user data
-- Two-stage privacy pipeline (anonymization)
-- Transparent data export/download functionality
-
-### CORS Configuration
-- Restrictive CORS for production
-- Development-friendly local origins
-- Credential support for authenticated requests
-
-## Critical Pitfalls and Anti-Patterns (Sprint 2 Learnings)
+<failure_prevention>  
+## Critical Anti-Patterns (Sprint 2 Validated)
 
 ### ❌ NEVER: Silent Architectural Deviations
-**Anti-Pattern**: Implementing REST when GraphQL is specified due to "dependency conflicts"
-**Root Cause**: Local directory shadowing (`/graphql/` shadowing graphql-core package)
-**Correct Process**: 
-1. Create 15-min PoC demonstrating claimed conflict
-2. Test with latest package versions
-3. Verify no environment issues (PATH, import shadows)
-4. Document exact error messages before alternative implementation
+**Prevention**: Create 15-min PoC demonstrating claimed conflicts before alternative implementations
 
 ### ❌ NEVER: Frontend-Backend Contract Misalignment  
-**Anti-Pattern**: Building excellent frontend that's completely blocked by missing backend endpoints
-**Example**: Backend provides `PATCH /api/users/me`, frontend expects `PUT /api/users/profile` + billing APIs
 **Prevention**: API-first development with contract validation before frontend work
 
 ### ❌ NEVER: Pydantic AI Tool Decoration Errors
-**Anti-Pattern**: Trying to import and use `@tool` decorators
 ```python
 # ❌ WRONG - This import doesn't exist
 from pydantic_ai.tools import tool  
-
-@tool  # ❌ This decorator pattern doesn't work
-async def my_tool():
-    pass
 ```
-**Correct Pattern**: Plain functions with type hints - Pydantic AI auto-converts via introspection
-
-### ❌ NEVER: Backend Import Violations
-**Anti-Pattern**: Using sys.path.append() or absolute imports for internal modules
-```python
-# ❌ FORBIDDEN
-import sys; sys.path.append(...)
-from models.user import User  # Absolute import for internal module
-```
-**Correct**: Always use relative imports (`from .models.user import User`)
-
-### ❌ NEVER: Service Execution from Wrong Directory
-**Anti-Pattern**: Running backend services directly from their directories
-```bash
-# ❌ WRONG - Breaks relative imports
-cd backend && python main.py
-cd backend && uvicorn main:app
-```
-**Correct**: `npm run dev:backend` (runs as module from project root)
-
-### ❌ NEVER: Tailwind CSS v3 Syntax in v4 Project
-**Anti-Pattern**: Using v3 syntax in CSS files
-```css
-/* ❌ WRONG - v3 syntax */
-@tailwind base;
-@tailwind components; 
-@tailwind utilities;
-```
-**Correct**: `@import "tailwindcss";` and `@theme` directive
-
-### ❌ NEVER: Incomplete TDD Cycles
-**Anti-Pattern**: Implementing without RED-GREEN-REFACTOR or skipping elegance phase
-**Common Issue**: Functional code that lacks production architecture
-**Prevention**: Complete TDD cycles with systematic refactoring phases
-
-### ❌ NEVER: Integration Testing After Frontend Development
-**Anti-Pattern**: Building frontend UI then discovering missing backend endpoints
-**Impact**: Complete development blockage requiring significant rework
-**Prevention**: Integration testing BEFORE frontend implementation
-
-### ❌ NEVER: Security Implementation Without TDD
-**Anti-Pattern**: Building security features without comprehensive test coverage  
-**Risk**: Undetected vulnerabilities in authentication/authorization flows
-**Requirement**: 95%+ test coverage for all security-critical code paths
+**Correct**: Plain functions with type hints - Pydantic AI auto-converts via introspection
 
 ### ❌ NEVER: Domain Logic Mixed with Framework Code
-**Anti-Pattern**: Putting business logic inside React components or FastAPI routes
-**Problem**: Untestable, coupled code that violates clean architecture
-**Correct**: Domain layer with zero framework dependencies
-
-### ❌ NEVER: Direct Database Access from Services
-**Anti-Pattern**: Services calling database clients directly
-**Problem**: Tight coupling, difficult testing, architectural violations
-**Required**: Repository pattern with abstract interfaces
-
-### ❌ NEVER: Manual Configuration Throughout Codebase
-**Anti-Pattern**: Scattered `os.getenv()` calls throughout services
-**Problem**: Configuration drift, environment-specific failures
-**Required**: Centralized configuration with dependency injection
-
-### ❌ NEVER: Generic Error Responses
-**Anti-Pattern**: Returning "Something went wrong" for all errors
-**Problem**: Poor user experience, difficult debugging
-**Required**: Structured error responses with specific user messaging
+**Required**: Domain layer with zero framework dependencies
 
 ### ❌ NEVER: Complex Story Implementation Without Decomposition
-**Anti-Pattern**: Implementing multi-service features as single story
-**Problem**: Coordination failures, integration blockages
 **Required**: Systematic sub-story decomposition with dependency mapping
 
-## Development Velocity Killers Observed
+**Complete Anti-Pattern Guide**: `/memory/sprint_tracking/sprint-2/sprint-2-claude-insights/architectural-compliance-lessons.md`
+</failure_prevention>
 
-1. **API Contract Misalignment** - Frontend blocked waiting for missing endpoints
-2. **Integration Coordination Issues** - Services unable to communicate properly
-3. **Security Implementation Complexity** - Multiple debugging cycles for authentication flows
-4. **Framework Violation Attempts** - Time wasted on non-working decorator patterns
-5. **Import Structure Violations** - Service startup failures due to import errors
+<context_discovery>
+## Project Knowledge Architecture  
 
-## Quality Failure Patterns
+### Context Discovery Directories
+- **/.context/**: Subsystem epistemic knowledge and coordinate development insights
+  - `dev_feature_contexts/#[0-5]-[coordinate]/`: Development insights by coordinate
+  - `epistemic_systemic_contexts/`: Core system knowledge and QL foundations
+- **/memory/**: Sprint tracking, story research, and architectural evolution
+  - `/memory/diagrams/` - Visual architecture reference (foundational)
+  - `/memory/sprint_tracking/` - Development insights and proven patterns
+  - `/memory/story_bimba_research/` - Epic research and coordinate analysis
+- **/docs/**: BMAD process documentation and technical specifications
+  - `/docs/stories/`: User story specifications and acceptance criteria
+  - `/docs/architecture/`: Technical architecture documentation
+  - `/docs/agent_researches/`: Research agent outputs and analysis
 
-1. **Skipped TDD Phases** - Functional code without architectural elegance
-2. **Missing Integration Tests** - Service boundary failures in production
-3. **Insufficient Security Testing** - Undetected authentication vulnerabilities  
-4. **Poor Error Handling** - Generic error responses causing user confusion
-5. **Architectural Inconsistency** - Different patterns across similar components
+### Context Discovery Workflow
+1. **Feature Planning**: Start with `/.context/dev_feature_contexts/[coordinate]/`
+2. **Architectural Context**: Reference `/.context/epistemic_systemic_contexts/`
+3. **Implementation History**: Check `/memory/story_bimba_research/` and sprint tracking
+4. **Formal Specifications**: Use `/docs/stories/` and `/docs/architecture/`
+5. **Reserach SubAgent OUtputs**: Dive into `/docs/agent_researches/` for expert insights
+</context_discovery>
 
-CRITICAL - NEVER IMPLEMENT CUSTOM APPROACHES OR WORKAROUNDS THAT VIOLATE EXISTING ARCHITECTURE OR SERVICES, STANDARDS, PATTERNS OR PACKAGES. RESPECT THE LIBRARIES WE'RE WORKING WITH. IF IN DOUBT, COMMUNICATE. 
+<architectural_maintenance>
+## Architectural Diagram Maintenance
+
+### Update Workflow
+On **user-verified feature completion**:
+1. Update relevant diagrams in `/memory/diagrams/`
+2. Maintain architectural accuracy with implemented codebase
+3. Document stable patterns for future context
+4. Preserve coordinate system alignment in all representations
+
+### Diagram Dependencies
+```yaml
+foundational_architecture: "/memory/diagrams/"
+sprint_insights: "/memory/sprint_tracking/sprint-2/sprint-2-claude-insights/"  
+technical_specifications: "/docs/architecture/"
+coordinate_contexts: "/.context/"
+operational_scripts: "/scripts/"
+```
+</architectural_maintenance>
+
+## Agent Architecture Reference
+
+### Orchestrator Agent (`/agentic/agents/orchestrator/`)
+The core Pydantic AI agent implementing CAG paradigm with coordinate-aware components:
+
+**CAG Tools by Namespace:**
+- `tools/bimba/` - Bimba namespace (canonical knowledge resolution via coordinate system)
+- `tools/gnostic/` - Gnostic namespace (LightRAG document intelligence)
+- `tools/episodic/` - Episodic namespace (Graphiti temporal memory)
+
+**Configuration:**
+- `system_prompt/quaternal_logic_foundation.py` - QL mod6 framework awareness
+- `personas/` - Coordinate-aligned persona configurations
+
+**Agent Architecture Details**: `/memory/diagrams/agentic-orchestration.mmd`
+
+---
+
+CRITICAL - NEVER IMPLEMENT CUSTOM APPROACHES OR WORKAROUNDS THAT VIOLATE EXISTING ARCHITECTURE OR SERVICES, STANDARDS, PATTERNS OR PACKAGES. RESPECT THE LIBRARIES WE'RE WORKING WITH. IF IN DOUBT, COMMUNICATE.

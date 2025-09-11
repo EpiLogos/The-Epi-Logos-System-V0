@@ -52,6 +52,7 @@ graph TB
             COORD_RESOLVERS[GraphQL Resolvers<br/>Node Operations]
             COORD_REPO[Node Repository<br/>Database Access]
             COORD_SVC[Node Service<br/>Business Logic]
+            BP_MCP[Bimba-Pratibimba MCP]
         end
         
         LIGHT_API --> LIGHT_SVC
@@ -65,6 +66,7 @@ graph TB
         COORD_SCHEMA --> COORD_RESOLVERS
         COORD_RESOLVERS --> COORD_REPO
         COORD_REPO --> COORD_SVC
+        COORD_SVC --> BP_MCP
     end
     
     subgraph "Authentication Architecture"
@@ -138,7 +140,7 @@ graph TB
         QDRANT_LOCAL[Qdrant<br/>Local Vector DB]
     end
     
-    NEO4J_CLIENT -.->|Connection| NEO4J_Local
+    NEO4J_CLIENT -.->|Connection| NEO4J_LOCAL
     MONGO_CLIENT -.->|Connection| MONGO_ATLAS
     REDIS_CLIENT -.->|Connection| REDIS_CLOUD
     QDRANT_CLIENT -.->|Connection| QDRANT_LOCAL

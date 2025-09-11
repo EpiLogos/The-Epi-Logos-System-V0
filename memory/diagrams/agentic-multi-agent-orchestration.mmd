@@ -1,0 +1,175 @@
+---
+config:
+  layout: elk
+---
+flowchart TB
+ subgraph subGraph0["External Systems & Data Sources"]
+        BACKEND_MICROSERVICES["Backend Microservices"]
+  end
+ subgraph subGraph1["AG-UI Protocol Integration"]
+        AGUI_API["AG-UI API<br>/api/ag-ui/*"]
+        AGUI_STREAM["SSE Streaming<br>Real-time Events &amp; thread_id"]
+        AGUI_HANDLER["Request Handler<br>Native Integration"]
+  end
+ subgraph subGraph2["Central Orchestrator Agent (Hybrid Controller)"]
+        ORCH_AGENT["Unified Orchestrator<br>Pydantic AI Core"]
+        ORCH_DEPS["Dependencies<br>Client &amp; Tool Injection"]
+        ORCH_CONTEXT["Context Processor<br>Window Management"]
+        ORCH_ROUTING["Hybrid Router<br>Routes to Internal Personas or External Agents"]
+        INTERNAL_PERSONAS["Internal Persona Masks<br>For lightweight tasks"]
+  end
+ subgraph PERSONA_CONSTELLATION["Persona Constellation (Conceptual Identities)"]
+        PERSONA_0["Anuttara Persona<br>#0"]
+        PERSONA_1["Paramasiva Persona<br>#1"]
+        PERSONA_2["Parashakti Persona<br>#2"]
+        PERSONA_3["Mahamaya Persona<br>#3"]
+        PERSONA_4["Nara Persona<br>#4"]
+        PERSONA_5["Epii Persona<br>#5"]
+  end
+ subgraph AGENT_CONSTELLATION["Subsystem Agent Constellation (Active Implementations)"]
+        AGENT_0["Anuttara Agent<br>#0 Proto-logical"]
+        AGENT_1["Paramasiva Agent<br>#1 Quaternal Logic"]
+        AGENT_2["Parashakti Agent<br>#2 Vibrational"]
+        AGENT_3["Mahamaya Agent<br>#3 Symbolic"]
+        AGENT_4["Nara Agent<br>#4 Personal Interface"]
+        AGENT_5["Epii Agent<br>#5 Synthesis Orchestration"]
+  end
+ subgraph subGraph5["Nested Context Hierarchy"]
+    direction TB
+        AGUI_THREAD["AG-UI Conversation<br><b>thread_id</b>"]
+        CONTEXT_LINEAGES["A2A Context Lineages<br><b>context_id</b>"]
+        CONTEXT_PACKAGE["Context Package<br>Shared State"]
+        WISDOM_PACKETS["Wisdom Packets<br>Synthesized Insights"]
+  end
+ subgraph subGraph6["Session & Context Management (Redis Data Store)"]
+    direction TB
+        SESSION_MANAGER["Session Manager<br><b>session_id</b>"]
+        subGraph5
+  end
+ subgraph subGraph7["Pydantic AI Application (Port 8001)"]
+    direction TB
+        MAIN["main.py<br>Agentic Entry Point"]
+        subGraph1
+        subGraph2
+        PERSONA_CONSTELLATION
+        AGENT_CONSTELLATION
+        subGraph6
+  end
+ subgraph SHARED_TOOL_GROUP["Shared CAG Tools (Universal Foundation)"]
+    direction TB
+        BIMBA_TOOL["Resolve Coordinate Tool"]
+        LIGHTRAG_TOOL["Gnostic Space Tools"]
+        GRAPHITI_TOOL["Episodic Space Tools"]
+        REDIS_TOOL["Get Session Context Tool"]
+  end
+ subgraph SPECIFIC_TOOL_GROUP["Coordinate-Specific Tools (Specialized Capabilities)"]
+        TOOLS_0["Anuttara Tools<br>#0"]
+        TOOLS_1["Paramasiva Tools<br>#1"]
+        TOOLS_2["Parashakti Tools<br>#2"]
+        TOOLS_3["Mahamaya Tools<br>#3"]
+        TOOLS_4["Nara Tools<br>#4"]
+        TOOLS_5["Epii Tools<br>#5"]
+  end
+ subgraph TOOL_ARCHITECTURE["Tool Architecture & Data Flow"]
+    direction LR
+        SHARED_TOOL_GROUP
+        SPECIFIC_TOOL_GROUP
+        TOOL_OUTPUT["Consolidated Tool Output"]
+  end
+ subgraph subGraph11["Backend HTTP Clients"]
+        BACKEND_CLIENT["Backend HTTP Client"]
+        BIMBA_CLIENT["Bimba GraphQL Client"]
+        LIGHTRAG_CLIENT["LightRAG Client"]
+        GRAPHITI_CLIENT["Graphiti Client"]
+        REDIS_CLIENT["Redis Client"]
+  end
+ subgraph subGraph12["Model Integration"]
+        MODEL_FACTORY["Model Factory"]
+  end
+ subgraph subGraph13["Client & Model Architecture (Injected via Dependencies)"]
+    direction TB
+        subGraph11
+        subGraph12
+  end
+    MAIN --> AGUI_API
+    AGUI_API --> AGUI_STREAM & AGUI_HANDLER
+    AGUI_HANDLER --> ORCH_AGENT
+    ORCH_AGENT --> ORCH_DEPS & ORCH_CONTEXT & ORCH_ROUTING
+    ORCH_ROUTING -- delegates to --> AGENT_CONSTELLATION
+    ORCH_ROUTING -- handles via --> INTERNAL_PERSONAS
+    INTERNAL_PERSONAS -.-> PERSONA_CONSTELLATION
+    PERSONA_0 -. embodies .-> AGENT_0
+    PERSONA_1 -. embodies .-> AGENT_1
+    PERSONA_2 -. embodies .-> AGENT_2
+    PERSONA_3 -. embodies .-> AGENT_3
+    PERSONA_4 -. embodies .-> AGENT_4
+    PERSONA_5 -. embodies .-> AGENT_5
+    SESSION_MANAGER --> AGUI_THREAD
+    AGUI_THREAD --> CONTEXT_LINEAGES
+    CONTEXT_LINEAGES --> CONTEXT_PACKAGE & WISDOM_PACKETS
+    AGUI_STREAM -- establishes --> SESSION_MANAGER
+    BACKEND_MICROSERVICES -- injects data into --> CONTEXT_PACKAGE
+    ORCH_AGENT -- creates/updates --> CONTEXT_LINEAGES
+    AGENT_CONSTELLATION -- creates/updates --> CONTEXT_LINEAGES
+    SHARED_TOOL_GROUP -- provides --> TOOL_OUTPUT
+    SPECIFIC_TOOL_GROUP -- provides --> TOOL_OUTPUT
+    BACKEND_CLIENT --> BIMBA_CLIENT & LIGHTRAG_CLIENT & GRAPHITI_CLIENT & REDIS_CLIENT
+    ORCH_DEPS -- injects --> BACKEND_CLIENT & MODEL_FACTORY
+    ORCH_AGENT -- invokes --> TOOL_ARCHITECTURE
+    AGENT_CONSTELLATION -- invokes --> TOOL_ARCHITECTURE
+    BIMBA_TOOL -- uses --> BIMBA_CLIENT
+    LIGHTRAG_TOOL -- uses --> LIGHTRAG_CLIENT
+    GRAPHITI_TOOL -- uses --> GRAPHITI_CLIENT
+    REDIS_TOOL -- uses --> REDIS_CLIENT
+    REDIS_CLIENT -- reads from --> SESSION_MANAGER
+    TOOL_OUTPUT -- feeds back to --> ORCH_AGENT & AGENT_CONSTELLATION
+    AGENT_CONSTELLATION <-. A2A Communication .-> AGENT_CONSTELLATION
+     BACKEND_MICROSERVICES:::external
+     AGUI_API:::agent
+     AGUI_STREAM:::agent
+     AGUI_HANDLER:::agent
+     ORCH_AGENT:::agent
+     ORCH_DEPS:::agent
+     ORCH_CONTEXT:::agent
+     ORCH_ROUTING:::agent
+     INTERNAL_PERSONAS:::agent
+     PERSONA_0:::persona
+     PERSONA_1:::persona
+     PERSONA_2:::persona
+     PERSONA_3:::persona
+     PERSONA_4:::persona
+     PERSONA_5:::persona
+     AGENT_0:::agent
+     AGENT_1:::agent
+     AGENT_2:::agent
+     AGENT_3:::agent
+     AGENT_4:::agent
+     AGENT_5:::agent
+     SESSION_MANAGER:::data
+     AGUI_THREAD:::data
+     CONTEXT_LINEAGES:::data
+     CONTEXT_PACKAGE:::data
+     WISDOM_PACKETS:::data
+     BIMBA_TOOL:::tool
+     LIGHTRAG_TOOL:::tool
+     GRAPHITI_TOOL:::tool
+     REDIS_TOOL:::tool
+     TOOLS_0:::tool
+     TOOLS_1:::tool
+     TOOLS_2:::tool
+     TOOLS_3:::tool
+     TOOLS_4:::tool
+     TOOLS_5:::tool
+     TOOL_OUTPUT:::data
+     BACKEND_CLIENT:::client
+     BIMBA_CLIENT:::client
+     LIGHTRAG_CLIENT:::client
+     GRAPHITI_CLIENT:::client
+     REDIS_CLIENT:::client
+     MODEL_FACTORY:::client
+    classDef agent fill:#7c3aed,stroke:#6d28d9,stroke-width:2px,color:#ffffff
+    classDef tool fill:#059669,stroke:#047857,stroke-width:2px,color:#ffffff
+    classDef client fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#ffffff
+    classDef persona fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#ffffff
+    classDef external fill:#4b5563,stroke:#374151,stroke-width:2px,color:#ffffff
+    classDef data fill:#db2777,stroke:#be185d,stroke-width:2px,color:#ffffff

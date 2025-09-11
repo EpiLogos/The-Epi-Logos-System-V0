@@ -43,15 +43,18 @@ graph TB
             AGUI_HOOKS[AGUI Hooks<br/>Streaming Bridge]
         end
         
-        AUTH_DOMAIN --> AUTH_HOOKS
-        NAV_DOMAIN --> NAV_HOOKS
-        AGUI_DOMAIN --> AGUI_HOOKS
-        
-        AUTH_HOOKS --> AUTH_CLIENT
-        NAV_HOOKS --> GRAPHQL_CLIENT
-        AGUI_HOOKS --> AGUI_CLIENT
-        
-        AUTH_CLIENT --> STORAGE_CLIENT
+        %% Domain-Hook Integration (Data Flow)
+        AUTH_DOMAIN <-.->|State Management| AUTH_HOOKS
+        NAV_DOMAIN <-.->|Navigation State| NAV_HOOKS
+        AGUI_DOMAIN <-.->|Streaming State| AGUI_HOOKS
+
+        %% Hook-Client Integration (API Calls)
+        AUTH_HOOKS <-.->|API Operations| AUTH_CLIENT
+        NAV_HOOKS <-.->|GraphQL Operations| GRAPHQL_CLIENT
+        AGUI_HOOKS <-.->|Streaming Operations| AGUI_CLIENT
+
+        %% Client Storage Integration
+        AUTH_CLIENT <-.->|Session Persistence| STORAGE_CLIENT
     end
     
     subgraph "Agentic Service Integration (Port 8001)"
@@ -75,23 +78,23 @@ graph TB
             MCP_CLIENT[MCP Client<br/>Tool Protocol]
         end
         
-        %% Infrastructure flows TO agents (corrected direction)
-        BACKEND_HTTP --> ORCH_AGENT
-        MODEL_FACTORY --> ORCH_AGENT
+        %% Bidirectional Agent-Infrastructure Flow
+        ORCH_AGENT <-.->|Query/Response Cycles| BACKEND_HTTP
+        ORCH_AGENT <-.->|Model Selection/Results| MODEL_FACTORY
 
-        %% Tools flow FROM infrastructure TO orchestrator
-        BIMBA_TOOLS --> ORCH_AGENT
-        GNOSTIC_TOOLS --> ORCH_AGENT
-        EPISODIC_TOOLS --> ORCH_AGENT
+        %% Tool Integration (Bidirectional Data Flow)
+        ORCH_AGENT <-.->|Coordinate Queries/Updates| BIMBA_TOOLS
+        ORCH_AGENT <-.->|Document Processing/Storage| GNOSTIC_TOOLS
+        ORCH_AGENT <-.->|Memory Formation/Retrieval| EPISODIC_TOOLS
 
-        %% Agent internal flow
+        %% Agent Internal Processing
         ORCH_AGENT --> PERSONA_ROUTER
         ORCH_AGENT --> CONTEXT_PROC
 
-        %% Direct HTTP clients for orchestrator (primary path)
-        BACKEND_HTTP --> BIMBA_TOOLS
-        BACKEND_HTTP --> GNOSTIC_TOOLS
-        BACKEND_HTTP --> EPISODIC_TOOLS
+        %% Tool-Backend Data Cycles
+        BIMBA_TOOLS <-.->|Coordinate CRUD Operations| BACKEND_HTTP
+        GNOSTIC_TOOLS <-.->|Document Intelligence Ops| BACKEND_HTTP
+        EPISODIC_TOOLS <-.->|Memory Management Ops| BACKEND_HTTP
     end
     
     subgraph "Backend Service Integration (Port 8000)"
@@ -146,16 +149,18 @@ graph TB
             VECTOR_REPO[Vector Repository<br/>Qdrant Operations]
         end
         
-        NEO4J_CLIENT --> NODE_REPO
-        MONGO_CLIENT --> USER_REPO
-        REDIS_CLIENT --> CACHE_REPO
-        QDRANT_CLIENT --> VECTOR_REPO
-        
-        COORD_SERVICE --> NODE_REPO
-        USER_SERVICE --> USER_REPO
-        AUTH_SERVICE --> CACHE_REPO
-        LIGHTRAG_SERVICE --> VECTOR_REPO
-        GRAPHITI_SERVICE --> NODE_REPO
+        %% Database Client Bidirectional Operations
+        NEO4J_CLIENT <-.->|Read/Write Graph Data| NODE_REPO
+        MONGO_CLIENT <-.->|Read/Write User Data| USER_REPO
+        REDIS_CLIENT <-.->|Cache Operations| CACHE_REPO
+        QDRANT_CLIENT <-.->|Vector Search/Store| VECTOR_REPO
+
+        %% Service-Repository Data Cycles
+        COORD_SERVICE <-.->|Graph Queries/Updates| NODE_REPO
+        USER_SERVICE <-.->|User CRUD Operations| USER_REPO
+        AUTH_SERVICE <-.->|Session Management| CACHE_REPO
+        LIGHTRAG_SERVICE <-.->|Document Vectors| VECTOR_REPO
+        GRAPHITI_SERVICE <-.->|Memory Graph Ops| NODE_REPO
     end
     
     subgraph "External Service Integration"
@@ -182,34 +187,37 @@ graph TB
             STRIPE[Stripe<br/>Payment Processing]
         end
         
-        NEO4J_CLIENT -.->|Local Connection| NEO4J_LOCAL
-        MONGO_CLIENT -.->|Connection Pool| MONGO_ATLAS
-        REDIS_CLIENT -.->|Connection Pool| REDIS_CLOUD
-        QDRANT_CLIENT -.->|Local HTTP API| QDRANT_LOCAL
-        
-        MODEL_FACTORY -.->|API Calls| OPENAI
-        MODEL_FACTORY -.->|API Calls| ANTHROPIC
-        MODEL_FACTORY -.->|API Calls| GOOGLE_AI
-        
-        AUTH_SERVICE -.->|OAuth Flow| GOOGLE_OAUTH
-        BILLING_SERVICE -.->|Payment API| STRIPE
+        %% Database Connection Pools (Bidirectional)
+        NEO4J_CLIENT <-.->|Local Connection Pool| NEO4J_LOCAL
+        MONGO_CLIENT <-.->|Atlas Connection Pool| MONGO_ATLAS
+        REDIS_CLIENT <-.->|Cloud Connection Pool| REDIS_CLOUD
+        QDRANT_CLIENT <-.->|Local HTTP API| QDRANT_LOCAL
+
+        %% AI Provider Request/Response Cycles
+        MODEL_FACTORY <-.->|API Request/Response| OPENAI
+        MODEL_FACTORY <-.->|API Request/Response| ANTHROPIC
+        MODEL_FACTORY <-.->|API Request/Response| GOOGLE_AI
+
+        %% External Service Integration Flows
+        AUTH_SERVICE <-.->|OAuth Flow/Tokens| GOOGLE_OAUTH
+        BILLING_SERVICE <-.->|Payment Processing| STRIPE
     end
     
-    %% Cross-Layer Service Communication
-    
-    %% Frontend to Agentic
-    AGUI_CLIENT -.->|AG-UI Protocol| ORCH_AGENT
-    AGUI_CLIENT -.->|SSE Streaming| ORCH_AGENT
-    
-    %% Frontend to Backend
-    AUTH_CLIENT -.->|HTTP API| REST_API
-    GRAPHQL_CLIENT -.->|GraphQL| GRAPHQL_API
-    
-    %% Agentic to Backend
-    BACKEND_HTTP -.->|HTTP API| REST_API
-    BACKEND_HTTP -.->|GraphQL| GRAPHQL_API
-    BACKEND_HTTP -.->|Service APIs| LIGHTRAG_SERVICE
-    BACKEND_HTTP -.->|Service APIs| GRAPHITI_SERVICE
+    %% Cross-Layer Data Flow Patterns
+
+    %% Frontend-Agentic Bidirectional Streaming
+    AGUI_CLIENT <-.->|AG-UI Protocol Streaming| ORCH_AGENT
+    AGUI_CLIENT <-.->|SSE Request/Response| ORCH_AGENT
+
+    %% Frontend-Backend API Cycles
+    AUTH_CLIENT <-.->|Auth API Calls| REST_API
+    GRAPHQL_CLIENT <-.->|GraphQL Queries| GRAPHQL_API
+
+    %% Agentic-Backend Service Integration
+    BACKEND_HTTP <-.->|REST API Operations| REST_API
+    BACKEND_HTTP <-.->|GraphQL Operations| GRAPHQL_API
+    BACKEND_HTTP <-.->|LightRAG Intelligence| LIGHTRAG_SERVICE
+    BACKEND_HTTP <-.->|Graphiti Memory Ops| GRAPHITI_SERVICE
     
     %% MCP Integration (External Agent Flexibility)
     subgraph "MCP Service Layer"
@@ -221,15 +229,15 @@ graph TB
         MCP_NOTE[Note: MCPs provide flexible<br/>access for external agents.<br/>Orchestrator uses direct HTTP.]
     end
 
-    %% MCP servers provide alternative access (not primary orchestrator path)
-    BIMBA_MCP -.->|Backend API| COORD_SERVICE
-    LIGHTRAG_MCP -.->|Backend API| LIGHTRAG_SERVICE
-    GRAPHITI_MCP -.->|Backend API| GRAPHITI_SERVICE
+    %% MCP Alternative Access Patterns (External Agent Flexibility)
+    BIMBA_MCP <-.->|Backend API Bridge| COORD_SERVICE
+    LIGHTRAG_MCP <-.->|Backend API Bridge| LIGHTRAG_SERVICE
+    GRAPHITI_MCP <-.->|Backend API Bridge| GRAPHITI_SERVICE
 
-    %% External agents can use MCP (future capability)
-    MCP_CLIENT -.->|MCP Protocol<br/>(External Agents)| BIMBA_MCP
-    MCP_CLIENT -.->|MCP Protocol<br/>(External Agents)| LIGHTRAG_MCP
-    MCP_CLIENT -.->|MCP Protocol<br/>(External Agents)| GRAPHITI_MCP
+    %% External Agent MCP Integration (Future Capability)
+    MCP_CLIENT <-.->|MCP Protocol - External Agents| BIMBA_MCP
+    MCP_CLIENT <-.->|MCP Protocol - External Agents| LIGHTRAG_MCP
+    MCP_CLIENT <-.->|MCP Protocol - External Agents| GRAPHITI_MCP
     
     %% Service Health Monitoring
     subgraph "Health Monitoring"
