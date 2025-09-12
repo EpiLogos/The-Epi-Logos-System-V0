@@ -1,0 +1,28 @@
+---
+config:
+  layout: elk
+---
+flowchart TD
+    M3["Mahamaya Agent 3 symbolic transcription engine"] --> AP["APOC relation engine"]
+    AP --> CLK["Clock 3-5 dynamic integrator"]
+    CLK --> QR["Quaternionic rotation module"]
+    QR --> AL["Alphabet 64 mapper"]
+    AL --> TR["Transcription pipeline symbolic packets"]
+    TR --> PA["Packet assembler and emitter"]
+    EC["Environmental conductor"] -- modulates --> CLK & TR
+    AP -- heavy procedures --> L1["Structural APOC GDS"]
+    CLK -- structural pulses --> L1
+    QR -- role constraints --> L3["Ontology neosemantics"]
+    AL -- symbol taxonomy --> L3
+    TR -- semantic enrichment --> L2["Semantic embeddings Gnostic"]
+    PA -- factual ids and refs --> L0["Coordinate access GraphQL Bimba"]
+    L0 --> NB["Bimba namespace"] & C["Redis context cache"]
+    L1 --> NB & NE["Episodic namespace"] & C
+    L2 --> NG["Gnostic namespace"] & C
+    L3 --> NB & NG & C
+    NB --> C
+    NG --> C
+    NE --> C
+    C --> M3 & CLK & TR
+    PA --> OUT["Symbolic packets transcription results"]
+    OUT --> C
