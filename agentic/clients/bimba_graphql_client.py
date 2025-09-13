@@ -7,7 +7,7 @@ Bimba coordinate resolution system, replacing direct Neo4j connections.
 
 import logging
 from typing import Dict, Any, List, Optional
-from .backend_http_client import BackendHttpClient
+from agentic.clients.backend_http_client import BackendHttpClient
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +53,6 @@ class BimbaGraphQLClient(BackendHttpClient):
                     "subsystem": node_data["subsystem"],
                     "content": node_data.get("description"),  # Map description to content
                     "context": {
-                        "description": node_data.get("description"),
                         "operationalEssence": node_data.get("operationalEssence"),
                         "coreNature": node_data.get("coreNature"),
                         "function": node_data.get("function"),

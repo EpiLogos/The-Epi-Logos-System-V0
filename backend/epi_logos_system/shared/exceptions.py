@@ -646,15 +646,16 @@ def map_database_exception(exc: Exception) -> ServiceError:
             )
         
         elif isinstance(exc, WriteError):
-            error_code = getattr(exc.details, 'code', None)
-            if error_code == 121:  # Document validation error
+            details = getattr(exc, 'details', {}) or {}
+            code_val = details.get('code') if isinstance(details, dict) else getattr(details, 'code', None)
+            if code_val == 121:  # Document validation error
                 return ValidationError(
                     "Document failed validation",
-                    context={"validation_details": exc.details}
+                    context={"validation_details": details}
                 )
             return UserServiceError(
                 "Database write error",
-                context={"error_details": exc.details}
+                context={"error_details": details}
             )
     
     except ImportError:

@@ -33,7 +33,7 @@ except ImportError:
 import httpx
 
 # Import modular system prompt components
-from .system_prompt import get_complete_system_foundation
+from agentic.agents.orchestrator.system_prompt import get_complete_system_foundation
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,7 @@ class OrchestratorDeps:
 class CoordinateResult(BaseModel):
     """Result from coordinate resolution"""
     coordinate: str
+    name: Optional[str] = None
     content: Optional[str] = None
     context: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
@@ -100,7 +101,7 @@ class OrchestratorResponse(BaseModel):
 # Agent factory and tools (only if Pydantic AI is available)
 if PYDANTIC_AI_AVAILABLE:
     import os
-    from .simple_context_processor import create_simple_context_processor
+    from agentic.agents.orchestrator.simple_context_processor import create_simple_context_processor
     
     def create_orchestrator_agent(model_name: str) -> Agent:
         """Create an orchestrator agent with the specified model"""
@@ -160,6 +161,7 @@ if PYDANTIC_AI_AVAILABLE:
                 if result:
                     return CoordinateResult(
                         coordinate=coordinate,
+                        name=result.get("name"),
                         content=result.get("content"),
                         context=result.get("context", {}),
                     )
@@ -278,7 +280,7 @@ if PYDANTIC_AI_AVAILABLE:
                 # Get current conversation messages from agent's context
                 # Note: This is a simplified approach - in full implementation 
                 # we'd access the actual message history
-                from ..simple_context_processor import get_context_status, MODEL_LIMITS
+                from agentic.agents.orchestrator.simple_context_processor import get_context_status, MODEL_LIMITS
                 
                 # Simulate current context status (in real implementation, we'd get actual messages)
                 model_name = ctx.deps.state.get('model', 'test') if ctx.deps.state else 'test'

@@ -15,7 +15,7 @@ from datetime import datetime, timezone, timedelta
 import redis.asyncio as aioredis
 from redis.exceptions import ConnectionError, RedisError
 
-from ..types import PersonaType
+from agentic.agents.orchestrator.types import PersonaType
 
 logger = logging.getLogger(__name__)
 

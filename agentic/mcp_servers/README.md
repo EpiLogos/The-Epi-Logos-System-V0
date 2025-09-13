@@ -12,29 +12,11 @@ Minimal Model Context Protocol (MCP) server that bridges Epi-Logos orchestrator 
     "bimba-pratibimba": {
       "command": "/usr/local/bin/python3",
       "args": [
-        "/Users/admin/Documents/The Epi-Logos System V0/agentic/mcp_servers/run_bimba_stdio.py"
+        "-m", "agentic.mcp_servers.bimba_pratibimba_server",
+        "--transport", "stdio"
       ],
-      "env": {}
-    }
-  }
-}
-```
-
-**Alternative (requires PYTHONPATH):**
-
-```json
-{
-  "mcpServers": {
-    "bimba-pratibimba": {
-      "command": "/usr/local/bin/python3",
-      "args": [
-        "/Users/admin/Documents/The Epi-Logos System V0/agentic/mcp_servers/bimba_pratibimba_server.py",
-        "--transport",
-        "stdio"
-      ],
-      "env": {
-        "PYTHONPATH": "/Users/admin/Documents/The Epi-Logos System V0"
-      }
+      "env": {},
+      "cwd": "/Users/admin/Documents/The Epi-Logos System V0"
     }
   }
 }
@@ -48,8 +30,8 @@ For non-Claude Desktop clients that support SSE transport:
 
 Start the SSE server with:
 ```bash
-python agentic/mcp_servers/bimba_pratibimba_server.py --transport sse
-# or just: python agentic/mcp_servers/bimba_pratibimba_server.py
+python -m agentic.mcp_servers.bimba_pratibimba_server --transport sse
+# or just: python -m agentic.mcp_servers.bimba_pratibimba_server
 ```
 
 ## Overview
@@ -57,9 +39,11 @@ python agentic/mcp_servers/bimba_pratibimba_server.py --transport sse
 This MCP server provides a foundation tool for resolving Epi-Logos coordinates using the existing orchestrator GraphQL client. It serves as a clean, extensible base for adding more orchestrator capabilities to MCP clients.
 
 **Key Benefits:**
+- ✅ **Unified Runner**: Single server with transport selection via `--transport` flag
 - ✅ **Multiple Client Support**: SSE transport allows Claude Desktop, VS Code, and other MCP clients simultaneously
 - ✅ **Single Server Instance**: One running server serves all clients (no duplicate processes)
 - ✅ **HTTP-Based**: Proper networking with health checks and monitoring endpoints
+- ✅ **Clean Architecture**: Proper Python module execution (no path hacks)
 - ✅ **Legacy Compatible**: Still supports single-client STDIO for simple scenarios
 
 ## Features
@@ -88,6 +72,26 @@ Resolves Epi-Logos coordinates to get node data, context, and relationships.
 - `#4`: Nara - Personal interface (Qdrant)
 - `#5`: Epii - Orchestration synthesis (Redis + Notion)
 
+### Unified Execution Pattern
+
+The server uses a single runner with transport selection:
+
+```bash
+# For Claude Desktop (STDIO transport)
+python -m agentic.mcp_servers.bimba_pratibimba_server --transport stdio
+
+# For multi-client development (SSE transport)
+python -m agentic.mcp_servers.bimba_pratibimba_server --transport sse
+
+# Default is SSE transport
+python -m agentic.mcp_servers.bimba_pratibimba_server
+```
+
+**Key Benefits:**
+- ✅ **No Path Hacks**: Uses proper Python module execution
+- ✅ **One Runner**: Single file handles both transports
+- ✅ **Clean Architecture**: Follows established project patterns
+
 ## Usage
 
 ### Development Server
@@ -110,7 +114,7 @@ npm run stop:mcp
 
 ```bash
 # Direct execution from project root
-python run_mcp_server.py
+python -m agentic.mcp_servers.bimba_pratibimba_server --transport sse
 ```
 
 ### MCP Client Configuration

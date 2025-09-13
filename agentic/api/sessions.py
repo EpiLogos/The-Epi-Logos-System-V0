@@ -11,7 +11,7 @@ from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ..agents.orchestrator.tools.http_clients_factory import create_enhanced_orchestrator_deps
+from agentic.agents.orchestrator.tools.http_clients_factory import create_enhanced_orchestrator_deps
 
 logger = logging.getLogger(__name__)
 

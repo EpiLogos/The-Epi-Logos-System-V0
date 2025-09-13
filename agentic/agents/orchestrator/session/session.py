@@ -18,7 +18,7 @@ import os
 import uuid
 
 from shared.database.redis_client import RedisClient
-from ..types import PersonaType
+from agentic.agents.orchestrator.types import PersonaType
 
 
 SESSION_TTL_SECONDS = int(os.getenv("ORCHESTRATOR_SESSION_TTL", "86400"))  # default 24h
@@ -133,4 +133,3 @@ class OrchestratorSessionManager:
 
     def delete_session(self, session_id: str) -> bool:
         return bool(self._redis.delete(self._key(session_id)))
-

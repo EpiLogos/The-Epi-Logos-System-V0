@@ -1,0 +1,44 @@
+---
+config:
+  layout: elk
+---
+flowchart TD
+    O["Orchestrator routing governance session"] <--> E5["Epii Agent 5 integrator and master librarian"]
+    KH["Knowledge hub reading and chat context"] --> PR["Persona router coordinate aware"]
+    PR --> E5
+    E5 --> IE["Illumination engine engagement scoring"] & LG0["A-logos 0 unspeakable potential"] & PLE["Proto logos engine chunk embed ingest"]
+    IE --> PL["Pratibimba document reflective analysis"] & C["Redis context cache"]
+    LG0 --> LG1["Pro-logos 1 first emergence participation"]
+    LG1 --> LG2["Dia-logos 2 narrative and relation"]
+    LG2 --> LG3["Logos 3 articulated understanding"]
+    LG3 --> LG4["Epi-logos 4 integration of perspectives"]
+    LG4 --> LG5["An-a-logos 5 return to ineffable transformed"]
+    LG5 --> PL
+    PL --> II["Integral identity 5-5 synthesis meta perspective"] & E5 & C
+    LG0 -. archetypal grounding .-> A0["Anuttara 0 archetypal number code"]
+    LG3 -. structure and logic .-> P1["Paramasiva 1 quaternal logic frames"]
+    LG4 -. vibrational synthesis .-> S2["Parashakti 2 mef lens"]
+    LG4 -. symbolic mapping .-> M3["Mahamaya 3 symbolic transcription"]
+    LG5 -. personal integration .-> N4["Nara 4 context and personal field"]
+    PR -. requests .-> A0 & P1 & S2 & M3 & N4
+    A0 -. results .-> E5
+    P1 -. results .-> E5
+    S2 -. results .-> E5
+    M3 -. results .-> E5
+    N4 -. results .-> E5
+    PLE --> L2["Semantic embeddings LightRAG"] & PL & NP["Notion payload builder structured json"]
+    NP --> C
+    E5 -- facts and ids --> L0["Coordinate access GraphQL Bimba"]
+    E5 -- structure checks --> L1["Structural APOC GDS"]
+    E5 -- ontology roles --> L3["Ontology neosemantics"]
+    L0 --> NB["Bimba namespace"] & C
+    L1 --> NB & NE["Episodic namespace"] & C
+    L2 --> NG["Gnostic namespace"] & C
+    L3 --> NB & NG & C
+    NB --> C
+    NG --> C
+    NE --> C
+    C --> E5 & PR & IE & PL
+    O -. supervises persona and tools .-> PR
+    O -. policy and safety .-> IE
+    O -. session memory .-> C

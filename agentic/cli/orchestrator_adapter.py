@@ -8,8 +8,8 @@ from typing import Any, AsyncGenerator, Dict, Iterable, List, Optional, Tuple
 import importlib
 from uuid import uuid4
 
-from .agui_payload import build_run_agent_input
-from .diagnostics import DiagnosticsRecorder
+from agentic.cli.agui_payload import build_run_agent_input
+from agentic.cli.diagnostics import DiagnosticsRecorder
 import logging
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,7 @@ import os
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 
-from ....clients import (
+from agentic.clients import (
     BackendHttpClient,
     LightRAGHttpClient, 
     GraphitiHttpClient,

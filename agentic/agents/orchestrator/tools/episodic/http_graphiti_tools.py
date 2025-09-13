@@ -8,7 +8,7 @@ communicating through the Backend layer's REST API instead of direct Neo4j conne
 import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from ..clients.graphiti_http_client import GraphitiHttpClient
+from agentic.clients.graphiti_http_client import GraphitiHttpClient
 
 logger = logging.getLogger(__name__)
 
