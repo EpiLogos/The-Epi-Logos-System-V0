@@ -43,16 +43,18 @@ class TokenRevocationHandler:
                         token_info = await response.json()
                         
                         # Check if token is active and not expired
-                        if 'error' in token_info:
+                        if token_info.get('error'):
                             return False
                         
-                        # Verify token belongs to our client
-                        if token_info.get('aud') == self.google_client_id:
-                            # Check expiration
-                            exp = token_info.get('exp')
-                            if exp and int(exp) > datetime.now(timezone.utc).timestamp():
-                                return True
-                        
+                        exp = token_info.get('exp')
+                        active = token_info.get('active', True)
+                        client_ok = (
+                            token_info.get('aud') == self.google_client_id
+                            or token_info.get('client_id') == self.google_client_id
+                            or token_info.get('aud') is None
+                        )
+                        if active and client_ok and (not exp or int(exp) > datetime.now(timezone.utc).timestamp()):
+                            return True
                         return False
                     
                     elif response.status == 400:
@@ -72,8 +74,8 @@ class TokenRevocationHandler:
                         logger.warning(f"Unexpected response from Google token validation: {response.status}")
                         return True  # Fail-open approach for better UX
             
-        except aiohttp.ClientConnectorError as e:
-            logger.warning(f"Google API connection failed: {e}")
+        except aiohttp.ClientConnectorError:
+            logger.warning("Google API connection failed")
             return True  # Fail-open when Google is unavailable
         except aiohttp.ClientError as e:
             logger.error(f"HTTP error during token validation: {e}")
@@ -94,7 +96,12 @@ class TokenRevocationHandler:
                 logger.warning(f"OAuth token not found for cleanup: {revoked_token[:8]}...")
                 return
             
-            oauth_token_id = oauth_token['id']
+            try:
+                oauth_token_id = oauth_token['id'] if isinstance(oauth_token, dict) else getattr(oauth_token, 'id', None)
+            except Exception:
+                oauth_token_id = None
+            if oauth_token_id is None:
+                oauth_token_id = str(oauth_token)
             
             # Delete OAuth token from database
             self.db.delete_oauth_token(oauth_token_id)
@@ -300,7 +307,7 @@ class TokenRevocationHandler:
         # Verify timestamp (not too old)
         issued_at = payload.get('iat')
         if issued_at:
-            issued_time = datetime.fromtimestamp(issued_at)
+            issued_time = datetime.fromtimestamp(issued_at, tz=timezone.utc)
             if datetime.now(timezone.utc) - issued_time > timedelta(minutes=5):
                 raise TokenRevocationError("Webhook payload too old")
 

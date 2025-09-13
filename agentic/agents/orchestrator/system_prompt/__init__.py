@@ -3,9 +3,9 @@ Orchestrator System Prompt Module Imports
 Modular system prompt components for isolated editing and dynamic loading
 """
 
-from .quaternal_logic_foundation import get_quaternal_logic_foundation
-from .epi_logos_system_foundation import get_epi_logos_system_foundation  
-from .agent_operational_context import get_agent_operational_context
+from agentic.agents.orchestrator.system_prompt.quaternal_logic_foundation import get_quaternal_logic_foundation
+from agentic.agents.orchestrator.system_prompt.epi_logos_system_foundation import get_epi_logos_system_foundation  
+from agentic.agents.orchestrator.system_prompt.agent_operational_context import get_agent_operational_context
 
 __all__ = [
     'get_quaternal_logic_foundation',

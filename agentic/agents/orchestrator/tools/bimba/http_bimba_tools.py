@@ -7,7 +7,7 @@ communicating through the Backend layer's GraphQL API instead of direct Neo4j co
 
 import logging
 from typing import Dict, Any, Optional, List
-from ..clients.bimba_graphql_client import BimbaGraphQLClient
+from agentic.clients.bimba_graphql_client import BimbaGraphQLClient
 
 logger = logging.getLogger(__name__)
 

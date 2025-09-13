@@ -12,7 +12,7 @@ import logging
 from typing import Optional, List, Dict, Any, AsyncIterator, Callable
 from datetime import datetime, timezone
 
-from .orchestrator.orchestrator_agent import (
+from agentic.agents.orchestrator.orchestrator_agent import (
     orchestrator_agent, 
     OrchestratorDeps, 
     OrchestratorResponse,
@@ -21,8 +21,8 @@ from .orchestrator.orchestrator_agent import (
 )
 
 # Import existing infrastructure
-from .orchestrator.types import PersonaType
-from .orchestrator.session.session import OrchestratorSession
+from agentic.agents.orchestrator.types import PersonaType
+from agentic.agents.orchestrator.session.session import OrchestratorSession
 
 logger = logging.getLogger(__name__)
 

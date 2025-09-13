@@ -16,8 +16,8 @@ from rich import box
 from rich.live import Live
 from rich.spinner import Spinner
 
-from .simple_agent_adapter import SimpleAgentAdapter
-from .diagnostics import DiagnosticsRecorder
+from agentic.cli.simple_agent_adapter import SimpleAgentAdapter
+from agentic.cli.diagnostics import DiagnosticsRecorder
 
 app = typer.Typer(add_completion=False, help="Agentic chat CLI for Unified Orchestrator.")
 console = Console()

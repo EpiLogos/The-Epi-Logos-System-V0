@@ -7,7 +7,7 @@ Backend layer's HTTP API, replacing direct MongoDB/Qdrant connections.
 
 import logging
 from typing import Dict, Any, List, Optional
-from .backend_http_client import BackendHttpClient
+from agentic.clients.backend_http_client import BackendHttpClient
 
 logger = logging.getLogger(__name__)
 

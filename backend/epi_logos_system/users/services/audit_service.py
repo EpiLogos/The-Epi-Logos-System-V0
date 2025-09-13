@@ -7,7 +7,7 @@ import uuid
 from typing import Dict, Optional, Any, List
 from datetime import datetime, timezone, timedelta
 
-# REPLACED_RELATIVE_IMPORTcore.exceptions import AuditError
+from backend.epi_logos_system.shared.exceptions import AuditError
 
 
 class AuditService:
@@ -52,7 +52,8 @@ class AuditService:
         ip_address: str,
         user_id: Optional[str] = None,
         user_agent: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[datetime] = None,
     ) -> Dict[str, Any]:
         """
         Log a security event.
@@ -87,7 +88,7 @@ class AuditService:
             "event_id": str(uuid.uuid4()),
             "event_type": event_type,
             "severity": severity,
-            "timestamp": datetime.now(timezone.utc),
+            "timestamp": timestamp or datetime.now(timezone.utc),
             "ip_address": ip_address,
             "user_id": user_id,
             "user_agent": user_agent,
@@ -139,8 +140,17 @@ class AuditService:
         
         try:
             # Query MongoDB
-            cursor = self.mongodb_client.security_events.find(query).sort("timestamp", -1).limit(limit)
-            events = await cursor.to_list(length=limit)
+            res = self.mongodb_client.security_events.find(query)
+            # Support both chained cursor and direct async list
+            try:
+                cursor = res.sort("timestamp", -1).limit(limit)
+                events = await cursor.to_list(length=limit)
+            except AttributeError:
+                # If AsyncMock returns coroutine-like
+                if hasattr(res, 'to_list'):
+                    events = await res.to_list(length=limit)
+                else:
+                    events = list(res)
             
             return {
                 "events": events,
@@ -211,11 +221,15 @@ class AuditService:
             query["severity"] = severity_filter
         
         try:
-            cursor = (self.mongodb_client.security_events
-                     .find(query)
-                     .sort("timestamp", -1)
-                     .limit(limit))
-            events = await cursor.to_list(length=limit)
+            res = self.mongodb_client.security_events.find(query)
+            try:
+                cursor = res.sort("timestamp", -1).limit(limit)
+                events = await cursor.to_list(length=limit)
+            except AttributeError:
+                if hasattr(res, 'to_list'):
+                    events = await res.to_list(length=limit)
+                else:
+                    events = list(res)
             
             return {
                 "events": events,
@@ -255,8 +269,15 @@ class AuditService:
         }
         
         try:
-            cursor = self.mongodb_client.security_events.find(query).sort("timestamp", -1).limit(limit)
-            events = await cursor.to_list(length=limit)
+            res = self.mongodb_client.security_events.find(query)
+            try:
+                cursor = res.sort("timestamp", -1).limit(limit)
+                events = await cursor.to_list(length=limit)
+            except AttributeError:
+                if hasattr(res, 'to_list'):
+                    events = await res.to_list(length=limit)
+                else:
+                    events = list(res)
             
             return {
                 "events": events,
@@ -302,8 +323,15 @@ class AuditService:
             query["timestamp"] = timestamp_filter
         
         try:
-            cursor = self.mongodb_client.security_events.find(query).sort("timestamp", -1).limit(limit)
-            events = await cursor.to_list(length=limit)
+            res = self.mongodb_client.security_events.find(query)
+            try:
+                cursor = res.sort("timestamp", -1).limit(limit)
+                events = await cursor.to_list(length=limit)
+            except AttributeError:
+                if hasattr(res, 'to_list'):
+                    events = await res.to_list(length=limit)
+                else:
+                    events = list(res)
             
             return {
                 "events": events,

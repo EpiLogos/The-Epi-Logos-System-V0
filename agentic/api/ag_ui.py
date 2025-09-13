@@ -16,8 +16,8 @@ from ag_ui.core import RunAgentInput
 from pydantic_ai.ag_ui import handle_ag_ui_request, run_ag_ui
 
 # Use the canonical orchestrator agent and HTTP-based deps
-from ..agents.orchestrator.orchestrator_agent import orchestrator_agent
-from ..agents.orchestrator.tools.http_clients_factory import create_enhanced_orchestrator_deps
+from agentic.agents.orchestrator.orchestrator_agent import orchestrator_agent
+from agentic.agents.orchestrator.tools.http_clients_factory import create_enhanced_orchestrator_deps
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +67,7 @@ async def run_agent(request: Request) -> Response:
         )
         
         # Create orchestrator agent with selected model
-        from ..agents.orchestrator.orchestrator_agent import create_orchestrator_agent
+        from agentic.agents.orchestrator.orchestrator_agent import create_orchestrator_agent
         dynamic_agent = create_orchestrator_agent(model_config)
         
         # Use Pydantic AI's native AG-UI integration (original request, enriched deps)

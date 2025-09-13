@@ -175,11 +175,12 @@ async def list_personas():
     }
 
 # Include AG-UI protocol router (moved from Backend layer)
-from .api.ag_ui import router as ag_ui_router
+# Include AG-UI protocol router (moved from Backend layer)
+from agentic.api.ag_ui import router as ag_ui_router
 app.include_router(ag_ui_router)
 
 # Include session metadata API
-from .api.sessions import router as sessions_router
+from agentic.api.sessions import router as sessions_router
 app.include_router(sessions_router)
 
 @app.get("/api/v1/orchestrator/status")

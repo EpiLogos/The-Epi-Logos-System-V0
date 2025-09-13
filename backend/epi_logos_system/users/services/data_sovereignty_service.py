@@ -18,20 +18,21 @@ from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-# REPLACED_RELATIVE_IMPORTcore.exceptions import (
+from backend.epi_logos_system.shared.exceptions import (
     DataSovereigntyError,
     EncryptionError,
-    UserNotFoundError
+    UserNotFoundError,
 )
 
 
 class DataSovereigntyService:
     """MINIMAL Sacred Boundary service for basic data sovereignty."""
     
-    def __init__(self, user_repository, mongodb_client):
+    def __init__(self, user_repository, mongodb_client, audit_service=None):
         """Initialize minimal data sovereignty service."""
         self.user_repository = user_repository
         self.mongodb_client = mongodb_client
+        self.audit_service = audit_service
         
     async def encrypt_user_data(self, user_id: str, data: Dict[str, Any], user_password: str) -> str:
         """

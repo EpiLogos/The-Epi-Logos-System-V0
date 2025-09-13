@@ -7,7 +7,7 @@ communicating through the Backend layer's REST API instead of direct MongoDB/Qdr
 
 import logging
 from typing import Dict, Any, Optional, List
-from ..clients.lightrag_http_client import LightRAGHttpClient
+from agentic.clients.lightrag_http_client import LightRAGHttpClient
 
 logger = logging.getLogger(__name__)
 

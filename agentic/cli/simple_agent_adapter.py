@@ -14,8 +14,8 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple
 from uuid import uuid4
 import logging
 
-from .agui_payload import build_run_agent_input
-from .diagnostics import DiagnosticsRecorder
+from agentic.cli.agui_payload import build_run_agent_input
+from agentic.cli.diagnostics import DiagnosticsRecorder
 
 logger = logging.getLogger(__name__)
 

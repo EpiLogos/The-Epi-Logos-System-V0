@@ -8,7 +8,7 @@ import secrets
 from typing import Dict, Optional, Any
 from datetime import datetime, timezone, timedelta
 
-# REPLACED_RELATIVE_IMPORTcore.exceptions import DataExportError, UserNotFoundError
+from backend.epi_logos_system.shared.exceptions import DataExportError, UserNotFoundError
 
 
 class DataExportService:

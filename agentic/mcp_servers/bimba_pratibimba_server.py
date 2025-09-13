@@ -86,16 +86,18 @@ class BimbaPratibimbaMCPServerSSE:
 
 The Epi-Logos system uses a hierarchical coordinate structure where each coordinate maps to one of six consciousness-computing subsystems:
 • #0 Anuttara: Proto-logical processing & foundational ground
-• #1 Paramasiva: Quaternal Logic engine & architectural patterns  
+• #1 Paramasiva: Quaternal Logic engine & architectural patterns
 • #2 Parashakti: Vibrational processing & cosmic imagination
 • #3 Mahamaya: Symbolic transcription & universal language
 • #4 Nara: Personal interface & dialogical processing
 • #5 Epii: Synthesis & orchestration processing
 
+CORE MOD6 QL FRAMEWORK: The coordinate system is built on Quaternal Logic (QL) with mod6 processing, where the standard coordinate range runs from 0-5 as the foundational basis within any given branch. This mod6 framework represents a complete cycle of manifestation from implicit potential (0) through quintessential synthesis (5).
+
 Coordinates use flexible separators: hyphens (#N-N-N) for most linkages, dots (#N.N) typically after #4. The bare '#' represents system root.
 
 Use this tool when users ask about:
-- "Get info on coordinate #X" or "What's at #X-Y?"  
+- "Get info on coordinate #X" or "What's at #X-Y?"
 - "Check out Bimba coordinate #X" or "Resolve #X-Y-Z"
 - "Explore subsystem X" or "Tell me about the Anuttara layer"
 - Any reference to Epi-Logos coordinates, nodes, or subsystem data
@@ -226,6 +228,11 @@ The tool returns comprehensive node information including name, subsystem, conte
     def _get_schema_resource(self) -> str:
         """Get coordinate schema resource."""
         schema = {
+            "mod6_ql_framework": {
+                "description": "Core mod6 Quaternal Logic framework with standard coordinate range 0-5",
+                "cycle": "Complete manifestation cycle from implicit potential (0) to quintessential synthesis (5)",
+                "range": "0-5 as foundational basis within any given branch"
+            },
             "coordinate_formats": [
                 {
                     "format": "#",
@@ -233,7 +240,7 @@ The tool returns comprehensive node information including name, subsystem, conte
                 },
                 {
                     "format": "#N",
-                    "description": "Primary subsystem coordinate (0-5)"
+                    "description": "Primary subsystem coordinate (0-5 mod6 QL framework)"
                 },
                 {
                     "format": "#N-N-N",
@@ -247,7 +254,7 @@ The tool returns comprehensive node information including name, subsystem, conte
             "subsystems": {
                 "0": "Anuttara - Proto-logical processing",
                 "1": "Paramasiva - Quaternal Logic engine",
-                "2": "Parashakti - Vibrational processing", 
+                "2": "Parashakti - Vibrational processing",
                 "3": "Mahamaya - Symbolic transcription",
                 "4": "Nara - Personal interface",
                 "5": "Epii - Synthesis & orchestration"

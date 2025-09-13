@@ -9,11 +9,10 @@ from __future__ import annotations
 
 from typing import Tuple
 
-from .session.session import OrchestratorSessionManager
-from .conversation.conversation import ConversationManager
+from agentic.agents.orchestrator.session.session import OrchestratorSessionManager
+from agentic.agents.orchestrator.conversation.conversation import ConversationManager
 
 
 def get_default_managers() -> Tuple[OrchestratorSessionManager, ConversationManager]:
     """Return default session and conversation managers using env-configured clients."""
     return OrchestratorSessionManager(), ConversationManager()
-

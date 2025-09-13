@@ -8,7 +8,7 @@ through the Backend layer's HTTP API, replacing direct Neo4j connections.
 import logging
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from .backend_http_client import BackendHttpClient
+from agentic.clients.backend_http_client import BackendHttpClient
 
 logger = logging.getLogger(__name__)
 
