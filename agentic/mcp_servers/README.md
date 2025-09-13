@@ -10,12 +10,14 @@ Minimal Model Context Protocol (MCP) server that bridges Epi-Logos orchestrator 
 {
   "mcpServers": {
     "bimba-pratibimba": {
-      "command": "/usr/local/bin/python3",
+      "command": "/Users/admin/Documents/The Epi-Logos System V0/.venv/bin/python",
       "args": [
         "-m", "agentic.mcp_servers.bimba_pratibimba_server",
         "--transport", "stdio"
       ],
-      "env": {},
+      "env": {
+        "PYTHONPATH": "/Users/admin/Documents/The Epi-Logos System V0"
+      },
       "cwd": "/Users/admin/Documents/The Epi-Logos System V0"
     }
   }
@@ -127,20 +129,6 @@ The server supports **multiple concurrent client connections** via SSE transport
 
 Configure your clients to connect to the running server:
 
-#### Claude Desktop Configuration
-
-Add to your Claude Desktop `claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "bimba-pratibimba": {
-      "url": "http://localhost:8004/sse",
-      "type": "sse"
-    }
-  }
-}
-```
 
 #### VS Code MCP Extension Configuration
 
