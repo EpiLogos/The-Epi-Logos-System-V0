@@ -288,7 +288,7 @@ export const ThreeErrorBoundary: React.FC<{ children: ReactNode }> = ({
             There was an issue loading the 3D scene. This might be due to WebGL compatibility or resource loading issues.
           </div>
           <div className="text-gray-400 text-xs mb-4">
-            Try refreshing the page or check your browser's WebGL support.
+            Try refreshing the page or check your browser&apos;s WebGL support.
           </div>
           <button
             onClick={() => window.location.reload()}

@@ -10,7 +10,7 @@ jest.mock('next/server', () => {
   return {
     ...actual,
     NextResponse: {
-      json: (body: any, init?: ResponseInit) => {
+      json: (body: unknown, init?: ResponseInit) => {
         return new Response(JSON.stringify(body), {
           status: init?.status || 200,
           headers: { 'Content-Type': 'application/json', ...init?.headers }
@@ -21,7 +21,7 @@ jest.mock('next/server', () => {
 });
 
 // Mock NextRequest
-const createMockRequest = (body?: any, searchParams?: URLSearchParams): NextRequest => {
+const createMockRequest = (body?: unknown, searchParams?: URLSearchParams): NextRequest => {
   const url = searchParams 
     ? `http://localhost:3000/api/dev/orchestrator/cli-bridge?${searchParams.toString()}`
     : 'http://localhost:3000/api/dev/orchestrator/cli-bridge';
@@ -213,7 +213,7 @@ describe('/api/dev/orchestrator/cli-bridge', () => {
       const data = await response.json();
 
       expect(data.data.models).toBeInstanceOf(Array);
-      data.data.models.forEach((model: any) => {
+      data.data.models.forEach((model: { name: string; provider: string; ready: boolean }) => {
         expect(model).toHaveProperty('name');
         expect(model).toHaveProperty('provider');
         expect(model).toHaveProperty('ready');

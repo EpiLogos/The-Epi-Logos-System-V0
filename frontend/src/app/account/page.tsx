@@ -87,7 +87,7 @@ export default function AccountPage() {
   // Broadcast coordinate context to global navbar
   useEffect(() => {
     // Store on window for immediate access
-    (window as any).__CURRENT_COORDINATE_DATA__ = COORDINATE_CONTEXT;
+    (window as Record<string, unknown>).__CURRENT_COORDINATE_DATA__ = COORDINATE_CONTEXT;
     
     // Dispatch event for listeners
     const event = new CustomEvent('coordinate-updated', { detail: COORDINATE_CONTEXT });
@@ -153,9 +153,6 @@ export default function AccountPage() {
     monochrome: false
   };
 
-  const gradientStyle = {
-    background: 'linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(116,201,104,0.12) 35%, rgba(2,6,23,1) 100%)',
-  } as React.CSSProperties;
 
   const overlayTint = 'rgba(116, 201, 104, 0.35)';
 
@@ -266,8 +263,17 @@ export default function AccountPage() {
   );
 }
 
+interface User {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  name?: string;
+  profilePicture?: string;
+  createdAt?: string;
+}
+
 // Profile Section with consistent app styling
-function ProfileSection({ isEditing, setIsEditing, user }: { isEditing: boolean; setIsEditing: (editing: boolean) => void; user: any }) {
+function ProfileSection({ isEditing, setIsEditing, user }: { isEditing: boolean; setIsEditing: (editing: boolean) => void; user?: User }) {
   return (
     <div className="space-y-8">
       {/* Profile Header Card */}
@@ -446,8 +452,16 @@ function ProfileSection({ isEditing, setIsEditing, user }: { isEditing: boolean;
   );
 }
 
+interface SecurityUser extends User {
+  oauthProviders?: Array<unknown>;
+  googleId?: string;
+  hasPassword?: boolean;
+  mfaEnabled?: boolean;
+  hasMFA?: boolean;
+}
+
 // Security section with password setup for OAuth users
-function SecuritySection({ user, hasPassword: hasPasswordProp, hasMFA: hasMFAProp }: { user: any; hasPassword: boolean; hasMFA: boolean }) {
+function SecuritySection({ user, hasPassword: hasPasswordProp, hasMFA: hasMFAProp }: { user?: SecurityUser; hasPassword: boolean; hasMFA: boolean }) {
   const [userState, setUserState] = useState(user);
   const [activeSecurityTab, setActiveSecurityTab] = useState<'overview' | 'mfa' | 'password'>('overview');
   const [mfaEnabled, setMfaEnabled] = useState(hasMFAProp);
@@ -766,12 +780,23 @@ function NotificationsSection() {
   );
 }
 
+interface Subscription {
+  id: string;
+  userId: string;
+  tier: string;
+  status: string;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+  stripeSubscriptionId: string;
+}
+
 function BillingSection() {
   const { getAuthHeader, isSessionValid } = useAuth();
-  const [subscription, setSubscription] = useState(null);
-  const [billingHistory, setBillingHistory] = useState([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [billingHistory, setBillingHistory] = useState<Array<unknown>>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Import billing service
   useEffect(() => {
@@ -803,7 +828,7 @@ function BillingSection() {
         
       } catch (err) {
         console.error('Failed to load billing data:', err);
-        setError(err.message);
+        setError(err instanceof Error ? err.message : 'Failed to load billing data');
       } finally {
         setIsLoading(false);
       }
@@ -842,11 +867,11 @@ function BillingSection() {
       
       // Refresh subscription status
       const subData = await billingService.getSubscription();
-      if (subData) {
-        setSubscription(prev => ({
-          ...prev,
+      if (subData && subscription) {
+        setSubscription({
+          ...subscription,
           cancelAtPeriodEnd: subData.cancel_at_period_end
-        }));
+        });
       }
     } catch (err) {
       console.error('Failed to cancel subscription:', err);

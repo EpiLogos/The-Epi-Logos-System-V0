@@ -30,7 +30,7 @@ interface CallbackError {
 export default function CallbackPage() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { processCallback, isProcessing, error: oauthError } = useOAuthCallback();
+  const { processCallback, isProcessing, error: _oauthError } = useOAuthCallback();
 
   const [callbackState, setCallbackState] = useState<CallbackState>('processing');
   const [error, setError] = useState<CallbackError | null>(null);

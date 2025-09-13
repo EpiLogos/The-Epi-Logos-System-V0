@@ -98,7 +98,7 @@ export default function SimpleChatPage() {
             {chat.session.messages.length === 0 ? (
               <div className="text-center text-gray-500 mt-8">
                 <p>Start a conversation with the Pydantic AI agent</p>
-                <p className="text-sm mt-2">Try: "Hello", "What is 2+2?", or "Tell me about AI"</p>
+                <p className="text-sm mt-2">Try: &quot;Hello&quot;, &quot;What is 2+2?&quot;, or &quot;Tell me about AI&quot;</p>
               </div>
             ) : (
               <div className="space-y-4">

@@ -178,8 +178,8 @@ export default function TypographyPage() {
                 ideal for both interface elements and extended reading experiences.
               </p>
               <blockquote className="font-heading text-lg italic leading-relaxed border-l-4 border-primary pl-4 my-6">
-                "The combination of Ranade and Work Sans creates a distinctive yet approachable 
-                typographic voice for the Epi-Logos System."
+                &quot;The combination of Ranade and Work Sans creates a distinctive yet approachable 
+                typographic voice for the Epi-Logos System.&quot;
               </blockquote>
               <p className="font-sans text-sm text-muted-foreground">
                 Caption or metadata information using smaller text size.

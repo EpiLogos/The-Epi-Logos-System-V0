@@ -1,7 +1,9 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from '@jest/globals';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import { resolveCoordinate } from '@/lib/coordinateService';
+import { testUserRegistration } from '@/lib/authService';
 import SprintTestingPage from '../page';
 
 // Mock Next.js router
@@ -36,7 +38,7 @@ describe('SprintTestingPage', () => {
 
   describe('Sprint 1 Testing Context', () => {
     beforeEach(() => {
-      jest.mocked(require('next/navigation').useParams).mockReturnValue({ sprint: '1' });
+      jest.mocked(useParams).mockReturnValue({ sprint: '1' });
     });
 
     it('should render Sprint 1 testing interface', () => {
@@ -66,7 +68,7 @@ describe('SprintTestingPage', () => {
         subsystem: 1,
         responseTime: 45
       });
-      jest.mocked(require('@/lib/coordinateService').resolveCoordinate).mockImplementation(mockResolve);
+      jest.mocked(resolveCoordinate).mockImplementation(mockResolve);
 
       render(<SprintTestingPage />);
       
@@ -82,7 +84,7 @@ describe('SprintTestingPage', () => {
     });
 
     it('should display test results with response time', async () => {
-      jest.mocked(require('@/lib/coordinateService').resolveCoordinate).mockResolvedValue({
+      jest.mocked(resolveCoordinate).mockResolvedValue({
         coordinate: '#1',
         name: 'Test Node',
         subsystem: 1,
@@ -104,7 +106,7 @@ describe('SprintTestingPage', () => {
 
   describe('Sprint 2 Testing Context', () => {
     beforeEach(() => {
-      jest.mocked(require('next/navigation').useParams).mockReturnValue({ sprint: '2' });
+      jest.mocked(useParams).mockReturnValue({ sprint: '2' });
     });
 
     it('should render Sprint 2 testing interface', () => {
@@ -133,7 +135,7 @@ describe('SprintTestingPage', () => {
         userId: 'test-user-123',
         token: 'jwt-token-456'
       });
-      jest.mocked(require('@/lib/authService').testUserRegistration).mockImplementation(mockRegistration);
+      jest.mocked(testUserRegistration).mockImplementation(mockRegistration);
 
       render(<SprintTestingPage />);
       

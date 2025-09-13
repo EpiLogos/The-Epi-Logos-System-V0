@@ -25,7 +25,7 @@ export interface PersonaMessage {
   messageType: 'request' | 'response' | 'notification' | 'broadcast';
   priority: 'low' | 'normal' | 'high' | 'urgent';
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface PersonaResponse {
@@ -44,8 +44,8 @@ export interface WorkflowStep {
   id: string;
   persona: PersonaId;
   action: string;
-  inputs: Record<string, any>;
-  outputs?: Record<string, any>;
+  inputs: Record<string, unknown>;
+  outputs?: Record<string, unknown>;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
   startTime?: string;
   endTime?: string;
@@ -61,5 +61,5 @@ export interface Workflow {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }

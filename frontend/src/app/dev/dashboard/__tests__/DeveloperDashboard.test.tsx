@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from '@jest/globals';
+import { checkSystemHealth, getSprintStatus } from '@/lib/serviceHealth';
 import DeveloperDashboard from '../page';
 
 // Mock the system health service
@@ -114,7 +115,7 @@ describe('DeveloperDashboard', () => {
         integrations: 'healthy'
       });
 
-      jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockImplementation(mockCheckSystemHealth);
+      jest.mocked(checkSystemHealth).mockImplementation(mockCheckSystemHealth);
 
       render(<DeveloperDashboard />);
       
@@ -129,7 +130,7 @@ describe('DeveloperDashboard', () => {
         sprint2: 'in_progress'
       });
 
-      jest.mocked(require('@/lib/serviceHealth').getSprintStatus).mockImplementation(mockGetSprintStatus);
+      jest.mocked(getSprintStatus).mockImplementation(mockGetSprintStatus);
 
       render(<DeveloperDashboard />);
       

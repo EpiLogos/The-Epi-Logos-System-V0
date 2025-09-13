@@ -207,7 +207,7 @@ export default function CLICommandPalette({
 
               {filteredCommands.length === 0 && (
                 <div className="p-6 text-center text-gray-400">
-                  No commands found matching "{searchTerm}"
+                  No commands found matching &quot;{searchTerm}&quot;
                 </div>
               )}
             </div>

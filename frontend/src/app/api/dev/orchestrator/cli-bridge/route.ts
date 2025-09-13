@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
-import { promisify } from 'util';
-import * as path from 'path';
 
 /**
  * API Bridge to Agentic CLI for Developer Portal
@@ -185,7 +183,7 @@ function parseModelsOutput(output: string): unknown {
   const lines = output.split('\n');
   const models: Array<{ name: string; provider: string; ready: boolean }> = [];
   let defaultModel = '';
-  let currentModel = '';
+  const currentModel = '';
   
   let inTable = false;
   for (const line of lines) {
@@ -198,12 +196,12 @@ function parseModelsOutput(output: string): unknown {
       const parts = trimmed.split(/\s{2,}/).filter(part => part.trim());
       
       if (parts.length >= 3) {
-        let modelPart = parts[0].trim();
-        let provider = parts[1].trim(); 
-        let ready = parts[2].trim() === 'yes';
+        const modelPart = parts[0].trim();
+        const provider = parts[1].trim(); 
+        const ready = parts[2].trim() === 'yes';
         
         // Remove marker indicators (• or *) and extract model name
-        let name = modelPart.replace(/^[*•]\s*/, '').trim();
+        const name = modelPart.replace(/^[*•]\s*/, '').trim();
         
         if (modelPart.includes('•')) {
           defaultModel = name;

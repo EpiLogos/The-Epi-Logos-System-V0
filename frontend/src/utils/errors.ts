@@ -237,7 +237,7 @@ export function createSystemError(
 /**
  * Privacy-preserving error logging
  */
-export function logError(error: BaseError, context?: Record<string, any>): void {
+export function logError(error: BaseError, context?: Record<string, unknown>): void {
   // In production, this would send to logging service
   // Only log technical details, never user data
   const logData = {
@@ -260,15 +260,15 @@ export function logError(error: BaseError, context?: Record<string, any>): void 
 /**
  * Remove sensitive data from context before logging
  */
-function sanitizeContext(context: Record<string, any>): Record<string, any> {
+function sanitizeContext(context: Record<string, unknown>): Record<string, unknown> {
   const sensitiveKeys = ['password', 'token', 'authorization', 'cookie', 'session'];
-  const sanitized: Record<string, any> = {};
+  const sanitized: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(context)) {
     if (sensitiveKeys.some(sensitive => key.toLowerCase().includes(sensitive))) {
       sanitized[key] = '[REDACTED]';
-    } else if (typeof value === 'object' && value !== null) {
-      sanitized[key] = sanitizeContext(value);
+    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      sanitized[key] = sanitizeContext(value as Record<string, unknown>);
     } else {
       sanitized[key] = value;
     }

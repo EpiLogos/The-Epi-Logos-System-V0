@@ -375,7 +375,7 @@ export default function SessionManager({
               Terminate all other sessions?
             </h3>
             <p id="terminate-all-dialog-description" className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-              This will sign you out of all devices except the current one. You'll remain signed in on this device.
+              This will sign you out of all devices except the current one. You&apos;ll remain signed in on this device.
             </p>
             <div className="flex space-x-3">
               <button

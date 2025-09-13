@@ -306,7 +306,7 @@ export default function LinkAccountPage() {
                         Secure Account Linking
                       </p>
                       <p className="font-sans text-blue-300 text-sm mt-1">
-                        For security, we'll need to verify your account ownership before linking. 
+                        For security, we&apos;ll need to verify your account ownership before linking. 
                         This prevents unauthorized account access.
                       </p>
                     </div>

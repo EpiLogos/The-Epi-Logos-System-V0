@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
-
+import { checkSystemHealth } from '@/lib/serviceHealth';
 import SystemHealthMonitor from '../SystemHealthMonitor';
 
 // Mock the service health module
@@ -62,7 +62,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should show backend service status', async () => {
-    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -72,7 +72,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should display database health indicators', async () => {
-    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -84,7 +84,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should show integration service metrics', async () => {
-    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -96,7 +96,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should display response time metrics', async () => {
-    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -107,7 +107,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should show warning status for degraded services', async () => {
-    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockResolvedValue(mockHealthData);
+    jest.mocked(checkSystemHealth).mockResolvedValue(mockHealthData);
     
     render(<SystemHealthMonitor />);
     
@@ -118,7 +118,7 @@ describe('SystemHealthMonitor', () => {
 
   it('should refresh health data automatically', async () => {
     const mockCheck = jest.fn().mockResolvedValue(mockHealthData);
-    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockImplementation(mockCheck);
+    jest.mocked(checkSystemHealth).mockImplementation(mockCheck);
     
     render(<SystemHealthMonitor refreshInterval={100} />);
     
@@ -135,7 +135,7 @@ describe('SystemHealthMonitor', () => {
   });
 
   it('should handle health check errors gracefully', async () => {
-    jest.mocked(require('@/lib/serviceHealth').checkSystemHealth).mockRejectedValue(new Error('Network error'));
+    jest.mocked(checkSystemHealth).mockRejectedValue(new Error('Network error'));
     
     render(<SystemHealthMonitor />);
     

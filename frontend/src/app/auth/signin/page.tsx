@@ -96,7 +96,7 @@ export default function SignInPage() {
       try {
         const requirements = await fetchPasswordRequirements();
         setPasswordRequirements(requirements);
-      } catch (error) {
+      } catch (_error) {
         console.warn('Failed to load password requirements, using defaults');
       }
     };
@@ -247,7 +247,7 @@ export default function SignInPage() {
           };
 
           // Create user object (remove tokens from user data)
-          const { accessToken, refreshToken, idToken, ...userData } = result.data;
+          const { accessToken: _accessToken, refreshToken: _refreshToken, idToken: _idToken, ...userData } = result.data;
 
           signIn({
             user: userData,

@@ -172,7 +172,7 @@ export default function MfaSetupComponent({ onSuccess }: MfaSetupComponentProps)
             Step 1: Scan QR Code
           </h3>
           <p className="text-green-400/80 font-sans">
-            Use your phone's authenticator app to scan this QR code
+            Use your phone&apos;s authenticator app to scan this QR code
           </p>
         </div>
 
@@ -186,8 +186,8 @@ export default function MfaSetupComponent({ onSuccess }: MfaSetupComponentProps)
           </div>
           <div className="text-green-400/80 font-sans text-sm mt-3">
             <p>1. Open your authenticator app</p>
-            <p>2. Tap "Add account" or "+"</p>
-            <p>3. Choose "Scan QR code"</p>
+            <p>2. Tap &quot;Add account&quot; or &quot;+&quot;</p>
+            <p>3. Choose &quot;Scan QR code&quot;</p>
             <p>4. Point your camera at the code below</p>
           </div>
         </div>
@@ -202,7 +202,7 @@ export default function MfaSetupComponent({ onSuccess }: MfaSetupComponentProps)
         {/* Manual setup option */}
         <div className="text-center space-y-2">
           <p className="text-green-400/80 font-sans text-sm">
-            Can't scan? Enter this code manually in your app:
+            Can&apos;t scan? Enter this code manually in your app:
           </p>
           <div className="flex items-center justify-center gap-2">
             <code className="px-3 py-1 bg-black/20 border border-green-500/30 text-green-300 font-mono text-sm">
@@ -341,7 +341,7 @@ export default function MfaSetupComponent({ onSuccess }: MfaSetupComponentProps)
         <div className="space-y-4 p-4 bg-black/20 border border-green-500/30">
           <h4 className="font-heading text-green-300 flex items-center gap-2">
             <KeyIcon className="h-5 w-5" />
-            What you'll need:
+            What you&apos;ll need:
           </h4>
           <ul className="space-y-2 text-green-400/80 font-sans text-sm">
             <li className="flex items-center gap-2">

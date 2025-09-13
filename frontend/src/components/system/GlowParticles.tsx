@@ -29,7 +29,7 @@ export const GlowParticles = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number>();
   const particlePropsLength = particleCount * 9;
-  let particleProps = new Float32Array(particlePropsLength);
+  const particleProps = new Float32Array(particlePropsLength);
   let tick = 0;
 
   const rand = (n: number): number => n * Math.random();

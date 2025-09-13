@@ -28,13 +28,13 @@ import {
 import type { AGUIState } from '@/domains/agui/persona.domain';
 
 export interface EventReporter {
-  reportEvent: (type: AGUIEventType, data: Record<string, any>) => void;
+  reportEvent: (type: AGUIEventType, data: Record<string, unknown>) => void;
 }
 
 export interface UseEventsReturn {
   eventHistory: AGUIEventData[];
-  reportEvent: (type: AGUIEventType, data: Record<string, any>) => void;
-  processIncomingEvent: (eventData: any, currentState: AGUIState) => EventProcessingResult;
+  reportEvent: (type: AGUIEventType, data: Record<string, unknown>) => void;
+  processIncomingEvent: (eventData: unknown, currentState: AGUIState) => EventProcessingResult;
   getEventsByType: (type: string) => AGUIEventData[];
   getEventsByPersona: () => Record<string, AGUIEventData[]>;
   getSortedEvents: () => AGUIEventData[];
@@ -45,8 +45,8 @@ export const useEvents = (): UseEventsReturn => {
   const [eventHistory, setEventHistory] = useState<AGUIEventData[]>([]);
   const eventIdCounter = useRef(0);
 
-  const reportEvent = useCallback((type: AGUIEventType, data: Record<string, any>) => {
-    let eventData: { type: AGUIEventType; data: Record<string, any> };
+  const reportEvent = useCallback((type: AGUIEventType, data: Record<string, unknown>) => {
+    let eventData: { type: AGUIEventType; data: Record<string, unknown> };
 
     // Use domain logic to create properly formatted event data
     switch (type) {
@@ -85,7 +85,7 @@ export const useEvents = (): UseEventsReturn => {
   }, []);
 
   const processIncomingEvent = useCallback((
-    eventData: any, 
+    eventData: unknown, 
     currentState: AGUIState
   ): EventProcessingResult => {
     // Validate event data using domain logic

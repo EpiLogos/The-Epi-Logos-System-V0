@@ -6,6 +6,7 @@
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useRouter, useSearchParams } from 'next/navigation';
 import AccountPage from '../page';
 
 // Mock OAuth Context
@@ -50,16 +51,55 @@ jest.mock('next/navigation', () => ({
 
 // Mock HexagonNavigation component
 jest.mock('@/components/HexagonNavigation', () => ({
-  default: ({ preset, className, children }: any) => (
+  default: ({ preset, className, children }: { preset?: string; className?: string; children?: React.ReactNode }) => (
     <div data-testid="hexagon-nav" data-preset={preset} className={className}>
       {children}
     </div>
   ),
 }));
 
+interface MockUserProfileProps {
+  user?: {
+    firstName?: string;
+    lastName?: string;
+  };
+  onSave?: (data: { firstName: string }) => void;
+  onCancel?: () => void;
+}
+
+interface MockSubscriptionManagerProps {
+  subscription?: {
+    tier?: string;
+  };
+  onUpgrade?: () => void;
+  onManage?: () => void;
+  onCancel?: () => void;
+}
+
+interface MockBillingHistoryProps {
+  userId?: string;
+}
+
+interface MockAccountSettingsProps {
+  user?: {
+    preferences: {
+      theme: string;
+    };
+  };
+  onSave?: (data: { preferences: { theme: string } }) => void;
+  onDeleteAccount?: () => void;
+  onExportData?: () => void;
+}
+
+interface MockSessionManagerProps {
+  sessions?: Array<unknown>;
+  onTerminateSession?: (sessionId: string) => void;
+  onRefresh?: () => void;
+}
+
 // Mock account components
 jest.mock('@/components/account/UserProfile', () => ({
-  default: ({ user, onSave, onCancel }: any) => (
+  default: ({ user, onSave, onCancel }: MockUserProfileProps) => (
     <div data-testid="user-profile">
       <h2>User Profile</h2>
       <div>Name: {user?.firstName} {user?.lastName}</div>
@@ -70,7 +110,7 @@ jest.mock('@/components/account/UserProfile', () => ({
 }));
 
 jest.mock('@/components/account/SubscriptionManager', () => ({
-  default: ({ subscription, onUpgrade, onManage, onCancel }: any) => (
+  default: ({ subscription, onUpgrade, onManage, onCancel }: MockSubscriptionManagerProps) => (
     <div data-testid="subscription-manager">
       <h2>Subscription Management</h2>
       <div>Tier: {subscription?.tier}</div>
@@ -82,7 +122,7 @@ jest.mock('@/components/account/SubscriptionManager', () => ({
 }));
 
 jest.mock('@/components/account/BillingHistory', () => ({
-  default: ({ userId }: any) => (
+  default: ({ userId }: MockBillingHistoryProps) => (
     <div data-testid="billing-history">
       <h2>Billing History</h2>
       <div>User ID: {userId}</div>
@@ -91,7 +131,7 @@ jest.mock('@/components/account/BillingHistory', () => ({
 }));
 
 jest.mock('@/components/account/AccountSettings', () => ({
-  default: ({ user, onSave, onDeleteAccount, onExportData }: any) => (
+  default: ({ user, onSave, onDeleteAccount, onExportData }: MockAccountSettingsProps) => (
     <div data-testid="account-settings">
       <h2>Account Settings</h2>
       <div>Theme: {user?.preferences.theme}</div>
@@ -103,7 +143,7 @@ jest.mock('@/components/account/AccountSettings', () => ({
 }));
 
 jest.mock('@/components/account/SessionManager', () => ({
-  default: ({ sessions, onTerminateSession, onRefresh }: any) => (
+  default: ({ sessions, onTerminateSession, onRefresh }: MockSessionManagerProps) => (
     <div data-testid="session-manager">
       <h2>Session Management</h2>
       <div>Sessions: {sessions?.length || 0}</div>
@@ -114,12 +154,13 @@ jest.mock('@/components/account/SessionManager', () => ({
 }));
 
 // Mock API calls
-global.fetch = jest.fn();
+const mockFetch = jest.fn();
+global.fetch = mockFetch as jest.MockedFunction<typeof fetch>;
 
 describe('Account Page', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (fetch as any).mockResolvedValue({
+    mockFetch.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ success: true }),
     });
@@ -215,7 +256,7 @@ describe('Account Page', () => {
 
     it('should update URL when tab changes', async () => {
       const mockPush = jest.fn();
-      jest.mocked(require('next/navigation').useRouter).mockReturnValue({
+      jest.mocked(useRouter).mockReturnValue({
         push: mockPush,
         replace: jest.fn(),
         back: jest.fn(),
@@ -283,7 +324,7 @@ describe('Account Page', () => {
   describe('Data Loading and Error Handling', () => {
     it('should show loading states during data fetching', async () => {
       const slowFetch = jest.fn(() => new Promise(resolve => setTimeout(resolve, 1000)));
-      global.fetch = slowFetch;
+      global.fetch = slowFetch as jest.MockedFunction<typeof fetch>;
 
       render(<AccountPage />);
       
@@ -292,7 +333,7 @@ describe('Account Page', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      (fetch as any).mockRejectedValueOnce(new Error('API Error'));
+      mockFetch.mockRejectedValueOnce(new Error('API Error'));
 
       render(<AccountPage />);
       
@@ -303,7 +344,7 @@ describe('Account Page', () => {
     });
 
     it('should handle network errors with retry functionality', async () => {
-      (fetch as any)
+      mockFetch
         .mockRejectedValueOnce(new Error('Network error'))
         .mockResolvedValueOnce({
           ok: true,
@@ -327,7 +368,7 @@ describe('Account Page', () => {
 
     it('should handle partial data loading failures', async () => {
       // Mock one API call failing
-      (fetch as any).mockImplementation((url: string) => {
+      mockFetch.mockImplementation((url: string) => {
         if (url.includes('/api/auth/sessions')) {
           return Promise.reject(new Error('Sessions unavailable'));
         }
@@ -444,7 +485,7 @@ describe('Account Page', () => {
 
   describe('URL State Management', () => {
     it('should load correct tab from URL parameter', () => {
-      jest.mocked(require('next/navigation').useSearchParams).mockReturnValue({
+      jest.mocked(useSearchParams).mockReturnValue({
         get: (key: string) => key === 'tab' ? 'billing' : null,
       });
 
@@ -455,7 +496,7 @@ describe('Account Page', () => {
     });
 
     it('should default to profile tab when no URL parameter', () => {
-      jest.mocked(require('next/navigation').useSearchParams).mockReturnValue({
+      jest.mocked(useSearchParams).mockReturnValue({
         get: () => null,
       });
 
@@ -466,7 +507,7 @@ describe('Account Page', () => {
     });
 
     it('should handle invalid tab parameter gracefully', () => {
-      jest.mocked(require('next/navigation').useSearchParams).mockReturnValue({
+      jest.mocked(useSearchParams).mockReturnValue({
         get: (key: string) => key === 'tab' ? 'invalid-tab' : null,
       });
 

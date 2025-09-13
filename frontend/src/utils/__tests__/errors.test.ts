@@ -181,7 +181,7 @@ describe('Error Utilities', () => {
 
     it('provides default classification for unknown error types', () => {
       const error = createAPIError('Unknown error');
-      error.type = 'unknown' as any;
+      error.type = 'unknown' as 'api';
       const classification = classifyError(error);
 
       expect(classification).toMatchObject({
@@ -195,11 +195,11 @@ describe('Error Utilities', () => {
 
   describe('logError', () => {
     beforeEach(() => {
-      jest.clearAllMocks();
+      vi.clearAllMocks();
     });
 
     it('logs error in development mode', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
@@ -213,7 +213,7 @@ describe('Error Utilities', () => {
     });
 
     it('sanitizes sensitive context data', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
@@ -226,17 +226,17 @@ describe('Error Utilities', () => {
 
       logError(error, context);
 
-      const loggedData = consoleSpy.mock.calls[0][1];
-      expect(loggedData.context.password).toBe('[REDACTED]');
-      expect(loggedData.context.token).toBe('[REDACTED]');
-      expect(loggedData.context.safeData).toBe('this is fine');
+      const loggedData = consoleSpy.mock.calls[0]?.[1];
+      expect(loggedData?.context?.password).toBe('[REDACTED]');
+      expect(loggedData?.context?.token).toBe('[REDACTED]');
+      expect(loggedData?.context?.safeData).toBe('this is fine');
 
       process.env.NODE_ENV = originalEnv;
       consoleSpy.mockRestore();
     });
 
     it('handles nested context sanitization', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
@@ -253,24 +253,24 @@ describe('Error Utilities', () => {
 
       logError(error, context);
 
-      const loggedData = consoleSpy.mock.calls[0][1];
-      expect(loggedData.context.user.name).toBe('John');
-      expect(loggedData.context.user.password).toBe('[REDACTED]');
-      expect(loggedData.context.auth.authorization).toBe('[REDACTED]');
+      const loggedData = consoleSpy.mock.calls[0]?.[1];
+      expect(loggedData?.context?.user?.name).toBe('John');
+      expect(loggedData?.context?.user?.password).toBe('[REDACTED]');
+      expect(loggedData?.context?.auth?.authorization).toBe('[REDACTED]');
 
       process.env.NODE_ENV = originalEnv;
       consoleSpy.mockRestore();
     });
 
     it('does not log sensitive information directly from error', () => {
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
       const error = createSystemError('System error');
       logError(error);
 
-      const loggedData = consoleSpy.mock.calls[0][1];
+      const loggedData = consoleSpy.mock.calls[0]?.[1];
       
       // Check that logged data only contains safe fields
       expect(loggedData).toHaveProperty('errorId');

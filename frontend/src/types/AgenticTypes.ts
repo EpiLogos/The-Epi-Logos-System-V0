@@ -6,15 +6,15 @@
 export interface AgenticTool {
   name: string;
   description: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   required: string[];
   category: 'search' | 'analysis' | 'synthesis' | 'communication' | 'data';
 }
 
 export interface ToolExecution {
   toolName: string;
-  parameters: Record<string, any>;
-  result?: any;
+  parameters: Record<string, unknown>;
+  result?: unknown;
   error?: string;
   executionTime: number;
   timestamp: string;
@@ -26,7 +26,7 @@ export interface AgenticContext {
   userId?: string;
   currentPersona: PersonaId;
   conversationHistory: ConversationTurn[];
-  workingMemory: Record<string, any>;
+  workingMemory: Record<string, unknown>;
   longTermMemory?: string[]; // References to stored memories
   goals: string[];
   constraints: string[];

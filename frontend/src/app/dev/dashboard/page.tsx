@@ -53,9 +53,6 @@ export default function DeveloperDashboard() {
     router.push(`/dev/sprint/${sprintNumber}`);
   };
 
-  const navigateHome = () => {
-    router.push('/');
-  };
 
   if (loading) {
     return (

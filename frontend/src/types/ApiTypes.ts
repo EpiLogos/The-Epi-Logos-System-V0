@@ -3,7 +3,7 @@
  */
 
 // Standard API response wrapper
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: ApiError;
@@ -18,7 +18,7 @@ export interface ApiResponse<T = any> {
 export interface ApiError {
   code: string;
   message: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   errorId: string; // UUID for support tracking
   path?: string[];
 }
@@ -52,8 +52,8 @@ export interface RequestConfig {
   method: HttpMethod;
   url: string;
   headers?: Record<string, string>;
-  params?: Record<string, any>;
-  data?: any;
+  params?: Record<string, unknown>;
+  data?: unknown;
   timeout?: number;
 }
 
@@ -71,5 +71,5 @@ export interface ServiceHealth {
   status: 'healthy' | 'degraded' | 'unhealthy';
   responseTime?: number;
   lastCheck: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }

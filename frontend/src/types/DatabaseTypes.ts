@@ -11,23 +11,23 @@ export interface DatabaseConfig {
   username?: string;
   password?: string;
   ssl?: boolean;
-  options?: Record<string, any>;
+  options?: Record<string, unknown>;
 }
 
 // Neo4j specific types
 export interface Neo4jQuery {
   cypher: string;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
 }
 
 export interface Neo4jResult {
-  records: any[];
+  records: unknown[];
   summary: {
     queryType: string;
     counters: Record<string, number>;
-    plan?: any;
-    profile?: any;
-    notifications?: any[];
+    plan?: unknown;
+    profile?: unknown;
+    notifications?: unknown[];
   };
 }
 
@@ -35,16 +35,16 @@ export interface Neo4jResult {
 export interface MongoQuery {
   collection: string;
   operation: 'find' | 'findOne' | 'insertOne' | 'insertMany' | 'updateOne' | 'updateMany' | 'deleteOne' | 'deleteMany';
-  filter?: Record<string, any>;
-  document?: Record<string, any>;
-  options?: Record<string, any>;
+  filter?: Record<string, unknown>;
+  document?: Record<string, unknown>;
+  options?: Record<string, unknown>;
 }
 
 // Redis specific types
 export interface RedisOperation {
   command: string;
   key: string;
-  value?: any;
+  value?: unknown;
   options?: {
     ttl?: number;
     nx?: boolean;
@@ -56,21 +56,21 @@ export interface RedisOperation {
 export interface QdrantVector {
   id: string | number;
   vector: number[];
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
 }
 
 export interface QdrantSearchParams {
   vector: number[];
   limit?: number;
   offset?: number;
-  filter?: Record<string, any>;
+  filter?: Record<string, unknown>;
   with_payload?: boolean;
   with_vector?: boolean;
   score_threshold?: number;
 }
 
 // Generic query result types
-export interface QueryResult<T = any> {
+export interface QueryResult<T = unknown> {
   data: T;
   metadata: {
     executionTime: number;

@@ -44,10 +44,10 @@ export interface UseAnimationReturn {
   // Animation calculations
   calculateGlowIntensity: (elapsedTime: number) => number;
   calculateColorHue: (elapsedTime: number) => number;
-  calculateTorusRotations: (elapsedTime: number) => any;
-  calculateParticleRotations: (elapsedTime: number) => any;
-  calculateBackgroundRotations: (elapsedTime: number) => any;
-  calculateTextTransition: (currentY: number, isTransitioning: boolean) => any;
+  calculateTorusRotations: (elapsedTime: number) => { x: number; y: number; z: number };
+  calculateParticleRotations: (elapsedTime: number) => { x: number; y: number; z: number };
+  calculateBackgroundRotations: (elapsedTime: number) => { x: number; y: number; z: number };
+  calculateTextTransition: (currentY: number, isTransitioning: boolean) => { y: number; opacity: number };
   calculateShaderUniforms: (elapsedTime: number, baseUniforms?: Partial<ShaderUniforms>) => ShaderUniforms;
   
   // Particle system

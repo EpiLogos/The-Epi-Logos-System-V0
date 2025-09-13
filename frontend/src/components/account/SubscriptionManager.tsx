@@ -154,7 +154,7 @@ export default function SubscriptionManager({
                 </h3>
                 <div className="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
                   <p>Your subscription will cancel at the end of your current period.</p>
-                  <p>You'll have access until {formatDate(subscription.currentPeriodEnd)}</p>
+                  <p>You&apos;ll have access until {formatDate(subscription.currentPeriodEnd)}</p>
                 </div>
                 <div className="mt-3">
                   <button
@@ -275,7 +275,7 @@ export default function SubscriptionManager({
           {isFreeTier ? (
             <div>
               <p className="font-medium mb-1">No dark patterns, no pressure</p>
-              <p>Upgrade only when it truly serves your journey. Support consciousness-aligned computing when you're ready.</p>
+              <p>Upgrade only when it truly serves your journey. Support consciousness-aligned computing when you&apos;re ready.</p>
             </div>
           ) : (
             <div>
@@ -300,7 +300,7 @@ export default function SubscriptionManager({
             </h3>
             <p id="cancel-dialog-description" className="text-sm text-gray-600 dark:text-gray-400 mb-6">
               Your subscription will remain active until {formatDate(subscription.currentPeriodEnd)}, 
-              after which you'll return to the free tier.
+              after which you&apos;ll return to the free tier.
             </p>
             <div className="flex space-x-3">
               <button

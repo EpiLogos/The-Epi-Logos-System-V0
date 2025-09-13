@@ -155,7 +155,7 @@ export default function PasswordResetComponent({ mode, onSuccess }: PasswordRese
             Reset Your Password
           </h3>
           <p className="text-green-400/80 font-sans">
-            Enter your email address and we'll send you a link to reset your password.
+            Enter your email address and we&apos;ll send you a link to reset your password.
           </p>
         </div>
 
