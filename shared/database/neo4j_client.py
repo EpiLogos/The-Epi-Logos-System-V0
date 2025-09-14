@@ -128,6 +128,57 @@ class Neo4jClient:
         records, _, _ = self.execute_query(query, {"coordinate": coordinate})
 
         return dict(records[0]["n"]) if records else None
+
+    def get_bimba_node_relationships(self, coordinate: str) -> List[Dict[str, Any]]:
+        """Get all direct relationships for a Bimba node identified by coordinate.
+
+        Returns a list of dictionaries with keys: type, direction, neighbor, properties.
+        """
+        edges: List[Dict[str, Any]] = []
+
+        # Outgoing relationships from the node to neighbors
+        outgoing_query = """
+        MATCH (n:BimbaNode {bimbaCoordinate: $coordinate})-[r]->(neighbor)
+        RETURN type(r) AS rel_type, neighbor AS neighbor, properties(r) AS rel_props
+        """
+
+        # Incoming relationships from neighbors to the node
+        incoming_query = """
+        MATCH (n:BimbaNode {bimbaCoordinate: $coordinate})<- [r] - (neighbor)
+        RETURN type(r) AS rel_type, neighbor AS neighbor, properties(r) AS rel_props
+        """
+
+        try:
+            out_records, _, _ = self.execute_query(outgoing_query, {"coordinate": coordinate})
+            for rec in out_records:
+                neighbor = dict(rec["neighbor"]) if rec.get("neighbor") is not None else {}
+                props = dict(rec["rel_props"]) if rec.get("rel_props") is not None else {}
+                edges.append(
+                    {
+                        "type": rec.get("rel_type"),
+                        "direction": "OUTGOING",
+                        "neighbor": neighbor,
+                        "properties": props,
+                    }
+                )
+
+            in_records, _, _ = self.execute_query(incoming_query, {"coordinate": coordinate})
+            for rec in in_records:
+                neighbor = dict(rec["neighbor"]) if rec.get("neighbor") is not None else {}
+                props = dict(rec["rel_props"]) if rec.get("rel_props") is not None else {}
+                edges.append(
+                    {
+                        "type": rec.get("rel_type"),
+                        "direction": "INCOMING",
+                        "neighbor": neighbor,
+                        "properties": props,
+                    }
+                )
+        except Exception as e:
+            logger.error(f"Error fetching Bimba node relationships for {coordinate}: {e}")
+            raise
+
+        return edges
     
     def create_lightrag_entity(self, name: str, entity_type: str, 
                               source_document: str, confidence: float,

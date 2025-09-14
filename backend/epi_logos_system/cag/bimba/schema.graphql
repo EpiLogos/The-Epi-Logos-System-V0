@@ -13,6 +13,32 @@ type BimbaNode {
     updatedAt: String
 }
 
+"""Direction of a relationship relative to the queried node"""
+enum RelationshipDirection {
+    INCOMING
+    OUTGOING
+}
+
+"""Key-value properties on a relationship edge"""
+type RelationshipProperty {
+    key: String!
+    value: String
+}
+
+"""A relationship edge connecting the queried node to a neighbor"""
+type RelationshipEdge {
+    type: String!
+    direction: RelationshipDirection!
+    neighbor: BimbaNode!
+    properties: [RelationshipProperty!]
+}
+
+"""A node bundled with its immediate relationship edges"""
+type NodeWithEdges {
+    node: BimbaNode!
+    edges: [RelationshipEdge!]!
+}
+
 type SearchResult {
     coordinate: String!
     name: String!
@@ -35,6 +61,7 @@ type SubsystemCoordinatesResponse {
 
 type Query {
     getNodeByCoordinate(coordinate: String!): BimbaNode
+    getNodeWithRelationships(coordinate: String!): NodeWithEdges
     searchCoordinates(query: String!, subsystem: Int, limit: Int): SearchResponse
     getSubsystemCoordinates(subsystem: Int!, limit: Int): SubsystemCoordinatesResponse
 }

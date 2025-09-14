@@ -114,6 +114,24 @@ The tool returns comprehensive node information including name, subsystem, conte
                         },
                         "required": ["coordinate"]
                     }
+                ),
+                Tool(
+                    name="get_node_relationships",
+                    description=(
+                        "Get all direct relationship connections for a Bimba coordinate. "
+                        "Returns the node and its edges with type, direction, neighbor, and properties."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "coordinate": {
+                                "type": "string",
+                                "description": "Bimba coordinate to inspect for relationships.",
+                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                            }
+                        },
+                        "required": ["coordinate"]
+                    }
                 )
             ]
         
@@ -123,6 +141,8 @@ The tool returns comprehensive node information including name, subsystem, conte
             try:
                 if name == "resolve_coordinate":
                     return await self._handle_resolve_coordinate(arguments)
+                elif name == "get_node_relationships":
+                    return await self._handle_get_node_relationships(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -224,6 +244,54 @@ The tool returns comprehensive node information including name, subsystem, conte
             )]
     
     # Note: Removed coordinate validation - GraphQL backend handles all format validation
+    async def _handle_get_node_relationships(self, arguments: dict) -> list[TextContent]:
+        """Handle relationship discovery for a coordinate."""
+        try:
+            coordinate = arguments.get("coordinate")
+            if not coordinate:
+                return [TextContent(type="text", text="Error: coordinate parameter is required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Relationship service not initialized")]
+
+            result = await self.bimba_client.get_node_relationships(coordinate)
+
+            if result.get("success"):
+                node = result.get("node") or {}
+                edges = result.get("edges", [])
+
+                lines: list[str] = []
+                lines.append(f"Coordinate: {node.get('coordinate', coordinate)}")
+                if node.get("name"):
+                    lines.append(f"Name: {node['name']}")
+                if node.get("subsystem") is not None:
+                    lines.append(f"Subsystem: {node['subsystem']}")
+                lines.append("")
+                lines.append(f"Edges: {len(edges)}")
+
+                for e in edges:
+                    etype = e.get("type")
+                    edir = e.get("direction")
+                    neigh = e.get("neighbor", {})
+                    ncoord = neigh.get("coordinate")
+                    nname = neigh.get("name")
+                    header = f"- [{edir}] {etype} -> {ncoord or 'UNKNOWN'}"
+                    if nname:
+                        header += f" ({nname})"
+                    lines.append(header)
+
+                    props = e.get("properties") or []
+                    if props:
+                        prop_str = ", ".join([f"{p['key']}={p.get('value')}" for p in props])
+                        lines.append(f"  properties: {prop_str}")
+
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                err = result.get("error", "Unknown error")
+                return [TextContent(type="text", text=f"Relationship discovery failed: {err}")]
+        except Exception as e:
+            logger.error(f"Error in get_node_relationships: {e}")
+            return [TextContent(type="text", text=f"Error fetching relationships: {str(e)}")]
     
     def _get_schema_resource(self) -> str:
         """Get coordinate schema resource."""
@@ -274,7 +342,7 @@ The tool returns comprehensive node information including name, subsystem, conte
                 "name": "Bimba-Pratibimba MCP Server",
                 "version": "1.0.0",
                 "transport": "SSE",
-                "tools": ["resolve_coordinate"],
+                "tools": ["resolve_coordinate", "get_node_relationships"],
                 "resources": ["bimba://schema"],
                 "clients_supported": "Multiple concurrent connections"
             }

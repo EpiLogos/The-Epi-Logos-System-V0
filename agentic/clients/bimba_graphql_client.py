@@ -172,3 +172,82 @@ class BimbaGraphQLClient(BackendHttpClient):
                 "coordinates": [],
                 "error": error_msg or "GraphQL query failed"
             }
+
+    async def get_node_relationships(self, coordinate: str) -> Dict[str, Any]:
+        """Get a node with all direct relationship connections."""
+        query = """
+        query GetNodeWithRelationships($coordinate: String!) {
+            getNodeWithRelationships(coordinate: $coordinate) {
+                node {
+                    coordinate
+                    name
+                    subsystem
+                    description
+                    operationalEssence
+                    coreNature
+                    function
+                    symbol
+                    nodeType
+                    uuid
+                    createdAt
+                    updatedAt
+                }
+                edges {
+                    type
+                    direction
+                    neighbor {
+                        coordinate
+                        name
+                        subsystem
+                        description
+                        operationalEssence
+                        coreNature
+                        function
+                        symbol
+                        nodeType
+                        uuid
+                        createdAt
+                        updatedAt
+                    }
+                    properties { key value }
+                }
+            }
+        }
+        """
+
+        variables = {"coordinate": coordinate}
+        request_data = {"query": query, "variables": variables}
+
+        logger.info(f"Fetching relationships for coordinate: {coordinate}")
+        response = await self.post("/graphql", json_data=request_data)
+
+        if "data" in response and response["data"]:
+            node_with_edges = response["data"].get("getNodeWithRelationships")
+            if node_with_edges:
+                node = node_with_edges.get("node", {})
+                edges = node_with_edges.get("edges", [])
+                return {
+                    "success": True,
+                    "coordinate": node.get("coordinate", coordinate),
+                    "node": node,
+                    "edges": edges,
+                    "error": None,
+                }
+            else:
+                return {
+                    "success": False,
+                    "coordinate": coordinate,
+                    "node": None,
+                    "edges": [],
+                    "error": "Coordinate not found",
+                }
+        else:
+            errors = response.get("errors", [])
+            error_msg = "; ".join([err.get("message", "Unknown error") for err in errors])
+            return {
+                "success": False,
+                "coordinate": coordinate,
+                "node": None,
+                "edges": [],
+                "error": error_msg or "GraphQL query failed",
+            }

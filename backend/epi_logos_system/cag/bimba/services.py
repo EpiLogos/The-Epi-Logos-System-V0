@@ -170,6 +170,64 @@ class NodeService:
     def get_node(self, coordinate: str) -> BimbaNode | None:
         return self._repo.find_by_coordinate(coordinate=coordinate)
 
+    def get_node_relationships(self, coordinate: str) -> dict | None:
+        """Return a node bundled with its immediate relationship edges.
+
+        Uses the shared Neo4j client to fetch both the node and all direct
+        incoming/outgoing relationships, formatting the result to match the
+        GraphQL schema NodeWithEdges shape.
+        """
+        # First, resolve the node itself
+        node = self.get_node(coordinate)
+        if not node:
+            return None
+
+        # Fetch relationships via Neo4j client helper
+        edges_raw = self._repo.neo4j_client.get_bimba_node_relationships(coordinate)
+
+        # Transform raw edges into GraphQL-friendly structures
+        edges: list[dict] = []
+        for edge in edges_raw:
+            neighbor = edge.get("neighbor", {})
+
+            # Normalize coordinate field to always be present
+            neighbor_coord = neighbor.get("coordinate") or neighbor.get("bimbaCoordinate")
+            neighbor_dict = {
+                "coordinate": neighbor_coord,
+                "name": neighbor.get("name"),
+                "subsystem": str(neighbor.get("subsystem")) if neighbor.get("subsystem") is not None else None,
+                "description": neighbor.get("description"),
+                "operationalEssence": neighbor.get("operationalEssence"),
+                "coreNature": neighbor.get("coreNature"),
+                "function": neighbor.get("function"),
+                "symbol": neighbor.get("symbol"),
+                "nodeType": neighbor.get("nodeType"),
+                "uuid": neighbor.get("uuid"),
+                "createdAt": str(neighbor.get("created_at")) if neighbor.get("created_at") else None,
+                "updatedAt": str(neighbor.get("updated_at")) if neighbor.get("updated_at") else None,
+            }
+
+            # Flatten relationship properties into key-value array
+            rel_props = edge.get("properties", {}) or {}
+            properties_list = [
+                {"key": k, "value": rel_props[k] if rel_props[k] is not None else None}
+                for k in rel_props
+            ]
+
+            edges.append(
+                {
+                    "type": edge.get("type"),
+                    "direction": edge.get("direction"),
+                    "neighbor": neighbor_dict,
+                    "properties": properties_list,
+                }
+            )
+
+        return {
+            "node": node.model_dump(),
+            "edges": edges,
+        }
+
 # FastAPI dependency provider
 def get_node_service() -> NodeService:
     # Initialize Neo4j client with environment configuration

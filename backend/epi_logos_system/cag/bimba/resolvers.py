@@ -14,6 +14,17 @@ def resolve_get_node_by_coordinate(_: Any, info: Any, coordinate: str) -> dict |
     # Transform the Pydantic model into a dictionary for GraphQL.
     return node.model_dump() if node else None
 
+@query.field("getNodeWithRelationships")
+def resolve_get_node_with_relationships(_: Any, info: Any, coordinate: str) -> dict | None:
+    """Resolve a node and its direct relationships.
+
+    Follows the same thin-resolver pattern as getNodeByCoordinate, delegating
+    all business logic to the service layer and shaping the response for GraphQL.
+    """
+    node_service = info.context["service"]
+    result = node_service.get_node_relationships(coordinate)
+    return result if result else None
+
 @query.field("searchCoordinates")
 def resolve_search_coordinates(_: Any, info: Any, query: str, subsystem: Optional[int] = None, limit: Optional[int] = 10) -> dict:
     # TODO: Implement actual search functionality

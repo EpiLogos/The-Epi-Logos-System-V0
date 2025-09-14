@@ -151,6 +151,47 @@ class HttpBimbaClient:
                 "coordinates": [],
                 "error": f"HTTP request failed: {str(e)}"
             }
+
+    async def get_node_relationships(self, coordinate: str) -> Dict[str, Any]:
+        """
+        Get all direct relationship connections for a Bimba coordinate.
+
+        Args:
+            coordinate: The Bimba coordinate to inspect
+
+        Returns:
+            Dict containing the node and its relationship edges
+        """
+        try:
+            result = await self.client.get_node_relationships(coordinate)
+
+            if result.get("success"):
+                logger.info(f"Retrieved relationships for coordinate: {coordinate} ({len(result.get('edges', []))} edges)")
+                return {
+                    "success": True,
+                    "coordinate": result.get("coordinate", coordinate),
+                    "node": result.get("node"),
+                    "edges": result.get("edges", []),
+                }
+            else:
+                error_msg = result.get("error", "Unknown relationships error")
+                logger.warning(f"Failed to fetch relationships for {coordinate}: {error_msg}")
+                return {
+                    "success": False,
+                    "coordinate": coordinate,
+                    "node": None,
+                    "edges": [],
+                    "error": error_msg,
+                }
+        except Exception as e:
+            logger.error(f"Exception fetching relationships for {coordinate}: {e}")
+            return {
+                "success": False,
+                "coordinate": coordinate,
+                "node": None,
+                "edges": [],
+                "error": f"HTTP request failed: {str(e)}",
+            }
     
     async def close(self):
         """Close the HTTP client connection"""
