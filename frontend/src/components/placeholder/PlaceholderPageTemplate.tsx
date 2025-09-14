@@ -17,10 +17,11 @@ import { CoordinateDisplay } from '@/components/coordinate/CoordinateDisplay';
 import { useCoordinateDisplay } from '@/components/coordinate/useCoordinateDisplay';
 import { LivingPlaceholder } from '@/components/placeholder/LivingPlaceholder';
 import { DevModeModal, DevModeControls } from '@/components/dev/DevModeModal';
+import { THEME_SYSTEM } from '@/theme/subsystemPalette';
 
 export interface PlaceholderPageTemplateProps {
   coordinate: string;
-  enableDevMode?: boolean;
+  isDevMode?: boolean;
   onFeatureReady?: () => void;
   className?: string;
   children?: React.ReactNode;
@@ -28,7 +29,7 @@ export interface PlaceholderPageTemplateProps {
 
 export const PlaceholderPageTemplate: React.FC<PlaceholderPageTemplateProps> = ({
   coordinate,
-  enableDevMode = process.env.NODE_ENV === 'development',
+  isDevMode = process.env.NODE_ENV === 'development',
   onFeatureReady,
   className = '',
   children
@@ -44,20 +45,23 @@ export const PlaceholderPageTemplate: React.FC<PlaceholderPageTemplateProps> = (
     enableCaching: true
   });
   const [devControls, setDevControls] = useState<DevModeControls>({
-    coordinateSelector: currentCoordinate,
+    coordinate: currentCoordinate,
     templateVariation: 'canvas',
     stylingControls: {
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-      borderRadius: 8,
+      borderWidth: 1,
       glowIntensity: 50,
-      animationSpeed: 100,
+      animationSpeed: 1,
+      useSubsystemColors: true,
+      customBackground: undefined,
+      customText: undefined,
     },
-    previewMode: 'dev'
+    previewMode: false
   });
 
   // Handle coordinate changes from dev mode
   const handleCoordinateChange = async (newCoordinate: string) => {
     setCurrentCoordinate(newCoordinate);
+    setDevControls(prev => ({ ...prev, coordinate: newCoordinate }));
     // resolveCurrentCoordinate will be called automatically via useCoordinateDisplay dependency
   };
 
@@ -75,31 +79,31 @@ export const PlaceholderPageTemplate: React.FC<PlaceholderPageTemplateProps> = (
 
   // Toggle dev mode with keyboard shortcut
   React.useEffect(() => {
-    if (!enableDevMode) return;
+    if (!isDevMode) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       // Ctrl/Cmd + Shift + D to toggle dev mode
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === 'D') {
         event.preventDefault();
-        setIsDevModeOpen(!isDevModeOpen);
+        setIsDevModeOpen(prev => !prev);
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [enableDevMode, isDevModeOpen]);
+  }, [isDevMode]);
 
   // Debug logging
   React.useEffect(() => {
     console.log('PlaceholderPageTemplate state:', {
-      enableDevMode,
+      isDevMode,
       isDevModeOpen,
       currentCoordinate,
       coordinateData: coordinateData ? 'loaded' : 'null',
       isLoading,
       error
     });
-  }, [enableDevMode, isDevModeOpen, currentCoordinate, coordinateData, isLoading, error]);
+  }, [isDevMode, isDevModeOpen, currentCoordinate, coordinateData, isLoading, error]);
 
   // Broadcast coordinate data to global navbar
   React.useEffect(() => {
@@ -113,7 +117,7 @@ export const PlaceholderPageTemplate: React.FC<PlaceholderPageTemplateProps> = (
     }
   }, [coordinateData]);
 
-  const showDevMode = enableDevMode && devControls.previewMode === 'dev';
+  const showDevMode = isDevMode && !devControls.previewMode;
 
   return (
     <div className={`placeholder-page-template ${className}`} data-testid="placeholder-page-template">
@@ -127,7 +131,7 @@ export const PlaceholderPageTemplate: React.FC<PlaceholderPageTemplateProps> = (
       {/* Main Content Area */}
       <main className="page-main">
         {/* Development Mode Toggle */}
-        {enableDevMode && (
+        {isDevMode && (
           <div 
             className="fixed top-[90px] right-4 z-[1000]"
             style={{ position: 'fixed', top: '90px', right: '1rem', zIndex: 1000 }}
@@ -195,14 +199,17 @@ export const PlaceholderPageTemplate: React.FC<PlaceholderPageTemplateProps> = (
       </main>
 
       {/* Development Mode Modal */}
-      {enableDevMode && (
+      {isDevMode && (
         <DevModeModal
           isOpen={isDevModeOpen}
-          onOpenChange={setIsDevModeOpen}
-          currentCoordinate={currentCoordinate}
-          onCoordinateChange={handleCoordinateChange}
-          onControlsChange={handleDevControlsChange}
-          onExportSettings={handleExportSettings}
+          controls={devControls}
+          onControlsChange={(newControls) => {
+            setDevControls(newControls);
+            if (newControls.coordinate !== currentCoordinate) {
+              handleCoordinateChange(newControls.coordinate);
+            }
+          }}
+          onToggle={() => setIsDevModeOpen(!isDevModeOpen)}
           className="page-dev-modal"
         />
       )}
@@ -212,16 +219,14 @@ export const PlaceholderPageTemplate: React.FC<PlaceholderPageTemplateProps> = (
           min-height: 100vh;
           display: flex;
           flex-direction: column;
-          background: radial-gradient(ellipse at center, 
-            rgba(20, 20, 30, 0.9) 0%, 
-            rgba(10, 10, 20, 0.95) 70%);
+          background: ${THEME_SYSTEM.cosmic.black};
         }
 
         .page-header {
           position: relative;
-          background: rgba(0, 0, 0, 0.3);
+          background: ${THEME_SYSTEM.cosmic.blackAlt};
           backdrop-filter: blur(20px);
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          border-bottom: 1px solid ${THEME_SYSTEM.cosmic.borderThin};
           z-index: 10;
         }
 

@@ -181,11 +181,21 @@ export const LivingPlaceholder: React.FC<LivingPlaceholderProps> = ({
           overflow: hidden;
           background: var(--bg-color);
           color: var(--text-color);
-          font-size: var(--font-size);
-          font-weight: var(--font-weight);
-          line-height: var(--line-height);
-          letter-spacing: var(--letter-spacing);
-          opacity: var(--opacity);
+        }
+
+        .coordinate-details {
+          margin-top: 1rem;
+          padding: 1rem;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: var(--border-radius);
+          border: 1px solid var(--border-color);
+        }
+
+        .coordinate-details p {
+          color: var(--text-color-muted);
+          font-size: 0.95rem;
+          line-height: 1.6;
+          margin: 0;
         }
 
         .living-placeholder--loading {
