@@ -59,7 +59,11 @@ export default function SprintTestingPage() {
       case 2:
         return 'Sprint 2: Orchestration Foundation';
       case 3:
-        return 'Sprint 3: Graph Operations Foundation';
+        return 'Sprint 3: Graph Operations Foundation & GraphRAG Capabilities';
+      case 4:
+        return 'Sprint 4: Intelligence Synthesis Core & Cross-Namespace Coordination';
+      case 5:
+        return 'Sprint 5: Context Management System & Paramasiva Topological Analysis';
       default:
         return `Sprint ${sprint}`;
     }
@@ -855,28 +859,95 @@ export default function SprintTestingPage() {
                 </div>
                 
                 <div className="space-y-4">
-                  <h4 className="font-semibold text-yellow-200 mb-3">Story 02.03 - Traycer Plan Complete:</h4>
-                  <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-200 mb-3">Story 02.03 - Implementation Complete:</h4>
+                  <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-yellow-400 text-sm font-medium">Graph Path Traversal</span>
+                      <span className="text-green-400 text-sm font-medium">Graph Path Traversal ✅</span>
                     </div>
                     <div className="text-xs text-gray-400 mb-2">
-                      Comprehensive implementation plan validated and ready
+                      Full implementation with GraphQL schema, Neo4j path finding, and agent integration
                     </div>
                     <div className="text-xs text-green-400">
-                      ✅ Traycer planning phase: 60% completion milestone
+                      ✅ GraphQL getPathBetweenCoordinates query operational
                     </div>
-                    <div className="text-xs text-blue-400">
-                      📋 Next: Implementation phase with validated specifications
+                    <div className="text-xs text-green-400">
+                      ✅ Neo4j shortest path algorithm with maxHops safeguards
+                    </div>
+                    <div className="text-xs text-green-400">
+                      ✅ Orchestrator and MCP server tool integration complete
                     </div>
                     <div className="text-xs text-purple-400 mt-1">
-                      🔍 Advanced graph operations architecture defined
+                      🎯 Advanced graph operations fully operational
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-blue-200 mb-3">New GraphRAG Stories (Enhanced Scope):</h4>
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-blue-400 text-sm font-medium">02.03.1 Semantic-to-Coordinate Resolution 🔍</span>
+                      <span className="px-2 py-1 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full text-xs">
+                        NEW
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-2">
+                      Natural language → coordinate discovery for inverse CAG flow
+                    </div>
+                    <div className="text-xs text-orange-400">
+                      📋 Critical GraphRAG Foundation - Ready for Implementation
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-blue-400 text-sm font-medium">02.03.2 Hybrid GraphRAG Retrieval Integration 🔄</span>
+                      <span className="px-2 py-1 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full text-xs">
+                        NEW
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-2">
+                      L0-L3 cross-layer orchestration for advanced CAG retrieval
+                    </div>
+                    <div className="text-xs text-orange-400">
+                      🚀 Advanced CAG Retrieval - Implementation specifications ready
+                    </div>
+                  </div>
+                  
+                  <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-purple-400 text-sm font-medium">02.25 Bimba Node Embedding Generation Tool 🧬</span>
+                      <span className="px-2 py-1 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full text-xs">
+                        CRITICAL
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-2">
+                      Foundational embedding infrastructure for GraphRAG capabilities
+                    </div>
+                    <div className="text-xs text-purple-400">
+                      🎯 GraphRAG Enabler - Required for 02.03.1 & 02.03.2 implementation
                     </div>
                   </div>
                 </div>
               </div>
               
               <div className="border-t border-blue-500/20 pt-4">
+                <h4 className="font-semibold text-yellow-200 mb-3">Enhanced Sprint Scope Update:</h4>
+                <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-yellow-400 text-sm font-medium">🚀 Sprint 3 Enhanced: +2 Critical GraphRAG Stories</span>
+                  </div>
+                  <div className="text-xs text-gray-400 mb-2">
+                    Original goal: "Complete graph CRUD operations" → Enhanced goal: "Complete graph CRUD + foundational GraphRAG capabilities"
+                  </div>
+                  <div className="text-xs text-yellow-400">
+                    ✅ Story count expanded: 7 stories → 10 stories (20% completion with enhanced scope)
+                  </div>
+                  <div className="text-xs text-yellow-400">
+                    🎯 Success metric evolution: Navigate, modify, AND semantically search Bimba knowledge graph with hybrid retrieval
+                  </div>
+                </div>
+                
                 <h4 className="font-semibold text-purple-200 mb-3">Inter-Sprint Review Ceremony Compliance:</h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                   <div className="bg-gray-800/30 rounded-lg p-2 text-center">
@@ -902,10 +973,10 @@ export default function SprintTestingPage() {
             {/* Graph Operations Foundation Status */}
             <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-6">
               <h3 className="text-xl font-semibold text-blue-12 mb-6">
-                Graph Operations Foundation - Sprint 3 Development Status
+                Graph Operations Foundation & GraphRAG Capabilities - Sprint 3 Development Status
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
                 <div className="bg-gray-800/30 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-3 h-3 rounded-full bg-green-400" />
@@ -920,15 +991,51 @@ export default function SprintTestingPage() {
                 
                 <div className="bg-gray-800/30 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                    <div className="w-3 h-3 rounded-full bg-green-400" />
                     <span className="font-medium text-blue-12">Story 02.03</span>
-                    <span className="text-xs px-2 py-1 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-full ml-2">
-                      TRAYCER PLAN COMPLETE
+                    <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full ml-2">
+                      COMPLETE
                     </span>
                   </div>
                   <div className="text-sm text-gray-300 mb-1">Graph Path Traversal</div>
-                  <div className="text-xs text-gray-400">Advanced graph operations - Comprehensive implementation plan validated, ready for development</div>
-                  <div className="text-xs text-blue-400 mt-1">Progress: Traycer planning phase complete (60% milestone)</div>
+                  <div className="text-xs text-gray-400">Advanced graph operations - Full implementation with GraphQL, Neo4j path finding, and agent integration</div>
+                  <div className="text-xs text-green-400 mt-1">Progress: Implementation complete (100% milestone) ✅</div>
+                </div>
+                
+                <div className="bg-gray-800/30 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-orange-400" />
+                    <span className="font-medium text-blue-12">Story 02.03.1</span>
+                    <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full ml-2">
+                      NEW - GRAPHRAG
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-300 mb-1">Semantic-to-Coordinate Resolution</div>
+                  <div className="text-xs text-gray-400">Natural language → coordinate discovery for inverse CAG flow</div>
+                </div>
+                
+                <div className="bg-gray-800/30 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-orange-400" />
+                    <span className="font-medium text-blue-12">Story 02.03.2</span>
+                    <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full ml-2">
+                      NEW - GRAPHRAG
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-300 mb-1">Hybrid GraphRAG Retrieval Integration</div>
+                  <div className="text-xs text-gray-400">L0-L3 cross-layer orchestration for advanced CAG retrieval</div>
+                </div>
+                
+                <div className="bg-gray-800/30 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded-full bg-purple-400" />
+                    <span className="font-medium text-blue-12">Story 02.25</span>
+                    <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-full ml-2">
+                      CRITICAL - ENABLER
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-300 mb-1">Bimba Node Embedding Generation Tool</div>
+                  <div className="text-xs text-gray-400">Foundational embedding infrastructure for GraphRAG capabilities</div>
                 </div>
                 
                 <div className="bg-gray-800/30 rounded-lg p-4">
@@ -950,8 +1057,8 @@ export default function SprintTestingPage() {
                       <span className="text-gray-300">Story 02.02: Complete with graph relations tools for agent and MCP</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 bg-yellow-400 rounded-full" />
-                      <span className="text-gray-300">Story 02.03: Traycer planning complete - Implementation-ready specifications validated</span>
+                      <span className="w-2 h-2 bg-green-400 rounded-full" />
+                      <span className="text-gray-300">Story 02.03: Implementation complete - GraphQL path traversal operational with full agent integration</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 bg-blue-400 rounded-full" />
@@ -973,8 +1080,161 @@ export default function SprintTestingPage() {
           </div>
         )}
 
-        {/* Coming Soon for Sprint 4+ */}
-        {sprintNumber >= 4 && (
+        {/* Sprint 4 Testing */}
+        {sprintNumber === 4 && (
+          <div className="space-y-8">
+            {/* Sprint 4 Planning Status */}
+            <div data-testid="sprint-4-planning-status" className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-4 h-4 rounded-full bg-purple-400" />
+                <h3 className="text-xl font-semibold text-purple-300">
+                  Sprint 4: Intelligence Synthesis Core & Cross-Namespace Coordination - PLANNED
+                </h3>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-purple-200 mb-3">Primary Stories (Planned):</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-purple-400 rounded-full" />
+                      <span className="text-gray-300">03.01 Generating Wisdom Packet (Core intelligence)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-purple-400 rounded-full" />
+                      <span className="text-gray-300">04.01 Coordinate Decomposition (Logic foundation)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-orange-400 rounded-full" />
+                      <span className="text-gray-300">04.11 Coordinate System Harmonizer Implementation</span>
+                      <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full ml-2">
+                        NEW - CRITICAL
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-blue-200 mb-3">Cross-Namespace Coordination:</h4>
+                  <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-purple-400 text-sm font-medium">Story 04.11 - Harmonizer Engine</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-2">
+                      Cross-namespace coordination engine for distributed consciousness
+                    </div>
+                    <div className="text-xs text-orange-400">
+                      🔗 Critical for namespace harmonization across Bimba, Gnostic, Episodic
+                    </div>
+                    <div className="text-xs text-purple-400 mt-1">
+                      🎯 Foundation for Sprint 5 Paramasiva topological analysis
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Planning Phase Notice */}
+            <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-8 text-center">
+              <div className="text-purple-400 text-6xl mb-4">🧠</div>
+              <h3 className="text-xl font-semibold text-blue-12 mb-4">
+                Sprint 4: Intelligence Synthesis Planning Phase
+              </h3>
+              <p className="text-gray-400 mb-6">
+                Testing interface will be available when Sprint 4 development begins. Currently in architecture planning phase.
+              </p>
+              <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
+                <div className="text-purple-300 font-medium mb-2">Expected Capabilities:</div>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <div>• Wisdom packet generation and synthesis testing</div>
+                  <div>• Cross-namespace coordination validation</div>
+                  <div>• Multi-agent collective intelligence assessment</div>
+                  <div>• Coordinate system harmonizer diagnostics</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Sprint 5 Testing */}
+        {sprintNumber === 5 && (
+          <div className="space-y-8">
+            {/* Sprint 5 Planning Status */}
+            <div data-testid="sprint-5-planning-status" className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-4 h-4 rounded-full bg-indigo-400" />
+                <h3 className="text-xl font-semibold text-indigo-300">
+                  Sprint 5: Context Management & Paramasiva Topological Analysis - PLANNED
+                </h3>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-indigo-200 mb-3">Primary Stories (Planned):</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-indigo-400 rounded-full" />
+                      <span className="text-gray-300">04.06 Context Frame System</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-indigo-400 rounded-full" />
+                      <span className="text-gray-300">02.16 Unified Orchestrator Context Frame Activation</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 bg-orange-400 rounded-full" />
+                      <span className="text-gray-300">02.24.1 Paramasiva Topological Analysis Engine</span>
+                      <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-400 border border-orange-500/30 rounded-full ml-2">
+                        NEW - TOPOLOGICAL
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-blue-200 mb-3">Paramasiva Mathematical Engine:</h4>
+                  <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-indigo-400 text-sm font-medium">Story 02.24.1 - Topological Analysis</span>
+                    </div>
+                    <div className="text-xs text-gray-400 mb-2">
+                      GraphSAGE/Node2Vec as core mathematical essence for structural-semantic intelligence
+                    </div>
+                    <div className="text-xs text-orange-400">
+                      🧮 Foundation for Paramasiva subsystem (#1) specialization
+                    </div>
+                    <div className="text-xs text-indigo-400 mt-1">
+                      🔗 Complements Sprint 3 GraphRAG capabilities (02.03.1, 02.03.2)
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Planning Phase Notice */}
+            <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-8 text-center">
+              <div className="text-indigo-400 text-6xl mb-4">🧮</div>
+              <h3 className="text-xl font-semibold text-blue-12 mb-4">
+                Sprint 5: Topological Intelligence Planning Phase
+              </h3>
+              <p className="text-gray-400 mb-6">
+                Testing interface will be available when Sprint 5 development begins. Currently in architecture planning phase.
+              </p>
+              <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-lg p-4">
+                <div className="text-indigo-300 font-medium mb-2">Expected Capabilities:</div>
+                <div className="text-sm text-gray-300 space-y-1">
+                  <div>• Context frame management and switching validation</div>
+                  <div>• Paramasiva topological analysis diagnostics</div>
+                  <div>• Multi-agent coordination protocol testing</div>
+                  <div>• Structural-semantic intelligence assessment</div>
+                  <div>• GraphSAGE/Node2Vec embedding quality validation</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Coming Soon for Sprint 6+ */}
+        {sprintNumber >= 6 && (
           <div className="text-center py-16">
             <h3 className="text-2xl font-semibold text-blue-12 mb-4">
               {getSprintTitle(sprintNumber)} Testing
@@ -1019,7 +1279,7 @@ export default function SprintTestingPage() {
                   sprintNumber === 3 ? 'text-blue-400' : 'text-purple-400'
                 }`}>
                   {sprintNumber === 2.5 ? '100' : 
-                   sprintNumber === 3 ? '23' : '0'}%
+                   sprintNumber === 3 ? '20' : '0'}%
                 </div>
                 <div className="text-sm text-gray-400">
                   {sprintNumber === 2.5 ? 'Bridge Complete' : 

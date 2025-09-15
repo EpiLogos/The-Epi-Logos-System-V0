@@ -79,7 +79,7 @@ export default function SprintProgressTracker({
       case 2.5:
         return 'Sprint 2→3 Transition: Inter-Sprint Bridge Tasks';
       case 3:
-        return 'Sprint 3: Graph Operations Foundation';
+        return 'Sprint 3: Graph Operations Foundation & GraphRAG Capabilities';
       default:
         return `Sprint ${sprintNumber}`;
     }

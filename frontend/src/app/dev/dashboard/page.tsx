@@ -236,7 +236,7 @@ export default function DeveloperDashboard() {
         {/* Sprint Navigation */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-blue-12 mb-4">Sprint Testing Pages</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             <Link
               href="/dev/sprint/1"
               className="bg-gray-900/50 border border-gray-800 hover:border-blue-600/50 rounded-lg p-6 transition-all duration-200 hover:bg-gray-800/50"
@@ -296,11 +296,11 @@ export default function DeveloperDashboard() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-lg font-medium text-blue-12">Sprint 3 Testing</h3>
                 <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded">
-                  ACTIVE (23%)
+                  ACTIVE (22%)
                 </span>
               </div>
               <p className="text-gray-400 text-sm mb-3">
-                Graph Operations Foundation - Story 02.03 Traycer Plan Complete
+                Graph Operations Foundation & GraphRAG Capabilities - Enhanced Sprint Scope
               </p>
               <div className="flex flex-wrap gap-2">
                 <span className="px-2 py-1 bg-green-600/20 text-green-400 text-xs rounded">
@@ -308,6 +308,56 @@ export default function DeveloperDashboard() {
                 </span>
                 <span className="px-2 py-1 bg-yellow-600/20 text-yellow-400 text-xs rounded">
                   02.03 Ready
+                </span>
+              </div>
+            </Link>
+
+            <Link
+              href="/dev/sprint/4"
+              className="bg-gray-900/50 border border-gray-800 hover:border-blue-600/50 rounded-lg p-6 transition-all duration-200 hover:bg-gray-800/50"
+              role="link"
+              aria-label="Sprint 4 Testing"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-medium text-blue-12">Sprint 4 Testing</h3>
+                <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded">
+                  PLANNED
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm mb-3">
+                Intelligence Synthesis Core & Cross-Namespace Coordination
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
+                  Wisdom Packets
+                </span>
+                <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
+                  04.11 Harmonizer
+                </span>
+              </div>
+            </Link>
+
+            <Link
+              href="/dev/sprint/5"
+              className="bg-gray-900/50 border border-gray-800 hover:border-blue-600/50 rounded-lg p-6 transition-all duration-200 hover:bg-gray-800/50"
+              role="link"
+              aria-label="Sprint 5 Testing"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-lg font-medium text-blue-12">Sprint 5 Testing</h3>
+                <span className="px-2 py-1 bg-gray-500/20 text-gray-400 text-xs rounded">
+                  PLANNED
+                </span>
+              </div>
+              <p className="text-gray-400 text-sm mb-3">
+                Context Management System & Paramasiva Topological Analysis
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
+                  Context Frames
+                </span>
+                <span className="px-2 py-1 bg-blue-600/20 text-blue-400 text-xs rounded">
+                  02.24.1 Topological
                 </span>
               </div>
             </Link>
