@@ -201,6 +201,13 @@ cd backend && python main.py
 **Architectural Discipline**: Files go in designated locations only - no scattered directory creation
 **Trilaminar Boundaries**: Maintain strict service separation (Frontend/Backend/Agentic)
 
+### Neo4j / Bimba Graph Guardrails (CRITICAL)
+- Graph identity: Only `bimbaCoordinate` is valid for node identity in Neo4j. Do not use/read/write a `coordinate` property in the database.
+- Read purity: GraphQL/REST resolvers and services MUST NOT `CREATE`/`MERGE` during read operations.
+- Variable-length paths: Do not parameterize hop bounds in Cypher. Use literal hop counts selected by the caller (Python), e.g., `[*1..3]`.
+- API semantics: Use `maxHops` (hops/steps), not “depth”. Default is 5; callers may adjust. Backend enforces a safety cap via `BIMBA_MAX_HOPS_CAP` (default 10) to protect performance.
+- Node anchoring: `MATCH (n:BimbaNode { bimbaCoordinate: $coord })` for start/end; no permissive OR conditions.
+
 **Complete Standards**: `/docs/architecture/coding-standards.md`
 **Technology Stack Details**: `/docs/architecture/tech-stack.md`
 </technical_constraints>

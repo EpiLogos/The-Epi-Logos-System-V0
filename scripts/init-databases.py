@@ -16,7 +16,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from backend.database import Neo4jClient, MongoDBClient, RedisClient, QdrantClient
+from shared.database import Neo4jClient, MongoDBClient, RedisClient, QdrantClient
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -34,8 +34,9 @@ async def init_neo4j():
             
             # Create constraints for unique properties
             constraints = [
-                "CREATE CONSTRAINT bimba_coordinate IF NOT EXISTS FOR (n:Bimba) REQUIRE n.coordinate IS UNIQUE",
-                "CREATE CONSTRAINT concept_coordinate IF NOT EXISTS FOR (n:Concept) REQUIRE n.coordinate IS UNIQUE",
+                # Bimba graph identity (only constraint we manage here)
+                "CREATE CONSTRAINT bimba_node_coordinate IF NOT EXISTS FOR (n:BimbaNode) REQUIRE n.bimbaCoordinate IS UNIQUE",
+                # Other domains expose/manipulate nodes with these labels as part of their own services
                 "CREATE CONSTRAINT lightrag_entity_name IF NOT EXISTS FOR (n:LightRAG) REQUIRE n.name IS UNIQUE",
                 "CREATE CONSTRAINT graphiti_episode_id IF NOT EXISTS FOR (n:Graphiti) REQUIRE n.id IS UNIQUE"
             ]
@@ -49,8 +50,11 @@ async def init_neo4j():
             
             # Create indexes for performance
             indexes = [
-                "CREATE INDEX bimba_subsystem IF NOT EXISTS FOR (n:Bimba) ON (n.subsystem)",
-                "CREATE INDEX bimba_node_type IF NOT EXISTS FOR (n:Bimba) ON (n.nodeType)",
+                # Bimba graph helpful indexes
+                "CREATE INDEX bimba_node_subsystem IF NOT EXISTS FOR (n:BimbaNode) ON (n.subsystem)",
+                # Full-text index for future semantic search
+                "CREATE FULLTEXT INDEX bimba_node_fulltext IF NOT EXISTS FOR (n:BimbaNode) ON EACH [n.name, n.description, n.coreNature, n.operationalEssence]",
+                # LightRAG / Graphiti indexes
                 "CREATE INDEX lightrag_type IF NOT EXISTS FOR (n:LightRAG) ON (n.type)",
                 "CREATE INDEX lightrag_source IF NOT EXISTS FOR (n:LightRAG) ON (n.source_document)",
                 "CREATE INDEX graphiti_user IF NOT EXISTS FOR (n:Graphiti) ON (n.user_id)",

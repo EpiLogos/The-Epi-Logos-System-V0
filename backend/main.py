@@ -191,13 +191,16 @@ app.include_router(graphiti_router)
 # Add GraphQL support
 import ariadne
 from ariadne.explorer import ExplorerGraphiQL
-from backend.epi_logos_system.cag.bimba.resolvers import query
+from backend.epi_logos_system.cag.bimba.resolvers import query, path_component
 
 # Load GraphQL schema
 import pathlib
 BACKEND_DIR = pathlib.Path(__file__).parent
-type_defs = ariadne.load_schema_from_path(str(BACKEND_DIR / "epi_logos_system/cag/bimba/schema.graphql"))
-schema = ariadne.make_executable_schema(type_defs, query)
+# Load existing Bimba schema and the new graph path traversal schema
+type_defs = ariadne.load_schema_from_path(
+    str(BACKEND_DIR / "epi_logos_system/cag/bimba/schema.graphql")
+)
+schema = ariadne.make_executable_schema(type_defs, [query, path_component])
 
 # GraphiQL explorer
 explorer_html = ExplorerGraphiQL().html(None)
@@ -218,6 +221,7 @@ async def graphql_endpoint(
     # Use the proper service layer instead of inline implementation
     repo = NodeRepository(neo4j_client)
     node_service = NodeService(repo)
+
 
     # Create context with the service
     context_value = {
@@ -266,7 +270,6 @@ class BimbaNode(BaseModel):
     coreNature: Optional[str] = None
     function: Optional[str] = None
     symbol: Optional[str] = None
-    nodeType: Optional[str] = None
     uuid: Optional[str] = None
     createdAt: Optional[str] = None
     updatedAt: Optional[str] = None
@@ -295,7 +298,7 @@ async def get_node_by_coordinate(coordinate: str, neo4j_client: Neo4jClient = De
         # Filter to lean response structure (AC: 4) 
         # Only return coordinate, name, subsystem - no other fields
         return BimbaNodeBasic(
-            coordinate=raw_result['coordinate'],
+            coordinate=raw_result['bimbaCoordinate'],
             name=raw_result['name'],
             subsystem=raw_result['subsystem']
         )

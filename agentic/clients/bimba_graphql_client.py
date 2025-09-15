@@ -28,7 +28,6 @@ class BimbaGraphQLClient(BackendHttpClient):
                 coreNature
                 function
                 symbol
-                nodeType
                 uuid
                 createdAt
                 updatedAt
@@ -57,7 +56,6 @@ class BimbaGraphQLClient(BackendHttpClient):
                         "coreNature": node_data.get("coreNature"),
                         "function": node_data.get("function"),
                         "symbol": node_data.get("symbol"),
-                        "nodeType": node_data.get("nodeType"),
                         "uuid": node_data.get("uuid"),
                         "createdAt": node_data.get("createdAt"),
                         "updatedAt": node_data.get("updatedAt")
@@ -146,7 +144,6 @@ class BimbaGraphQLClient(BackendHttpClient):
                     coreNature
                     function
                     symbol
-                    nodeType
                     uuid
                     createdAt
                     updatedAt
@@ -187,7 +184,6 @@ class BimbaGraphQLClient(BackendHttpClient):
                     coreNature
                     function
                     symbol
-                    nodeType
                     uuid
                     createdAt
                     updatedAt
@@ -204,7 +200,6 @@ class BimbaGraphQLClient(BackendHttpClient):
                         coreNature
                         function
                         symbol
-                        nodeType
                         uuid
                         createdAt
                         updatedAt

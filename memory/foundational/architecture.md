@@ -348,19 +348,19 @@ interface BimbaNode {
   coordinate: string;
   name: string;
   subsystem: number;
-  nodeType: 'TarotCard' | 'Hexagram' | 'Codon' | 'Generic'; // The "discriminator"
+  // nodeType removed; use explicit shapes where needed
 }
 
 // 2. Specific, extended types for semantically rich nodes
 interface TarotCardNode extends BimbaNode {
-  nodeType: 'TarotCard';
+  // nodeType removed; this is a TarotCard-shaped node
   suit?: 'Major' | 'Wands' | 'Cups' | 'Swords' | 'Pentacles';
   number?: number;
   archetype: string;
 }
 
 interface HexagramNode extends BimbaNode {
-  nodeType: 'Hexagram';
+  // nodeType removed; this is a Hexagram-shaped node
   judgement: string;
   imageText: string;
 }
@@ -370,7 +370,7 @@ type AnyBimbaNode = TarotCardNode | HexagramNode | BimbaNode;
 Why We Do This
 Reliability: Our application can always rely on coordinate and name being present on any AnyBimbaNode it receives.
 
-Flexibility: When our code needs to work with a specific kind of node, it can check the nodeType property. If it's 'TarotCard', the code then "knows" it can safely access the suit and archetype properties.
+Flexibility: When code needs to work with a specific kind of node, prefer explicit type guards (e.g., presence of suit/archetype fields) or GraphQL fragments instead of a nodeType discriminator.
 
 So, to summarize: We are defining the required universal properties for system-wide reliability, while creating a flexible structure that fully embraces and supports the rich, semantic diversity of your existing and future data.
 

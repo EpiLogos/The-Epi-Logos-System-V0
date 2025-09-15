@@ -90,39 +90,13 @@ class Neo4jClient:
             logger.error(f"Error executing Neo4j query: {e}")
             raise
     
-    def create_bimba_node(self, coordinate: str, name: str, subsystem: int,
-                         node_type: str, **properties) -> Dict[str, Any]:
-        """Create a Bimba Map node with proper labeling."""
-        query = """
-        CREATE (n:BimbaNode {
-            coordinate: $coordinate,
-            name: $name,
-            subsystem: $subsystem,
-            nodeType: $node_type,
-            uuid: randomUUID(),
-            created_at: datetime(),
-            updated_at: datetime()
-        })
-        SET n += $properties
-        RETURN n
-        """
-
-        records, _, _ = self.execute_query(query, {
-            "coordinate": coordinate,
-            "name": name,
-            "subsystem": subsystem,
-            "node_type": node_type,
-            "properties": properties
-        })
-
-        return dict(records[0]["n"]) if records else {}
+    # Note: Creation of Bimba nodes is handled by explicit admin/seed services, not generic clients.
     
     def get_bimba_node(self, coordinate: str) -> Optional[Dict[str, Any]]:
         """Get a Bimba Map node by coordinate."""
         # Use defensive querying to handle both property names for backward compatibility
         query = """
-        MATCH (n:BimbaNode)
-        WHERE n.coordinate = $coordinate OR n.bimbaCoordinate = $coordinate
+        MATCH (n:BimbaNode { bimbaCoordinate: $coordinate })
         RETURN n
         """
         records, _, _ = self.execute_query(query, {"coordinate": coordinate})

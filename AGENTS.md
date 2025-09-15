@@ -5,6 +5,14 @@
 - Python imports must be absolute from repo root; never use `sys.path` hacks. Start services via npm scripts (module mode).
 - Tailwind v4 only (v3 directives are invalid).
 
+## Neo4j/Cypher Guardrails (Bimba Graph)
+- Identity: Always use `bimbaCoordinate` in Neo4j. Do not read or write a `coordinate` property in the graph.
+- No implicit mutations: Read paths (REST/GraphQL/services/tools) MUST NOT `CREATE`/`MERGE` nodes or relationships.
+- Variable‑length patterns: Never parameterize hop bounds. Build Cypher with literal hop numbers selected in Python.
+- Path semantics: Use “hops/steps”, not “depth”. Public API takes `maxHops` with a sane default.
+- Defaults and caps: Default `maxHops` is 5. Agents may increase/decrease by passing `maxHops`. A safety cap is enforced by the backend and is configurable via env var `BIMBA_MAX_HOPS_CAP` (default 10).
+- Anchoring: Anchor start/end nodes by `bimbaCoordinate` equality, never via permissive ORs.
+
 ## Service URLs & API Highlights
 - Frontend: `http://localhost:3000`
 - Backend: `http://localhost:8000/docs`, `http://localhost:8000/graphql`, `GET /api/v1/status`, `GET /api/v1/nodes/{coordinate}`, health at `/api/health` (plus `/detailed`, `/metrics`).

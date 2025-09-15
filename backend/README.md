@@ -120,6 +120,13 @@ type Query {
 }
 ```
 
+### Graph Path Traversal (Notes)
+- Query: `getPathBetweenCoordinates(startCoordinate: String!, endCoordinate: String!, maxHops: Int)`
+- Identity: Neo4j nodes are matched strictly by `bimbaCoordinate` (canonical property).
+- Bounds: `maxHops` controls hop count; implemented with literal bounds in Cypher (never parameterized).
+- Read Purity: Path queries perform no `CREATE`/`MERGE`. Reads are side‑effect free.
+- Indexing: Uniqueness on `BimbaNode(bimbaCoordinate)`; full‑text index on `[name, description, coreNature, operationalEssence]`.
+
 ### REST API Patterns
 - **User Management** - `/api/users/*`
 - **Authentication** - `/api/auth/*`

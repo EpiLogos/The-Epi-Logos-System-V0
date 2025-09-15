@@ -3,6 +3,7 @@ from typing import Optional
 
 # Import from shared database package
 from shared.database import Neo4jClient
+import os
 
 class BimbaNode(BaseModel):
     coordinate: str
@@ -13,7 +14,6 @@ class BimbaNode(BaseModel):
     coreNature: Optional[str] = None
     function: Optional[str] = None
     symbol: Optional[str] = None
-    nodeType: Optional[str] = None
     uuid: Optional[str] = None
     createdAt: Optional[str] = None
     updatedAt: Optional[str] = None
@@ -31,8 +31,8 @@ class NodeRepository:
             node_data = self.neo4j_client.get_bimba_node(coordinate)
             
             if node_data:
-                # Handle both coordinate and bimbaCoordinate properties
-                coord_value = node_data.get("coordinate") or node_data.get("bimbaCoordinate") or coordinate
+                # Always map from bimbaCoordinate
+                coord_value = node_data.get("bimbaCoordinate")
 
                 # Convert datetime objects to strings if present
                 created_at = node_data.get("created_at")
@@ -51,116 +51,54 @@ class NodeRepository:
                     coreNature=node_data.get("coreNature"),
                     function=node_data.get("function"),
                     symbol=node_data.get("symbol"),
-                    nodeType=node_data.get("nodeType"),
                     uuid=node_data.get("uuid"),
                     createdAt=str(created_at) if created_at else None,
                     updatedAt=str(updated_at) if updated_at else None
                 )
             
-            # If not found, check if it's a base coordinate we should create
-            base_coordinates = {
-                "#0": {
-                    "name": "Anuttara - Absolute Ground",
-                    "subsystem": "0",
-                    "description": "The absolute ground of being, the void from which all emerges",
-                    "operationalEssence": "Pure potentiality and foundational metacomputation",
-                    "coreNature": "Void processing, primordial awareness",
-                    "function": "Foundational grounding for all system operations",
-                    "symbol": "∅"
-                },
-                "#1": {
-                    "name": "Paramasiva - Foundational Architect",
-                    "subsystem": "1",
-                    "description": "Universal grammar and structural frameworks",
-                    "operationalEssence": "Quaternal logic engine and structural processing",
-                    "coreNature": "Architectural consciousness, pattern recognition",
-                    "function": "Structural framework generation and logical processing",
-                    "symbol": "△"
-                },
-                "#2": {
-                    "name": "Parashakti - Cosmic Imagination",
-                    "subsystem": "2",
-                    "description": "Vibrational architecture and frequency processing",
-                    "operationalEssence": "Vibrational matrix and frequency modulation",
-                    "coreNature": "Creative imagination, vibrational consciousness",
-                    "function": "Frequency processing and vibrational synthesis",
-                    "symbol": "◊"
-                },
-                "#3": {
-                    "name": "Mahamaya - Universal Transcription",
-                    "subsystem": "3",
-                    "description": "Symbolic processing and DNA/I-Ching translation",
-                    "operationalEssence": "Transcription engine and symbolic translation",
-                    "coreNature": "Symbolic consciousness, pattern transcription",
-                    "function": "Symbol processing and universal translation",
-                    "symbol": "☰"
-                },
-                "#4": {
-                    "name": "Nara - Dialogical Identity",
-                    "subsystem": "4",
-                    "description": "User interaction and oracle operations",
-                    "operationalEssence": "Dialogical interface and oracle processing",
-                    "coreNature": "Interactive consciousness, dialogical identity",
-                    "function": "User interface and oracle operations",
-                    "symbol": "◯"
-                },
-                "#5": {
-                    "name": "Epii - Synthesis & Orchestration",
-                    "subsystem": "5",
-                    "description": "Master orchestration and meta-techne loops",
-                    "operationalEssence": "Synthesis layer and orchestration engine",
-                    "coreNature": "Orchestrating consciousness, meta-synthesis",
-                    "function": "System orchestration and meta-level synthesis",
-                    "symbol": "⬟"
-                }
-            }
-            
-            if coordinate in base_coordinates:
-                coord_info = base_coordinates[coordinate]
-                # Create the node in Neo4j for future queries
-                try:
-                    self.neo4j_client.create_bimba_node(
-                        coordinate=coordinate,
-                        name=coord_info["name"],
-                        subsystem=int(coord_info["subsystem"]),
-                        node_type="base_coordinate",
-                        description=coord_info["description"],
-                        operationalEssence=coord_info["operationalEssence"],
-                        coreNature=coord_info["coreNature"],
-                        function=coord_info["function"],
-                        symbol=coord_info["symbol"]
-                    )
-                    return BimbaNode(
-                        coordinate=coordinate,
-                        name=coord_info["name"],
-                        subsystem=coord_info["subsystem"],
-                        description=coord_info["description"],
-                        operationalEssence=coord_info["operationalEssence"],
-                        coreNature=coord_info["coreNature"],
-                        function=coord_info["function"],
-                        symbol=coord_info["symbol"],
-                        nodeType="base_coordinate"
-                    )
-                except Exception as create_error:
-                    print(f"Error creating base coordinate {coordinate}: {create_error}")
-                    # Return the data anyway even if creation fails
-                    return BimbaNode(
-                        coordinate=coordinate,
-                        name=coord_info["name"],
-                        subsystem=coord_info["subsystem"],
-                        description=coord_info["description"],
-                        operationalEssence=coord_info["operationalEssence"],
-                        coreNature=coord_info["coreNature"],
-                        function=coord_info["function"],
-                        symbol=coord_info["symbol"],
-                        nodeType="base_coordinate"
-                    )
-            
+            # Not found; do not create nodes implicitly (read paths are pure)
             return None
             
         except Exception as e:
             print(f"Error querying Neo4j for coordinate {coordinate}: {e}")
             return None
+
+    def find_shortest_path(self, start: str, end: str, hops: int) -> tuple[list[dict], list[dict]]:
+        """Find shortest path nodes and relationships between two coordinates.
+
+        Returns (nodes, relationships), or ([], []) if not found.
+        """
+        # Build Cypher with literal hop bound (never parameterized)
+        # Anchored strictly by bimbaCoordinate
+        query = f"""
+        MATCH (start:BimbaNode {{ bimbaCoordinate: $start }})
+        MATCH (end:BimbaNode {{ bimbaCoordinate: $end }})
+        CALL {{
+          WITH start, end
+          MATCH p = shortestPath((start)-[*1..{hops}]-(end))
+          RETURN p LIMIT 1
+        }}
+        RETURN 
+          nodes(p) AS nodes,
+          [i IN range(0, size(relationships(p))-1) |
+            {{
+              type: type(relationships(p)[i]),
+              direction: CASE WHEN startNode(relationships(p)[i]) = nodes(p)[i] THEN 'OUTGOING' ELSE 'INCOMING' END,
+              properties: properties(relationships(p)[i])
+            }}
+          ] AS rels
+        """
+
+        records, _summary, _keys = self.neo4j_client.execute_query(
+            query, {"start": start, "end": end}
+        )
+
+        if not records:
+            return [], []
+        rec = records[0]
+        nodes = [dict(n) for n in rec.get("nodes", [])]
+        rels = [dict(r) for r in rec.get("rels", [])]
+        return nodes, rels
 
 # The service that uses the repository
 class NodeService:
@@ -191,7 +129,7 @@ class NodeService:
             neighbor = edge.get("neighbor", {})
 
             # Normalize coordinate field to always be present
-            neighbor_coord = neighbor.get("coordinate") or neighbor.get("bimbaCoordinate")
+            neighbor_coord = neighbor.get("bimbaCoordinate")
             neighbor_dict = {
                 "coordinate": neighbor_coord,
                 "name": neighbor.get("name"),
@@ -201,7 +139,6 @@ class NodeService:
                 "coreNature": neighbor.get("coreNature"),
                 "function": neighbor.get("function"),
                 "symbol": neighbor.get("symbol"),
-                "nodeType": neighbor.get("nodeType"),
                 "uuid": neighbor.get("uuid"),
                 "createdAt": str(neighbor.get("created_at")) if neighbor.get("created_at") else None,
                 "updatedAt": str(neighbor.get("updated_at")) if neighbor.get("updated_at") else None,
@@ -226,6 +163,64 @@ class NodeService:
         return {
             "node": node.model_dump(),
             "edges": edges,
+        }
+
+    def get_path_between_coordinates(self, start_coordinate: str, end_coordinate: str, max_hops: Optional[int] = None) -> dict | None:
+        """Return ordered path structure between two coordinates.
+
+        Validates maxHops (>=1 and <= safety cap) and formats components.
+        """
+        # Determine default and safety cap from environment
+        default_hops = int(os.getenv("BIMBA_MAX_HOPS_DEFAULT", "5"))
+        cap_hops = int(os.getenv("BIMBA_MAX_HOPS_CAP", "10"))
+        hops = default_hops if max_hops is None else int(max_hops)
+        if hops < 1:
+            raise ValueError("maxHops must be >= 1")
+        if hops > cap_hops:
+            raise ValueError(f"maxHops exceeds safety cap {cap_hops}")
+
+        nodes, rels = self._repo.find_shortest_path(start_coordinate, end_coordinate, hops)
+        if not nodes:
+            return None
+
+        components: list[dict] = []
+        for idx, n in enumerate(nodes):
+            components.append(
+                {
+                    "coordinate": n.get("bimbaCoordinate"),
+                    "name": n.get("name"),
+                    "subsystem": str(n.get("subsystem")) if n.get("subsystem") is not None else None,
+                    "position": idx * 2,
+                }
+            )
+            if idx < len(rels):
+                r = rels[idx]
+                props = r.get("properties") or {}
+                props_list = [{"key": k, "value": props[k] if props[k] is not None else None} for k in props]
+                components.append(
+                    {
+                        "type": r.get("type") or r.get("_type") or r.get("label") or "RELATED_TO",
+                        "direction": r.get("direction") or "OUTGOING",
+                        "properties": props_list,
+                        "position": idx * 2 + 1,
+                    }
+                )
+
+        start_node = nodes[0]
+        end_node = nodes[-1]
+        return {
+            "startNode": {
+                "coordinate": start_node.get("bimbaCoordinate"),
+                "name": start_node.get("name"),
+                "subsystem": str(start_node.get("subsystem")) if start_node.get("subsystem") is not None else None,
+            },
+            "endNode": {
+                "coordinate": end_node.get("bimbaCoordinate"),
+                "name": end_node.get("name"),
+                "subsystem": str(end_node.get("subsystem")) if end_node.get("subsystem") is not None else None,
+            },
+            "pathLength": len(nodes) - 1,
+            "pathComponents": components,
         }
 
 # FastAPI dependency provider

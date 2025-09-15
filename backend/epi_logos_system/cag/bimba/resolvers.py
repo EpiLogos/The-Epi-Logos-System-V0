@@ -1,8 +1,9 @@
 # GraphQL Resolvers for Coordinate Resolution
-from ariadne import QueryType
+from ariadne import QueryType, UnionType
 from typing import Any, Optional
 
 query = QueryType()
+path_component = UnionType("PathComponent")
 
 @query.field("getNodeByCoordinate")
 def resolve_get_node_by_coordinate(_: Any, info: Any, coordinate: str) -> dict | None:
@@ -44,3 +45,23 @@ def resolve_get_subsystem_coordinates(_: Any, info: Any, subsystem: int, limit: 
         "coordinates": [],
         "error": f"Subsystem coordinate listing not yet implemented (subsystem: {subsystem}, limit: {limit})"
     }
+
+
+@query.field("getPathBetweenCoordinates")
+def resolve_get_path_between_coordinates(
+    _: Any,
+    info: Any,
+    startCoordinate: str,
+    endCoordinate: str,
+    maxHops: Optional[int] = None,
+) -> dict | None:
+    """Resolve an ordered path between two coordinates using service layer."""
+    service = info.context["service"]
+    return service.get_path_between_coordinates(startCoordinate, endCoordinate, maxHops)
+
+
+@path_component.type_resolver
+def resolve_path_component_type(obj, *_):
+    if isinstance(obj, dict) and "type" in obj:
+        return "PathRelationship"
+    return "PathNode"

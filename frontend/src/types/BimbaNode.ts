@@ -10,7 +10,6 @@ export interface BimbaNode {
   coordinate: string;
   name: string;
   subsystem: number;
-  nodeType: 'TarotCard' | 'Hexagram' | 'Codon' | 'Generic';
   uuid?: string;
   description?: string;
   createdAt?: string;
@@ -19,7 +18,6 @@ export interface BimbaNode {
 
 // Specific node types with semantic richness
 export interface TarotCardNode extends BimbaNode {
-  nodeType: 'TarotCard';
   suit?: 'Major' | 'Wands' | 'Cups' | 'Swords' | 'Pentacles';
   number?: number;
   archetype: string;
@@ -31,7 +29,6 @@ export interface TarotCardNode extends BimbaNode {
 }
 
 export interface HexagramNode extends BimbaNode {
-  nodeType: 'Hexagram';
   judgement: string;
   imageText: string;
   lines?: {
@@ -42,7 +39,6 @@ export interface HexagramNode extends BimbaNode {
 }
 
 export interface CodonNode extends BimbaNode {
-  nodeType: 'Codon';
   sequence: string;
   aminoAcid: string;
   geneKey?: number;
@@ -52,7 +48,6 @@ export interface CodonNode extends BimbaNode {
 }
 
 export interface GenericNode extends BimbaNode {
-  nodeType: 'Generic';
   category?: string;
   properties?: Record<string, any>;
 }

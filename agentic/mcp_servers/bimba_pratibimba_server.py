@@ -14,20 +14,21 @@ replacing the single-client STDIO transport limitation.
 
 import asyncio
 import logging
-from typing import Any, Sequence
+from typing import cast, Iterable
 
 from fastapi import FastAPI, Request
-from fastapi.routing import Mount
 from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
 from mcp.server.sse import SseServerTransport
 from mcp.server.stdio import stdio_server
 from mcp.types import (
     Resource, Tool, TextContent, ImageContent, EmbeddedResource,
-    LoggingLevel, CallToolRequest, GetPromptRequest, ReadResourceRequest,
-    ListPromptsRequest, ListResourcesRequest, ListToolsRequest,
-    Prompt, PromptArgument, PromptMessage, Role
 )
+from pydantic import AnyUrl, TypeAdapter
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # type-only import to avoid runtime ImportError on older MCP versions
+    from mcp.types import ReadResourceContents
 
 from agentic.clients.bimba_graphql_client import BimbaGraphQLClient
 
@@ -75,6 +76,8 @@ class BimbaPratibimbaMCPServerSSE:
     
     def _setup_handlers(self):
         """Setup MCP protocol handlers."""
+        # Construct a real AnyUrl for the custom scheme (validated at runtime)
+        SCHEMA_URI: AnyUrl = TypeAdapter(AnyUrl).validate_python("bimba://local/schema")
         
         @self.server.list_tools()
         async def handle_list_tools() -> list[Tool]:
@@ -133,6 +136,38 @@ The tool returns comprehensive node information including name, subsystem, conte
                         "required": ["coordinate"]
                     }
                 )
+                ,
+                Tool(
+                    name="get_path_between_coordinates",
+                    description=(
+                        "Find a path of relationships connecting two Bimba coordinates "
+                        "through the knowledge graph, enabling narrative discovery and "
+                        "contextual relationship analysis. Returns path length, start/end "
+                        "nodes, and ordered components (nodes and relationships)."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "startCoordinate": {
+                                "type": "string",
+                                "description": "Starting Bimba coordinate",
+                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                            },
+                            "endCoordinate": {
+                                "type": "string",
+                                "description": "Ending Bimba coordinate",
+                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                            },
+                            "maxHops": {
+                                "type": "integer",
+                                "description": "Optional hop limit (default 5)",
+                                "minimum": 1,
+                                "default": 5
+                            }
+                        },
+                        "required": ["startCoordinate", "endCoordinate"]
+                    }
+                )
             ]
         
         @self.server.call_tool()
@@ -143,6 +178,8 @@ The tool returns comprehensive node information including name, subsystem, conte
                     return await self._handle_resolve_coordinate(arguments)
                 elif name == "get_node_relationships":
                     return await self._handle_get_node_relationships(arguments)
+                elif name == "get_path_between_coordinates":
+                    return await self._handle_get_path_between_coordinates(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -161,7 +198,7 @@ The tool returns comprehensive node information including name, subsystem, conte
             """List available resources."""
             return [
                 Resource(
-                    uri="bimba://schema",
+                    uri=SCHEMA_URI,
                     name="Bimba Coordinate Schema",
                     description="Schema definition for Epi-Logos coordinate data structures",
                     mimeType="application/json"
@@ -169,13 +206,13 @@ The tool returns comprehensive node information including name, subsystem, conte
             ]
         
         @self.server.read_resource()
-        async def handle_read_resource(uri: str) -> str:
+        async def handle_read_resource(uri: AnyUrl) -> str | bytes | Iterable["ReadResourceContents"]:
             """Handle resource retrieval requests."""
-            if uri == "bimba://schema":
+            if str(uri) == str(SCHEMA_URI):
                 return self._get_schema_resource()
             else:
                 raise ValueError(f"Unknown resource URI: {uri}")
-    
+
     async def _handle_resolve_coordinate(self, arguments: dict) -> list[TextContent]:
         """Handle coordinate resolution tool call."""
         try:
@@ -221,8 +258,7 @@ The tool returns comprehensive node information including name, subsystem, conte
                                 response += f"  function: {value}\n"
                             elif key == 'symbol':
                                 response += f"  symbol: {value}\n"
-                            elif key == 'nodeType':
-                                response += f"  nodeType: {value}\n"
+                            # nodeType not used
                 
                 return [TextContent(
                     type="text",
@@ -292,6 +328,64 @@ The tool returns comprehensive node information including name, subsystem, conte
         except Exception as e:
             logger.error(f"Error in get_node_relationships: {e}")
             return [TextContent(type="text", text=f"Error fetching relationships: {str(e)}")]
+
+    async def _handle_get_path_between_coordinates(self, arguments: dict) -> list[TextContent]:
+        """Handle path traversal between two coordinates via GraphQL."""
+        try:
+            start = arguments.get("startCoordinate")
+            end = arguments.get("endCoordinate")
+            hops = arguments.get("maxHops", 5)
+
+            if not start or not end:
+                return [TextContent(type="text", text="Error: startCoordinate and endCoordinate are required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Path traversal service not initialized")]
+
+            # Inline GraphQL call using the client base POST
+            query = """
+            query Path($start: String!, $end: String!, $hops: Int) {
+              getPathBetweenCoordinates(startCoordinate: $start, endCoordinate: $end, maxHops: $hops) {
+                startNode { coordinate name subsystem }
+                endNode { coordinate name subsystem }
+                pathLength
+                pathComponents {
+                  ... on PathNode { position coordinate name subsystem }
+                  ... on PathRelationship { position type direction properties { key value } }
+                }
+              }
+            }
+            """
+            variables = {"start": start, "end": end, "hops": hops}
+            resp = await self.bimba_client.post("/graphql", json_data={"query": query, "variables": variables})
+
+            if "data" in resp and resp["data"] and resp["data"].get("getPathBetweenCoordinates"):
+                path = resp["data"]["getPathBetweenCoordinates"]
+                lines: list[str] = []
+                lines.append(f"Path from {path['startNode']['coordinate']} to {path['endNode']['coordinate']}")
+                lines.append(f"Length: {path['pathLength']}")
+                lines.append("Components:")
+                for comp in path.get("pathComponents", []):
+                    pos = comp.get("position")
+                    if "type" in comp:  # relationship
+                        t = comp.get("type")
+                        d = comp.get("direction")
+                        lines.append(f"  {pos}: [{d}] -{t}->")
+                    else:  # node
+                        lines.append(f"  {pos}: {comp.get('coordinate')} ({comp.get('name')})")
+                return [TextContent(type="text", text="\n".join(lines))]
+
+            # GraphQL error or no path
+            if "data" in resp and resp["data"] and resp["data"].get("getPathBetweenCoordinates") is None:
+                return [TextContent(type="text", text="No path found within constraints.")]
+
+            errors = resp.get("errors", [])
+            err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+            return [TextContent(type="text", text=f"Path traversal failed: {err_msg or 'GraphQL query failed'}")]
+
+        except Exception as e:
+            logger.error(f"Error in get_path_between_coordinates: {e}")
+            return [TextContent(type="text", text=f"Error finding path: {str(e)}")]
     
     def _get_schema_resource(self) -> str:
         """Get coordinate schema resource."""

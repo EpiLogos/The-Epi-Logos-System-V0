@@ -192,6 +192,73 @@ class HttpBimbaClient:
                 "edges": [],
                 "error": f"HTTP request failed: {str(e)}",
             }
+
+    async def get_path_between_coordinates(
+        self,
+        start_coordinate: str,
+        end_coordinate: str,
+        max_hops: int = 5,
+    ) -> Dict[str, Any]:
+        """
+        Find an ordered relationship path between two Bimba coordinates via GraphQL.
+
+        Args:
+            start_coordinate: Starting Bimba coordinate
+            end_coordinate: Ending Bimba coordinate
+            max_hops: Optional hop limit (default 5)
+
+        Returns:
+            Dict containing pathLength, start/end nodes, and ordered components
+        """
+        # Construct GraphQL request inline using the underlying client's POST
+        query = """
+        query GetPath($start: String!, $end: String!, $hops: Int) {
+          getPathBetweenCoordinates(startCoordinate: $start, endCoordinate: $end, maxHops: $hops) {
+            startNode { coordinate name subsystem }
+            endNode { coordinate name subsystem }
+            pathLength
+            pathComponents {
+              ... on PathNode { position coordinate name subsystem }
+              ... on PathRelationship { position type direction properties { key value } }
+            }
+          }
+        }
+        """
+
+        variables = {
+            "start": start_coordinate,
+            "end": end_coordinate,
+            "hops": max_hops,
+        }
+
+        try:
+            logger.info(
+                "Requesting path between %s and %s (maxHops=%s)",
+                start_coordinate,
+                end_coordinate,
+                max_hops,
+            )
+            response = await self.client.post("/graphql", json_data={"query": query, "variables": variables})
+
+            if "data" in response and response["data"]:
+                path = response["data"].get("getPathBetweenCoordinates")
+                if path is None:
+                    return {
+                        "success": False,
+                        "error": "No path found within constraints",
+                        "path": None,
+                    }
+                return {"success": True, "path": path}
+
+            # GraphQL errors path
+            errors = response.get("errors", [])
+            error_msg = "; ".join([err.get("message", "Unknown error") for err in errors])
+            logger.warning("Path traversal GraphQL error: %s", error_msg)
+            return {"success": False, "error": error_msg or "GraphQL query failed", "path": None}
+
+        except Exception as e:
+            logger.error("HTTP error during path traversal: %s", e)
+            return {"success": False, "error": f"HTTP request failed: {str(e)}", "path": None}
     
     async def close(self):
         """Close the HTTP client connection"""
