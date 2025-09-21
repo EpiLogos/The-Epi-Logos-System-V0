@@ -1,0 +1,22 @@
+
+graph TD
+    A[CoordinateGridPage] --> B[PageTransition]
+    A --> C[TextAnimate]
+    A --> D[CoordinatePanel]
+    
+    B --> E[WhiteOverlay]
+    B --> F[ContentBlur]
+    
+    C --> G[BlurTransition]
+    C --> H[OpacityTransition]
+    
+    D --> I[PanelImage]
+    D --> J[CoordinateText]
+    D --> K[ConditionalBorders]
+    
+    E -.->|"REUSABLE"| L[IndexPage]
+    E -.->|"REUSABLE"| M[ParamasivaPage]
+    F -.->|"REUSABLE"| L
+    F -.->|"REUSABLE"| M
+    C -.->|"REUSABLE"| L
+    C -.->|"REUSABLE"| M
