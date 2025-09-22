@@ -309,23 +309,37 @@ export class HTTPAPIClient implements APIClientAdapter {
   // Public API methods
 
   async signIn(credentials: SignInRequest): Promise<SignInResponse> {
-    const response = await this.makeRequest<any>('/api/auth/signin', {
+    const response = await this.makeRequest<any>('/api/users/login', {
       method: 'POST',
       body: JSON.stringify(credentials)
     }, false);
 
-    // Normalize user data from backend
-    const user = normalizeUserFromBackend(response.user);
+    // Backend returns: { success: true, data: { ...userData, accessToken, refreshToken, idToken } }
+    if (!response.success || !response.data) {
+      throw new APIError('Invalid response format from backend', 500, 'INVALID_RESPONSE');
+    }
+
+    // Extract tokens from the response data (same as original working code)
+    const tokens = {
+      accessToken: response.data.accessToken,
+      refreshToken: response.data.refreshToken,
+      idToken: response.data.idToken || '',
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
+    };
+
+    // Create user object (remove tokens from user data)
+    const { accessToken, refreshToken, idToken, ...userData } = response.data;
+    const user = normalizeUserFromBackend(userData);
     
     // Validate tokens
-    if (!isValidAuthTokens(response.tokens)) {
+    if (!isValidAuthTokens(tokens)) {
       throw new APIError('Invalid tokens received', 500, 'INVALID_TOKENS');
     }
 
     return {
       user,
-      tokens: response.tokens,
-      linkedAccount: response.linkedAccount
+      tokens,
+      linkedAccount: null // Backend doesn't return this for simple login
     };
   }
 

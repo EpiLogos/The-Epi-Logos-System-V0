@@ -130,6 +130,11 @@ def _get_redirect_allowlist() -> set[str]:
     if not items:
         items = [
             "http://localhost:3000/auth/callback",
+            "http://localhost:3001/auth/callback", 
+            "http://localhost:3002/auth/callback",
+            "http://localhost:3000/auth/modal-callback",
+            "http://localhost:3001/auth/modal-callback",
+            "http://localhost:3002/auth/modal-callback",
             "http://localhost:3000/auth/oauth/google/callback",
         ]
     return set(items)

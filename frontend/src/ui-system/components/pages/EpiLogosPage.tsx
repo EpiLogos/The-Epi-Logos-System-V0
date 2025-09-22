@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PortfolioContainer } from '../ui/PortfolioContainer';
 import { Sidebar } from '../ui/Sidebar';
-import { ContentPanel } from '../ui/ContentPanel';
+
 import { CoordinateText } from '../ui/CoordinateText';
 import { WhiteFadeOverlay } from '../ui/WhiteFadeOverlay';
 import { PageFadeIn } from '../ui/PageFadeIn';
@@ -13,7 +13,10 @@ import { GlowParticles } from '../ui/GlowParticles';
 import { useEpiLogosTransition } from '@/hooks/ui-system/useEpiLogosTransition';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
 import { AuthModalContent } from '../auth/AuthModalContent';
+import { ModalContentManager } from '../modal/ModalContentManager';
+import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { cn } from '../../utils/cn';
+import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 
 export const EpiLogosPage: React.FC = () => {
   // SEPARATED CONCERNS: Modal hook + Navigation hook (like ParamasivaPage)
@@ -26,6 +29,10 @@ export const EpiLogosPage: React.FC = () => {
     transitionToSubsystemsFromEpiLogos
   } = useInterPageTransition();
   
+  // Authentication and business state management
+  const { isAuthenticated, completeOAuth } = useUnifiedAuth();
+  const [businessState, setBusinessState] = useState<EpiLogosBusinessState>('png-displayed');
+  
   
   // Logo text state
   const [logoText] = useState("EPI : LOGOS");
@@ -36,6 +43,9 @@ export const EpiLogosPage: React.FC = () => {
   // Particles state - EXACT same pattern as Quaternal Logic page
   const [particlesVisible, setParticlesVisible] = useState(false);
   const [particlesFadeState, setParticlesFadeState] = useState<'hidden' | 'visible' | 'modal-hiding'>('hidden');
+
+  // PNG fade state - Same two-step pattern as particles
+  const [pngFadeState, setPngFadeState] = useState<'hidden' | 'visible'>('hidden');
   const modalPanelRef = useRef<HTMLDivElement>(null);
 
   // Update coordinate text visibility based on expansion state
@@ -75,6 +85,21 @@ export const EpiLogosPage: React.FC = () => {
     }
   }, [epiLogosState.isExpanded]);
 
+  // PNG fade-in effect - Same pattern as particles
+  useEffect(() => {
+    if (epiLogosState.imageFullyVisible) {
+      // Start hidden, then fade in after short delay
+      setPngFadeState('hidden');
+      const fadeTimer = setTimeout(() => {
+        setPngFadeState('visible');
+      }, 100); // Short delay for smooth fade-in
+
+      return () => clearTimeout(fadeTimer);
+    } else {
+      setPngFadeState('hidden');
+    }
+  }, [epiLogosState.imageFullyVisible]);
+
   const handleBackToParamasiva = () => {
     window.location.href = '/paramasiva';
   };
@@ -89,8 +114,18 @@ export const EpiLogosPage: React.FC = () => {
   };
 
   const handleDashboardClick = () => {
+    // Start the PNG animation
     epiLogosActions.transitionToDashboard();
+    
+    // Set the appropriate business state based on authentication
+    if (isAuthenticated) {
+      setBusinessState('account-profile');
+    } else {
+      setBusinessState('auth-signin');
+    }
   };
+
+  
 
   return (
     <>
@@ -225,13 +260,9 @@ export const EpiLogosPage: React.FC = () => {
             )}
           </Sidebar>
 
-          {/* Main Content Panel - Always visible during transitions, like Paramasiva */}
+          {/* Main Content - Flex Container like QuaternalLogicPage */}
           {(epiLogosState.isExpanded || isTransitioning || epiLogosState.imageFullyVisible) && (
-            <ContentPanel 
-              pageType="epi-logos"
-              isModalExpanded={epiLogosState.isExpanded}
-              isTransitioning={isTransitioning}
-            >
+            <div className="flex-1 flex flex-col relative mt-5">
               {/* Particle Container - Same pattern as Quaternal Logic */}
               <div 
                 ref={modalPanelRef}
@@ -295,11 +326,11 @@ export const EpiLogosPage: React.FC = () => {
                     className={cn(
                       "epi-png-base",
                       "png-gentle-waves",
-                      // ✅ CRITICAL: Apply hover utilities when image is fully visible (loaded state)
-                      epiLogosState.imageFullyVisible && "epi-png-loaded epi-png-hover",
+                      // ✅ FADE STATE: Apply opacity based on fade state, not immediate visibility
+                      pngFadeState === 'visible' ? "epi-png-loaded epi-png-hover" : "opacity-0",
                       // CONDITIONAL TRANSITIONS - Fast pop, then slow shrink
-                      epiLogosState.imageExpanded && !epiLogosState.imageMovedToCorner 
-                        ? "epi-png-pop-transition" 
+                      epiLogosState.imageExpanded && !epiLogosState.imageMovedToCorner
+                        ? "epi-png-pop-transition"
                         : "epi-png-smooth-transition",
                       // THREE-STEP ANIMATION: expand slightly, then shrink to center
                       epiLogosState.imageExpanded && !epiLogosState.imageMovedToCorner && "epi-png-expand-state",
@@ -308,28 +339,26 @@ export const EpiLogosPage: React.FC = () => {
                   />
                 )}
 
-                {/* Auth Modal Content - Using existing working component */}
-                {epiLogosState.showAuthModal && epiLogosState.authModalType && (
-                  <div className="content-transition-container content-visible auth-modal-container">
-                    <div className="auth-modal-content">
-                      <AuthModalContent
-                      businessState={epiLogosState.authModalType}
-                      onStateChange={(newState) => {
-                        if (newState === 'auth-signin') {
-                          epiLogosActions.showSigninModal();
-                        } else if (newState === 'auth-signup') {
-                          epiLogosActions.showSignupModal();
-                        } else if (newState === 'auth-success') {
-                          // Handle auth success - transition to success modal state
-                          epiLogosActions.showAuthSuccessModal();
-                        } else if (newState === 'png-displayed') {
-                          // Back button clicked
-                          epiLogosActions.hideAuthModal();
-                        }
-                      }}
-                      />
-                    </div>
-                  </div>
+                {/* Modal Content Manager - Handles both auth and account states */}
+                {epiLogosState.showAuthModal && businessState !== 'png-displayed' && (
+                  <ModalContentManager
+                    businessState={businessState}
+                    onStateChange={(newState) => {
+                      setBusinessState(newState);
+                      if (newState === 'png-displayed') {
+                        // Back button clicked - hide modal
+                        epiLogosActions.hideAuthModal();
+                      }
+                    }}
+                    onPNGClick={() => {
+                      setBusinessState('png-displayed');
+                      epiLogosActions.hideAuthModal();
+                    }}
+                    imageFullyVisible={epiLogosState.imageFullyVisible}
+                    imageMovedToCorner={epiLogosState.imageMovedToCorner}
+                    imageExpanded={epiLogosState.imageExpanded}
+                    showContent={epiLogosState.showAuthModal}
+                  />
                 )}
                 
                 {/* Coordinate Text */}
@@ -340,7 +369,7 @@ export const EpiLogosPage: React.FC = () => {
                 />
                 </div>
               </div>
-            </ContentPanel>
+            </div>
           )}
           {/* )} */}
         </PortfolioContainer>

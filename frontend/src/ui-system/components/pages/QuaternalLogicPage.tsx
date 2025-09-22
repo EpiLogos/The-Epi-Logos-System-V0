@@ -46,7 +46,7 @@ export const QuaternalLogicPage: React.FC = () => {
   // QL Modal state for hover effect
   const [showQLModal, setShowQLModal] = useState(false);
   
-  // Modal expansion state for Panel 2 
+  // Modal expansion state for Panel 2
   const [isModalExpanded, setIsModalExpanded] = useState(false);
   
   // Bottom panel expansion state
@@ -212,8 +212,8 @@ export const QuaternalLogicPage: React.FC = () => {
           transitionDirection="to-subsystems"
         >
           {/* Left Sidebar */}
-          <Sidebar 
-            variant="main" 
+          <Sidebar
+            variant="main"
             isModalExpanded={false}
             isTransitioning={isTransitioning}
 
@@ -294,7 +294,7 @@ export const QuaternalLogicPage: React.FC = () => {
           <div className="flex-1 flex flex-col relative">
             {/* Page Container - THE CONTAINER THAT EXPANDS */}
             <div className={cn(
-              "relative overflow-hidden m-[20px_20px_0_0] bg-[#090a09]", 
+              "relative overflow-hidden m-[20px_20px_0_0] bg-[#090a09]",
               // FIXED: Base transition for bidirectional smoothness
               "transition-[height,z-index] duration-700 ease-out",
               // FIXED: Apply expansion for BOTH page transitions AND modal hover

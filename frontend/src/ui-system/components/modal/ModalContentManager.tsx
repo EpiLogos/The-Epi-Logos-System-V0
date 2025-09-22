@@ -5,7 +5,7 @@ import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { cn } from '../../utils/cn';
 import { AuthModalContent } from '../auth/AuthModalContent';
 import { AccountModalContent } from '../account/AccountModalContent';
-import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
+import { type EpiLogosBusinessState, type AccountBusinessState, type AuthBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 
 interface ModalContentManagerProps {
   businessState: EpiLogosBusinessState;
@@ -48,7 +48,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         showContent ? 'content-visible' : 'content-hidden'
       )}>
         <AuthModalContent 
-          businessState={businessState as 'auth-signin' | 'auth-signup' | 'auth-oauth' | 'auth-success'} 
+          businessState={businessState as AuthBusinessState} 
           onStateChange={onStateChange} 
         />
       </div>
@@ -63,7 +63,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         showContent ? 'content-visible' : 'content-hidden'
       )}>
         <AccountModalContent 
-          businessState={businessState as 'account-profile' | 'account-security' | 'account-billing'} 
+          businessState={businessState as AccountBusinessState} 
           onStateChange={onStateChange} 
         />
       </div>

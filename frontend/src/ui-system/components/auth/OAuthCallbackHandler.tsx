@@ -34,21 +34,34 @@ export const OAuthCallbackHandler: React.FC = () => {
           
           if (code && state) {
             try {
-              // Complete OAuth flow
+              // Complete OAuth flow - WAIT for it to fully complete
+              console.log('Starting OAuth completion...', { code: code.substring(0, 10) + '...', state });
               await completeOAuth('google', code, state);
+              console.log('OAuth completion finished successfully');
+              
+              // Add a small delay to ensure auth state is persisted to storage
+              await new Promise(resolve => setTimeout(resolve, 200));
               
               // Notify parent window of success
               window.opener.postMessage({ 
                 type: 'oauth-success' 
               }, window.location.origin);
-              window.close();
+              
+              // Delay closing the window to ensure message is received
+              setTimeout(() => {
+                window.close();
+              }, 100);
             } catch (err) {
               console.error('OAuth completion failed:', err);
               window.opener.postMessage({ 
                 type: 'oauth-error', 
                 error: err instanceof Error ? err.message : 'OAuth completion failed'
               }, window.location.origin);
-              window.close();
+              
+              // Also delay error close to ensure message is received
+              setTimeout(() => {
+                window.close();
+              }, 100);
             }
           }
         } else {

@@ -78,19 +78,19 @@ export const useEpiLogosTransition = (): [EpiLogosTransitionState, EpiLogosTrans
     // PHASE 3: Height expansion starts (2100ms delay - after width completes)
     setTimeout(() => {
       setAnimationPhase('height-expanding');
-      
-      // PHASE 3.5: PNG fade-in during height expansion (600ms into height animation)
-      setTimeout(() => {
-        setImageFullyVisible(true);
-      }, 600);
-      
     }, 2100); // Width: 1200ms + 800ms + 100ms buffer = 2100ms
-    
+
     // PHASE 4: Content fade-in after all animations complete (4200ms from start)
     setTimeout(() => {
       setAnimationPhase('complete');
-      setLogoVisible(true);
+      setLogoVisible(false); // Hide sidebar logo when expanded content shows
       setShowExpandedContent(true);
+
+      // PHASE 4.5: PNG fade-in AFTER ContentPanel animations complete
+      setTimeout(() => {
+        setImageFullyVisible(true);
+      }, 200); // Small delay after content appears
+
     }, 4200); // Width(1200+800) + Height(1000) + PNG(600) + buffer(600) = 4200ms
   }, []);
 
@@ -118,10 +118,10 @@ export const useEpiLogosTransition = (): [EpiLogosTransitionState, EpiLogosTrans
     setTimeout(() => {
       setImageMovedToCorner(true);
       
-      // Step 3: After PNG animation completes, show auth modal
+      // Step 3: After PNG animation completes, show modal
       setTimeout(() => {
         setShowAuthModal(true);
-        setAuthModalType('auth-signin'); // Default to signin
+        // Note: business state is now managed by the calling component
       }, 1800); // Wait for PNG shrink animation to complete
     }, 200); // Brief 200ms expansion phase
   }, []);

@@ -6,11 +6,13 @@ import { useUnifiedAuth } from '@/auth/unified-auth-context';
 export interface ModalOAuthState {
   isLoading: boolean;
   error: string | null;
-  oauthWindow: Window | null;
+  oauthUrl: string | null;
+  showIframe: boolean;
 }
 
 export interface ModalOAuthActions {
   initiateModalOAuth: (provider: string) => Promise<void>;
+  cancelOAuth: () => void;
   clearError: () => void;
 }
 
@@ -19,83 +21,79 @@ export const useModalOAuth = (
   onError?: (error: string) => void
 ): [ModalOAuthState, ModalOAuthActions] => {
   
-  const { initiateOAuth, completeOAuth } = useUnifiedAuth();
+  const { initiateOAuth, completeOAuth, reloadFromStorage } = useUnifiedAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [oauthWindow, setOauthWindow] = useState<Window | null>(null);
+  const [oauthUrl, setOauthUrl] = useState<string | null>(null);
+  const [showIframe, setShowIframe] = useState(false);
 
   const initiateModalOAuth = useCallback(async (provider: string) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      // Generate OAuth URL with modal-aware callback
+      // Generate OAuth URL with same callback as normal flow
       const baseUrl = window.location.origin;
-      const callbackUrl = `${baseUrl}/auth/modal-callback`;
+      const callbackUrl = `${baseUrl}/auth/callback`;
 
-      const oauthUrl = await initiateOAuth(provider, callbackUrl);
-      
-      // Open popup window
-      const popup = window.open(
-        oauthUrl,
-        'oauth-popup',
-        'width=500,height=600,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no'
-      );
+      const generatedOauthUrl = await initiateOAuth(provider, callbackUrl);
 
-      if (!popup) {
-        throw new Error('Popup blocked. Please allow popups for this site and try again.');
+      // Parse state for BroadcastChannel name
+      const authUrl = new URL(generatedOauthUrl);
+      const stateParam = authUrl.searchParams.get('state');
+      if (!stateParam) {
+        throw new Error('OAuth state not present in authorization URL');
       }
 
-      setOauthWindow(popup);
-      
-      // Listen for popup completion (fallback if no message received)
-      const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed);
-          setIsLoading(false);
-          setOauthWindow(null);
-          
-          // Only show cancellation error if we didn't already get a message
-          setError('Authentication was cancelled');
-          onError?.('Authentication was cancelled');
-        }
-      }, 1000);
+      let completed = false;
+      const channel = new BroadcastChannel(`oauth_${stateParam}`);
 
-      // Listen for messages from popup
-      const handleMessage = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-        
-        if (event.data.type === 'oauth-success') {
-          clearInterval(checkClosed);
-          popup.close();
+      // 3-minute timeout
+      const timeoutId = window.setTimeout(() => {
+        if (!completed) {
           setIsLoading(false);
-          setOauthWindow(null);
-          
-          // Direct success callback - no localStorage
-          onSuccess?.();
-        } else if (event.data.type === 'oauth-error') {
-          clearInterval(checkClosed);
-          popup.close();
+          setError('Authentication timed out');
+          onError?.('Authentication timed out');
+          try { channel.close(); } catch {}
+        }
+      }, 3 * 60 * 1000);
+
+      channel.onmessage = async (evt) => {
+        const data = evt.data || {};
+        if (data.type === 'oauth-code' && data.code && data.state === stateParam) {
+          try {
+            setIsLoading(true);
+            await completeOAuth(provider, data.code, data.state);
+            completed = true;
+            window.clearTimeout(timeoutId);
+            setIsLoading(false);
+            await reloadFromStorage();
+            await new Promise(r => setTimeout(r, 150));
+            onSuccess?.();
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : 'OAuth completion failed';
+            setError(msg);
+            onError?.(msg);
+          } finally {
+            try { channel.close(); } catch {}
+          }
+        } else if (data.type === 'oauth-error') {
+          completed = true;
+          window.clearTimeout(timeoutId);
           setIsLoading(false);
-          setOauthWindow(null);
-          
-          const errorMessage = event.data.error || 'OAuth authentication failed';
-          setError(errorMessage);
-          onError?.(errorMessage);
+          const msg = data.error || 'OAuth authentication failed';
+          setError(msg);
+          onError?.(msg);
+          try { channel.close(); } catch {}
         }
       };
 
-      window.addEventListener('message', handleMessage);
-      
-      // Cleanup on component unmount or popup close
-      return () => {
-        window.removeEventListener('message', handleMessage);
-        clearInterval(checkClosed);
-        if (popup && !popup.closed) {
-          popup.close();
-        }
-      };
-      
+      // Open provider in a new tab (not popup) so the opener stays alive
+      window.open(generatedOauthUrl, '_blank');
+      setOauthUrl(generatedOauthUrl);
+      setShowIframe(false);
+      setIsLoading(false);
+
     } catch (err) {
       console.error('Modal OAuth failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to start OAuth process';
@@ -103,7 +101,44 @@ export const useModalOAuth = (
       setIsLoading(false);
       onError?.(errorMessage);
     }
-  }, [initiateOAuth, onSuccess, onError]);
+  }, [initiateOAuth, completeOAuth, reloadFromStorage, onError]);
+
+  const handleOAuthSuccess = useCallback(async () => {
+    try {
+      setShowIframe(false);
+      setIsLoading(true);
+      
+      // Force reload from storage after iframe OAuth completion
+      await reloadFromStorage();
+      
+      // Wait a bit to ensure auth context is fully updated
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      setIsLoading(false);
+      
+      // Auth state refreshed - trigger success callback
+      onSuccess?.();
+    } catch (err) {
+      console.error('Failed to complete OAuth after iframe success:', err);
+      const errorMessage = 'Failed to complete authentication';
+      setError(errorMessage);
+      setIsLoading(false);
+      onError?.(errorMessage);
+    }
+  }, [reloadFromStorage, onSuccess, onError]);
+
+  const handleOAuthError = useCallback((errorMessage: string) => {
+    setShowIframe(false);
+    setIsLoading(false);
+    setError(errorMessage);
+    onError?.(errorMessage);
+  }, [onError]);
+
+  const cancelOAuth = useCallback(() => {
+    setShowIframe(false);
+    setIsLoading(false);
+    setOauthUrl(null);
+  }, []);
 
   const clearError = useCallback(() => {
     setError(null);
@@ -112,13 +147,22 @@ export const useModalOAuth = (
   const state: ModalOAuthState = {
     isLoading,
     error,
-    oauthWindow,
+    oauthUrl,
+    showIframe,
   };
 
   const actions: ModalOAuthActions = {
     initiateModalOAuth,
+    cancelOAuth,
     clearError,
   };
 
-  return [state, actions];
+  // Expose success and error handlers for iframe component
+  const iframeHandlers = {
+    onSuccess: handleOAuthSuccess,
+    onError: handleOAuthError,
+    onCancel: cancelOAuth,
+  };
+
+  return [state, actions, iframeHandlers] as const;
 };

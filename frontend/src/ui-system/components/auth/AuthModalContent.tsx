@@ -20,11 +20,11 @@ import {
   LockClosedIcon,
   UserIcon
 } from '@heroicons/react/24/outline';
-// Simple type definition for business states
-type EpiLogosBusinessState = 'png-displayed' | 'auth-signin' | 'auth-signup' | 'auth-oauth' | 'auth-success' | 'account-profile' | 'account-security' | 'account-billing';
+import { type EpiLogosBusinessState, type AuthBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
+import { OAuthIframe } from './OAuthIframe';
 
 interface AuthModalContentProps {
-  businessState: 'auth-signin' | 'auth-signup' | 'auth-oauth' | 'auth-success';
+  businessState: AuthBusinessState;
   onStateChange: (state: EpiLogosBusinessState) => void;
 }
 
@@ -49,12 +49,12 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
   businessState, 
   onStateChange 
 }) => {
-  const { signIn, isLoading: isUnifiedAuthLoading } = useUnifiedAuth();
+  const { signIn, isLoading: isUnifiedAuthLoading, isAuthenticated } = useUnifiedAuth();
   
   // Modal OAuth integration
-  const [modalOAuthState, modalOAuthActions] = useModalOAuth(
+  const [modalOAuthState, modalOAuthActions, iframeHandlers] = useModalOAuth(
     () => {
-      // OAuth success callback
+      // OAuth success callback - bridge through auth-success
       onStateChange('auth-success');
     },
     (error) => {
@@ -202,73 +202,53 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
     setError(null);
 
     try {
-      const endpoint = authMode === 'signin' ? '/api/users/login' : '/api/users/register';
-      const payload = authMode === 'signin' 
-        ? { email: formData.email, password: formData.password }
-        : { 
-            email: formData.email, 
-            password: formData.password,
-            firstName: formData.firstName,
-            lastName: formData.lastName 
-          };
-
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // Sign in the user using AuthContext
-        if (result.data) {
-          const tokens = {
-            accessToken: result.data.accessToken,
-            refreshToken: result.data.refreshToken,
-            idToken: result.data.idToken || '',
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-          };
-
-          const { accessToken, refreshToken, idToken, ...userData } = result.data;
-
-          await signIn({
-            user: userData,
-            tokens: tokens
-          });
-        }
-
-        setAuthState('success');
-        onStateChange('auth-success');
-      } else {
-        let errorMessage = result.message || 'Authentication failed';
-
-        if (response.status === 422 && result.field_errors) {
-          const fieldErrors = Object.entries(result.field_errors)
-            .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
-            .join('; ');
-          errorMessage = `Validation failed: ${fieldErrors}`;
-        } else if (result.errors && Array.isArray(result.errors)) {
-          errorMessage = result.errors.map((err: any) =>
-            typeof err === 'string' ? err : err.message || 'Validation error'
-          ).join('; ');
-        }
-
-        setError({
-          code: response.status === 422 ? 'validation_error' : 'api_error',
-          message: errorMessage,
-          userMessage: errorMessage
+      if (authMode === 'signin') {
+        // Use unified auth context for signin
+        await signIn({
+          email: formData.email,
+          password: formData.password
         });
-        setAuthState('error');
+      } else {
+        // For signup, still use direct API call as unified auth context doesn't handle registration
+        const payload = { 
+          email: formData.email, 
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName 
+        };
+
+        const response = await fetch(`http://localhost:8000/api/users/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Registration failed');
+        }
+
+        // After successful registration, sign in with the new credentials
+        await signIn({
+          email: formData.email,
+          password: formData.password
+        });
       }
+
+      setAuthState('success');
+      onStateChange('auth-success');
     } catch (err) {
       console.error('Email auth failed:', err);
+      
+      const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
+      
       setError({
-        code: 'network_error',
-        message: 'Network error',
-        userMessage: 'Unable to connect to authentication server. Please check your connection and try again.'
+        code: 'auth_error',
+        message: errorMessage,
+        userMessage: errorMessage
       });
       setAuthState('error');
     }
@@ -294,6 +274,35 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
     setError(null);
     setAuthState('idle');
   };
+
+  // Auto-transition from auth-success to account-profile
+  useEffect(() => {
+    if (businessState === 'auth-success') {
+      const timer = setTimeout(() => {
+        // Only transition if user is actually authenticated in the auth context
+        // This prevents the OAuth bug where success fires before auth state updates
+        if (isAuthenticated && !isUnifiedAuthLoading) {
+          onStateChange('account-profile');
+        } else {
+          // If still loading or not authenticated, wait a bit more and try again
+          console.warn('Auth success state triggered but user not authenticated yet, retrying...');
+          const retryTimer = setTimeout(() => {
+            if (isAuthenticated && !isUnifiedAuthLoading) {
+              onStateChange('account-profile');
+            } else {
+              // Final fallback - transition anyway to avoid being stuck
+              console.warn('Final fallback: transitioning to account despite auth state');
+              onStateChange('account-profile');
+            }
+          }, 1000);
+          
+          return () => clearTimeout(retryTimer);
+        }
+      }, 2000); // 2 second delay to show success message
+      
+      return () => clearTimeout(timer);
+    }
+  }, [businessState, onStateChange, isAuthenticated, isUnifiedAuthLoading]);
 
   const toggleAuthMode = () => {
     const newMode = authMode === 'signin' ? 'signup' : 'signin';
@@ -323,10 +332,21 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
               Connecting with Google...
             </h3>
             <p className="text-ui-coord-text font-mono">
-              You'll be redirected to Google for authentication.
+              A secure browser tab has been opened for Google sign-in.
             </p>
           </div>
         </div>
+
+        {/* OAuth Iframe overlay for in-modal flow */}
+        {modalOAuthState.showIframe && modalOAuthState.oauthUrl && (
+          <OAuthIframe
+            oauthUrl={modalOAuthState.oauthUrl}
+            onSuccess={iframeHandlers.onSuccess}
+            onError={iframeHandlers.onError}
+            onCancel={iframeHandlers.onCancel}
+            isVisible={modalOAuthState.showIframe}
+          />
+        )}
       </div>
     );
   }
@@ -384,11 +404,11 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       </div>
 
       {/* Welcome Message */}
-      <div className="text-center mb-8">
-        <h2 className="font-heading text-2xl text-ui-panel mb-3">
+      <div className="text-center mb-4">
+        <h2 className="font-heading text-xl text-ui-panel mb-2">
           {authMode === 'signin' ? 'Welcome Back' : 'Join the System'}
         </h2>
-        <p className="font-mono text-ui-coord-text text-sm leading-relaxed">
+        <p className="font-mono text-ui-coord-text text-xs leading-relaxed">
           {authMode === 'signin' 
             ? 'Sign in to continue your journey through consciousness-computing synthesis.'
             : 'Create your account to explore the six-fold architecture of Epi-Logos.'
@@ -435,11 +455,11 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       </AnimatePresence>
 
       {/* Email/Password Form */}
-      <div className="space-y-4 mb-6">
+      <div className="space-y-3 mb-4">
         {/* Name fields for signup */}
         {authMode === 'signup' && (
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
               <label className="font-mono text-ui-panel text-sm font-medium">First Name</label>
               <div className="relative">
                 <input
@@ -455,7 +475,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
                 )}
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1">
               <label className="font-mono text-ui-panel text-sm font-medium">Last Name</label>
               <div className="relative">
                 <input
@@ -472,7 +492,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
         )}
 
         {/* Email field */}
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label className="font-mono text-ui-panel text-sm font-medium">Email Address</label>
           <div className="relative">
             <input
@@ -490,7 +510,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
         </div>
 
         {/* Password field */}
-        <div className="space-y-2">
+        <div className="space-y-1">
           <label className="font-mono text-ui-panel text-sm font-medium">Password</label>
           <div className="relative">
             <input
@@ -525,7 +545,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
 
         {/* Confirm password for signup */}
         {authMode === 'signup' && (
-          <div className="space-y-2">
+          <div className="space-y-1">
             <label className="font-mono text-ui-panel text-sm font-medium">Confirm Password</label>
             <div className="relative">
               <input
@@ -568,7 +588,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       </div>
 
       {/* Divider */}
-      <div className="relative flex items-center my-6">
+      <div className="relative flex items-center my-4">
         <div className="flex-1 border-t border-ui-coord-text/30" />
         <span className="px-4 text-ui-coord-text text-sm font-medium">or</span>
         <div className="flex-1 border-t border-ui-coord-text/30" />
@@ -613,7 +633,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       </button>
 
       {/* Security Notice */}
-      <div className="text-center mt-6">
+      <div className="text-center mt-4">
         <p className="font-mono text-xs text-ui-coord-text leading-relaxed">
           By continuing, you agree to our secure authentication practices. 
           We use industry-standard OAuth 2.0 with PKCE and encrypted password storage.
@@ -621,7 +641,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       </div>
 
       {/* Auth Mode Toggle */}
-      <div className="text-center mt-6 pt-4 border-t border-ui-coord-text/20">
+      <div className="text-center mt-4 pt-3 border-t border-ui-coord-text/20">
         <p className="font-mono text-sm text-ui-coord-text">
           {authMode === 'signin' ? "Don't have an account?" : 'Already have an account?'}
           <button
@@ -632,6 +652,17 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
           </button>
         </p>
       </div>
+
+      {/* OAuth Iframe - Render when OAuth is initiated */}
+      {modalOAuthState.showIframe && modalOAuthState.oauthUrl && (
+        <OAuthIframe
+          oauthUrl={modalOAuthState.oauthUrl}
+          onSuccess={iframeHandlers.onSuccess}
+          onError={iframeHandlers.onError}
+          onCancel={iframeHandlers.onCancel}
+          isVisible={modalOAuthState.showIframe}
+        />
+      )}
     </div>
   );
 };

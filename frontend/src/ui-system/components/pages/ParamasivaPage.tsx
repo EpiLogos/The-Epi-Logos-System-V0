@@ -21,10 +21,12 @@ import { ProjectsSection } from '../ui/ProjectsSection';
 
 import { useModalTransition } from '@/hooks/ui-system/useModalTransition';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 export const ParamasivaPage: React.FC = () => {
   // Use custom hooks for state management
   const [modalState, modalActions] = useModalTransition();
+  const { isCollapsed, toggle } = useSidebar();
   const {
     whiteOverlayVisible,
     isTransitioning,
@@ -225,6 +227,10 @@ export const ParamasivaPage: React.FC = () => {
   const handleImageClick = () => {
     if (modalState.isModalExpanded) {
       modalActions.closeModal();
+      // Auto-expand sidebar when modal closes if it's collapsed
+      if (isCollapsed) {
+        toggle();
+      }
     } else {
       modalActions.openModal();
     }
@@ -368,6 +374,7 @@ export const ParamasivaPage: React.FC = () => {
             transitionDirection={componentTransitionDirection}
             heightMorphStarted={heightMorphStarted}
             widthMorphStarted={widthMorphStarted}
+            isSidebarCollapsed={isCollapsed}
           >
           {/* Main Panel Content */}
           <ModalPanel
@@ -437,9 +444,12 @@ export const ParamasivaPage: React.FC = () => {
 
           </ContentPanel>
 
-          {/* Carousel Navigation - Centered relative to modal area */}
+          {/* Carousel Navigation - Centered relative to modal area, responsive to sidebar state */}
           {modalState.isModalExpanded && carouselNavigation && carouselVisible && (
-            <div className="absolute bottom-8 left-[420px] right-8 flex justify-center z-20">
+            <div className={cn(
+              "absolute bottom-8 right-8 flex justify-center z-20 carousel-nav-transition",
+              isCollapsed ? "left-[74px]" : "left-[420px]" // Account for sidebar width + 20px margin
+            )}>
               {carouselNavigation}
             </div>
           )}

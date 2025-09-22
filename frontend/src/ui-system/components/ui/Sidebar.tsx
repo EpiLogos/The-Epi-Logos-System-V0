@@ -1,5 +1,7 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import { useSidebar } from '@/contexts/SidebarContext';
+import { SidebarToggle } from './SidebarToggle';
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -20,12 +22,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
   animationPhase = 'initial',
   className
 }) => {
-  // Calculate width based on variant and modal state
+  // Get collapse state from context
+  const { isCollapsed, toggle } = useSidebar();
+  // Calculate width based on variant, modal state, and collapse state
   const getWidth = () => {
+    // COLLAPSE STATE: Override all other states when collapsed
+    if (isCollapsed) {
+      return 'sidebar-collapsed'; // 64px collapsed width
+    }
+
     if (variant === 'subsystems') {
       return 'w-[300px]'; // Grid sidebar width
     }
-    
+
     if (variant === 'paramasiva') {
       // TRANSITION HANDLING: Multiple directions from Paramasiva
       if (isTransitioning) {
@@ -37,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           return 'w-[420px]';
         }
       }
-      
+
       // NORMAL PARAMASIVA STATES
       return isModalExpanded ? 'w-[420px]' : 'w-[calc(100vw-420px)]'; // Expanded left sidebar
     }
@@ -48,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         // During reverse transition: Sidebar should expand from 420px back to full screen
         return 'w-screen'; // Back to full screen width
       }
-      
+
       // NORMAL EPI-LOGOS STATES
       // EPI-LOGOS: Full-width initial state → narrow expanded state
       return isModalExpanded ? 'w-[420px]' : 'w-screen'; // Full screen → narrow sidebar
@@ -58,20 +67,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
       // MAIN: Standard portfolio sidebar (quaternal logic page)
       return 'w-[420px]'; // Fixed main sidebar width
     }
-    
+
     return 'w-[420px]'; // Default
   };
 
   return (
     <div className={cn(
       // Base sidebar styling - FIXED: Remove overflow-hidden when modal expanded to allow scrolling
-      "bg-[#f5f5f5] px-10 py-8 flex flex-col justify-between flex-shrink-0 h-screen max-h-screen",
+      "bg-[#f5f5f5] px-10 py-8 flex flex-col justify-between flex-shrink-0 h-screen max-h-screen relative",
       // Only hide overflow when NOT in modal expanded state (to allow scrollable content)
       !isModalExpanded && "overflow-hidden",
-      
+
       // Width based on variant and state
       getWidth(),
-      
+
+      // Collapse transition
+      "sidebar-collapse-transition",
+
       // Border for subsystems and main variants (always)
       variant === 'subsystems' && "border-r border-[#e0e0e0]",
       variant === 'main' && "border-r border-[#e0e0e0]",
@@ -101,7 +113,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
       
       className
     )}>
-      {children}
+      {/* Sidebar Toggle - only visible in expanded state for Paramasiva */}
+      {(variant !== 'paramasiva' || isModalExpanded) && (
+        <div className="absolute top-4 right-2 z-10">
+          <SidebarToggle
+            isCollapsed={isCollapsed}
+            onToggle={toggle}
+          />
+        </div>
+      )}
+
+      {/* SVG positioned relative to main sidebar - ONLY when in corner mode OR during transition */}
+      {React.Children.map(children, (child) => {
+        if (React.isValidElement(child) &&
+            (child as any).props.className &&
+            (child as any).props.className.includes('epi-svg-container') &&
+            ((child as any).props.className.includes('epi-svg-container-corner') ||
+             (child as any).props.className.includes('epi-svg-container-center-absolute'))) {
+          // Render SVG outside flex container when in corner mode OR transitioning
+          return React.cloneElement(child as React.ReactElement, {
+            className: cn(
+              (child as any).props.className,
+              // ADD conditional utility alongside existing ones
+              isCollapsed && "epi-svg-container-center-collapsed"
+            )
+          });
+        }
+        return null;
+      })}
+
+      {/* Content area with fade - preserves layout but adds fade */}
+      <div className={cn(
+        "flex flex-col justify-between flex-1", // Preserve original flex layout
+        isCollapsed ? "sidebar-content-collapsed" : "sidebar-content-expanded"
+      )}>
+        {React.Children.map(children, (child) => {
+          if (React.isValidElement(child) &&
+              (child as any).props.className &&
+              (child as any).props.className.includes('epi-svg-container')) {
+            // Check if SVG should be inside flex container (center mode, NOT transitioning)
+            if ((child as any).props.className.includes('epi-svg-container-center') &&
+                !(child as any).props.className.includes('epi-svg-container-center-absolute')) {
+              // Render SVG inside flex container when in center mode (not transitioning)
+              return React.cloneElement(child as React.ReactElement, {
+                className: cn(
+                  (child as any).props.className,
+                  // ADD conditional utility alongside existing ones
+                  isCollapsed && "epi-svg-container-center-collapsed"
+                )
+              });
+            }
+            return null; // Don't render corner SVG here, it's rendered above
+          }
+          return child;
+        })}
+      </div>
     </div>
   );
 };

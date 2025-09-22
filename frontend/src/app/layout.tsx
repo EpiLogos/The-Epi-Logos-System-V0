@@ -3,6 +3,7 @@ import '@fontsource/jetbrains-mono';
 import './globals.css';
 import { UnifiedAuthProvider } from '@/auth';
 import { PageTransitionProvider } from '@/contexts/PageTransitionContext';
+import { SidebarProvider } from '@/contexts/SidebarContext';
 
 export const metadata: Metadata = {
   title: 'Epi:Logos System',
@@ -19,7 +20,9 @@ export default function RootLayout({
       <body>
         <UnifiedAuthProvider>
           <PageTransitionProvider>
-            {children}
+            <SidebarProvider>
+              {children}
+            </SidebarProvider>
           </PageTransitionProvider>
         </UnifiedAuthProvider>
       </body>

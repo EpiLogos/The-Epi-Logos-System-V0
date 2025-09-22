@@ -57,14 +57,17 @@ export interface UnifiedAuthContextValue extends AuthState {
   signIn: (credentials: { email: string; password: string }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshTokens: () => Promise<void>;
+  initializeAuth: () => Promise<void>;
   
   // OAuth actions
   initiateOAuth: (provider: string, returnUrl?: string, linkAccount?: boolean) => Promise<string>;
   completeOAuth: (provider: string, code: string, state: string) => Promise<void>;
+  setAuthFromData: (authData: { user: User; tokens: AuthTokens; linkedAccount?: LinkedAccount }) => Promise<void>;
   
   // User actions
   updateUser: (updates: Partial<User>) => Promise<void>;
   refreshUser: () => Promise<void>;
+  reloadFromStorage: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   
   // Account linking
@@ -371,22 +374,69 @@ export function UnifiedAuthProvider({
    */
   const completeOAuth = useCallback(async (provider: string, code: string, state: string) => {
     try {
+      console.log('UnifiedAuth.completeOAuth: Starting OAuth completion', { provider, code: code.substring(0, 10) + '...', state });
       setAuthState(prev => createLoadingState(prev.user, prev.tokens, prev.linkedAccount));
 
       // TODO: Retrieve stored PKCE parameters
       const codeVerifier = 'mock-verifier';
       const nonce = 'mock-nonce';
 
+      console.log('UnifiedAuth.completeOAuth: Calling API client...');
       const response = await apiClient.completeOAuth(provider, {
         code,
         state,
         codeVerifier,
         nonce
       });
+      console.log('UnifiedAuth.completeOAuth: API response received', { hasUser: !!response.user, hasTokens: !!response.tokens });
 
       // Process OAuth completion through domain logic
+      console.log('UnifiedAuth.completeOAuth: Processing sign-in through domain logic...');
       const newState = processSignIn(authState, response.user, response.tokens, response.linkedAccount);
+      console.log('UnifiedAuth.completeOAuth: New auth state created', { isAuthenticated: newState.isAuthenticated, hasUser: !!newState.user });
       
+      // Persist session
+      if (newState.isAuthenticated && newState.user && newState.tokens) {
+        console.log('UnifiedAuth.completeOAuth: Storing session to storage...');
+        const session: AuthSession = {
+          user: newState.user,
+          isAuthenticated: true,
+          tokens: newState.tokens,
+          linkedAccount: newState.linkedAccount
+        };
+        await storageAdapter.storeSession(session);
+        console.log('UnifiedAuth.completeOAuth: Session stored successfully');
+      }
+
+      console.log('UnifiedAuth.completeOAuth: Setting final auth state...');
+      setAuthState(newState);
+      console.log('UnifiedAuth.completeOAuth: OAuth completion finished successfully');
+      
+    } catch (error) {
+      console.error('OAuth completion failed:', error);
+      setAuthState(prev => createErrorState('OAuth authentication failed', prev.user, prev.tokens, prev.linkedAccount));
+      throw error;
+    }
+  }, [authState, apiClient, storageAdapter]);
+
+  /**
+   * Set auth state from completed OAuth data (for popup OAuth flows)
+   */
+  const setAuthFromData = useCallback(async (authData: { user: User; tokens: AuthTokens; linkedAccount?: LinkedAccount }) => {
+    try {
+      // Validate the auth data
+      if (!isValidUser(authData.user)) {
+        throw new Error('Invalid user data received from OAuth');
+      }
+
+      // Process sign-in through domain logic
+      const newState = processSignIn(authState, authData.user, authData.tokens, authData.linkedAccount);
+      
+      // Validate the new state
+      if (!validateAuthState(newState)) {
+        throw new Error('Invalid authentication state after OAuth data processing');
+      }
+
       // Persist session
       if (newState.isAuthenticated && newState.user && newState.tokens) {
         const session: AuthSession = {
@@ -401,11 +451,11 @@ export function UnifiedAuthProvider({
       setAuthState(newState);
       
     } catch (error) {
-      console.error('OAuth completion failed:', error);
-      setAuthState(prev => createErrorState('OAuth authentication failed', prev.user, prev.tokens, prev.linkedAccount));
+      console.error('Setting auth from OAuth data failed:', error);
+      setAuthState(prev => createErrorState('Failed to process OAuth authentication', prev.user, prev.tokens, prev.linkedAccount));
       throw error;
     }
-  }, [authState, apiClient, storageAdapter]);
+  }, [authState, storageAdapter]);
 
   /**
    * Update user profile
@@ -512,6 +562,40 @@ export function UnifiedAuthProvider({
       throw error;
     }
   }, [authState, apiClient, storageAdapter]);
+
+  /**
+   * Force reload auth state from storage (for popup OAuth completion)
+   */
+  const reloadFromStorage = useCallback(async () => {
+    try {
+      setAuthState(createLoadingState());
+      // Retrieve session from storage
+      const session = await storageAdapter.retrieveSession();
+      
+      if (!session || !session.isAuthenticated || !session.user) {
+        setAuthState(createUnauthenticatedState());
+        return;
+      }
+      
+      // Validate session data
+      if (!isValidUser(session.user)) {
+        console.warn('Invalid user data in stored session, clearing...');
+        await storageAdapter.clearSession();
+        setAuthState(createUnauthenticatedState());
+        return;
+      }
+      
+      // Create authenticated state
+      setAuthState(createAuthenticatedState(
+        session.user,
+        session.tokens,
+        session.linkedAccount
+      ));
+    } catch (error) {
+      console.error('Failed to reload from storage:', error);
+      setAuthState(createUnauthenticatedState());
+    }
+  }, [storageAdapter]);
 
   /**
    * Link OAuth account
@@ -651,10 +735,13 @@ export function UnifiedAuthProvider({
     signIn,
     signOut,
     refreshTokens,
+    initializeAuth,
     initiateOAuth,
     completeOAuth,
+    setAuthFromData,
     updateUser,
     refreshUser,
+    reloadFromStorage,
     changePassword,
     linkAccount,
     unlinkAccount,

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { GlowParticles } from '@/components/system/GlowParticles';
-import { useOAuthCallback } from '@/auth';
+import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import HexGridLoader from '@/components/HexGridLoader';
 
 type CallbackState = 'processing' | 'success' | 'error';
@@ -30,26 +30,118 @@ interface CallbackError {
 export default function CallbackPage() {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { processCallback, isProcessing, error: oauthError } = useOAuthCallback();
+  const { completeOAuth, isAuthenticated, user, tokens, linkedAccount } = useUnifiedAuth();
 
   const [callbackState, setCallbackState] = useState<CallbackState>('processing');
   const [error, setError] = useState<CallbackError | null>(null);
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState('Initializing authentication...');
+  const [isPopup, setIsPopup] = useState(false);
+  const [isIframe, setIsIframe] = useState(false);
 
   useEffect(() => {
     // Check if this is a popup window
-    const isPopup = window.opener && window.opener !== window;
+    const popupDetected = window.opener && window.opener !== window;
     
-    if (isPopup) {
+    // Check if this is an iframe window
+    const iframeDetected = window !== window.top;
+    
+    // Check URL params for iframe flag
+    const urlParams = new URLSearchParams(window.location.search);
+    const iframeParam = urlParams.get('iframe') === 'true';
+    
+    console.log('CALLBACK DETECTION:', { 
+      popupDetected, 
+      iframeDetected,
+      iframeParam,
+      hasOpener: !!window.opener, 
+      isSelfOpener: window.opener === window 
+    });
+    
+    setIsPopup(popupDetected);
+    setIsIframe(iframeDetected || iframeParam);
+    
+    if (popupDetected) {
+      console.log('CALLING handlePopupCallback');
       handlePopupCallback();
-    } else {
-      handleOAuthCallback();
+      return; // Don't run regular callback for popup
     }
+    
+    if (iframeDetected || iframeParam) {
+      console.log('CALLING handleIframeCallback');
+      handleIframeCallback();
+      return; // Don't run regular callback for iframe
+    }
+    
+    console.log('CALLING handleOAuthCallback');
+    handleOAuthCallback();
   }, []);
 
   const handlePopupCallback = async () => {
     try {
+      console.log('POPUP CALLBACK STARTING');
+
+      // Extract URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hash);
+
+      const code = urlParams.get('code') || hashParams.get('code');
+      const state = urlParams.get('state') || hashParams.get('state');
+      const error = urlParams.get('error') || hashParams.get('error');
+
+      console.log('POPUP CALLBACK PARAMS:', { code: code?.substring(0, 10) + '...', state, error });
+
+      if (error) {
+        console.log('POPUP CALLBACK ERROR - posting message and closing self');
+        // BroadcastChannel fallback (COOP-safe)
+        try {
+          const stateParam = new URLSearchParams(window.location.search).get('state') || '';
+          if (stateParam) {
+            const bc = new BroadcastChannel(`oauth_${stateParam}`);
+            bc.postMessage({ type: 'oauth-error', error });
+            bc.close();
+          }
+        } catch {}
+        // Best-effort postMessage to opener (if relationship exists)
+        window.opener?.postMessage({
+          type: 'oauth-error',
+          error: error
+        }, window.location.origin);
+        setTimeout(() => { try { window.close(); } catch {} }, 100);
+        return;
+      }
+
+      if (code && state) {
+        // Critical: Let the opener complete OAuth so sessionStorage (PKCE) is available
+        console.log('POPUP CALLBACK - posting code/state to opener');
+        // BroadcastChannel fallback (COOP-safe)
+        try {
+          const bc = new BroadcastChannel(`oauth_${state}`);
+          bc.postMessage({ type: 'oauth-code', code, state });
+          bc.close();
+        } catch {}
+        // Best-effort postMessage to opener (if relationship exists)
+        window.opener?.postMessage({ type: 'oauth-code', code, state }, window.location.origin);
+        // Close quickly; opener should already have the message
+        setTimeout(() => { try { window.close(); } catch {} }, 150);
+      }
+    } catch (err) {
+      console.error('OAuth callback handling failed:', err);
+
+      if (window.opener && window.opener !== window) {
+        window.opener.postMessage({
+          type: 'oauth-error',
+          error: 'Callback handling failed'
+        }, window.location.origin);
+      }
+    }
+  };
+
+  const handleIframeCallback = async () => {
+    try {
+      console.log('IFRAME CALLBACK STARTING');
+      
       // Extract URL parameters
       const urlParams = new URLSearchParams(window.location.search);
       const hash = window.location.hash.substring(1);
@@ -59,45 +151,41 @@ export default function CallbackPage() {
       const state = urlParams.get('state') || hashParams.get('state');
       const error = urlParams.get('error') || hashParams.get('error');
       
+      console.log('IFRAME CALLBACK PARAMS:', { code: code?.substring(0, 10) + '...', state, error });
+      
       if (error) {
-        // Notify parent window of error
-        window.opener.postMessage({ 
-          type: 'oauth-error', 
+        console.log('IFRAME CALLBACK ERROR - posting message to parent');
+        window.parent.postMessage({ 
+          type: 'oauth-iframe-error', 
           error: error 
         }, window.location.origin);
-        window.close();
         return;
       }
       
       if (code && state) {
         try {
-          // Process OAuth callback
-          await processCallback('google', code, state);
+          console.log('IFRAME CALLBACK - completing OAuth');
+          await completeOAuth('google', code, state);
           
-          // Notify parent window of success
-          window.opener.postMessage({ 
-            type: 'oauth-success' 
+          console.log('IFRAME CALLBACK - OAuth completed, posting success message to parent');
+          window.parent.postMessage({ 
+            type: 'oauth-iframe-success'
           }, window.location.origin);
-          window.close();
         } catch (err) {
-          console.error('OAuth completion failed:', err);
-          window.opener.postMessage({ 
-            type: 'oauth-error', 
+          console.error('OAuth completion failed in iframe:', err);
+          window.parent.postMessage({ 
+            type: 'oauth-iframe-error', 
             error: err instanceof Error ? err.message : 'OAuth completion failed'
           }, window.location.origin);
-          window.close();
         }
       }
     } catch (err) {
-      console.error('OAuth callback handling failed:', err);
+      console.error('OAuth iframe callback handling failed:', err);
       
-      if (window.opener && window.opener !== window) {
-        window.opener.postMessage({ 
-          type: 'oauth-error', 
-          error: 'Callback handling failed'
-        }, window.location.origin);
-        window.close();
-      }
+      window.parent.postMessage({ 
+        type: 'oauth-iframe-error', 
+        error: 'Callback handling failed'
+      }, window.location.origin);
     }
   };
 
@@ -105,60 +193,44 @@ export default function CallbackPage() {
     try {
       // Extract URL parameters
       const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      const state = urlParams.get('state');
-      const error = urlParams.get('error');
-      const errorDescription = urlParams.get('error_description');
+      const hash = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hash);
 
-      // Handle OAuth errors from provider
+      const code = urlParams.get('code') || hashParams.get('code');
+      const state = urlParams.get('state') || hashParams.get('state');
+      const error = urlParams.get('error') || hashParams.get('error');
+
       if (error) {
-        handleOAuthError(error, errorDescription);
+        // If we have a state, notify opener via BroadcastChannel; else just show error UI
+        const stateParam = state || '';
+        if (stateParam) {
+          try {
+            const bc = new BroadcastChannel(`oauth_${stateParam}`);
+            bc.postMessage({ type: 'oauth-error', error });
+            bc.close();
+          } catch {}
+        }
+        // Attempt to close; if blocked, remain and show minimal UI
+        setTimeout(() => { try { window.close(); } catch {} }, 100);
         return;
       }
 
-      // Validate required parameters
-      if (!code || !state) {
-        throw new Error('Missing authorization code or state parameter');
+      if (code && state) {
+        try {
+          const bc = new BroadcastChannel(`oauth_${state}`);
+          bc.postMessage({ type: 'oauth-code', code, state });
+          bc.close();
+        } catch {}
+        // Close quickly; opener should already have the message
+        setTimeout(() => { try { window.close(); } catch {} }, 150);
+        return;
       }
 
-      // Step 1: Process OAuth callback
-      setProgress(20);
-      setStatusMessage('Validating authorization...');
-      await new Promise(resolve => setTimeout(resolve, 500)); // UX delay
-
-      setProgress(60);
-      setStatusMessage('Processing your account...');
-      await new Promise(resolve => setTimeout(resolve, 500)); // UX delay
-
-      // Use unified OAuth callback processing
-      await processCallback('google', code, state);
-
-      // Step 3: Complete authentication
-      setProgress(90);
-      setStatusMessage('Welcome to Epi-Logos!');
-      await new Promise(resolve => setTimeout(resolve, 500)); // UX delay
-
-      // Success!
-      setProgress(100);
-      setCallbackState('success');
-
-      // Redirect to account page
-      setTimeout(() => {
-        router.push('/account');
-      }, 2000);
-
+      // Missing parameters; nothing to signal
+      setCallbackState('error');
+      setError({ code: 'missing_params', message: 'Missing parameters', userMessage: 'Missing parameters from provider.' });
     } catch (err) {
       console.error('OAuth callback error:', err);
-
-      const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
-
-      setError({
-        code: 'callback_failed',
-        message: errorMessage,
-        userMessage: getCallbackErrorMessage(errorMessage),
-        shouldRetry: !errorMessage.includes('state') && !errorMessage.includes('nonce')
-      });
-
       setCallbackState('error');
     }
   };
@@ -330,6 +402,30 @@ export default function CallbackPage() {
         return null;
     }
   };
+
+  // For popup windows, show minimal UI
+  if (isPopup) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white">Completing authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // For iframe windows, show minimal UI
+  if (isIframe) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white">Completing authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 

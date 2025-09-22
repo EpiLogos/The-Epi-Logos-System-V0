@@ -12,6 +12,7 @@ interface ContentPanelProps {
   transitionDirection?: 'to-subsystems' | 'to-quaternal' | 'idle'; // New transition directions
   heightMorphStarted?: boolean; // For quaternal transition height collapse phase
   widthMorphStarted?: boolean; // For quaternal transition width collapse phase
+  isSidebarCollapsed?: boolean; // For sidebar collapse coordination
   className?: string;
 }
 
@@ -25,6 +26,7 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
   transitionDirection = 'idle',
   heightMorphStarted = false,
   widthMorphStarted = false,
+  isSidebarCollapsed = false,
   className
 }) => {
   // Calculate dimensions based on page type and modal state
@@ -63,8 +65,9 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
       const height = panelMoved ? "h-[calc(60vh+20vh)]" : "h-[calc(60vh+35vh)]";
       
       if (isModalExpanded) {
-        // Modal expanded state
-        return "absolute top-0 right-0 w-[calc(100vw-420px-40px)] h-[calc(100vh-40px)] m-[20px]";
+        // Modal expanded state - responsive to sidebar collapse
+        const widthClass = isSidebarCollapsed ? "paramasiva-modal-expanded" : "paramasiva-modal-normal";
+        return `absolute top-0 right-0 ${widthClass} h-[calc(100vh-40px)] m-[20px]`;
       } else {
         // Normal state - FIXED: Was missing bottom margin (mb-5)
         return `absolute top-0 right-0 w-[420px] ${height} mt-5 mr-5 mb-5 ml-0`;
@@ -97,7 +100,7 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
         
         // Dimensions based on page type and state
         getDimensions(),
-        
+
         // TRANSITION CLASSES: Apply based on UPCOMING state, not current state
         pageType === 'paramasiva' && !isTransitioning && (
           // ALWAYS apply smooth transition - let state changes trigger the transition

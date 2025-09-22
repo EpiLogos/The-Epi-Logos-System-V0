@@ -87,7 +87,7 @@ export const SubsystemsPage: React.FC = () => {
   const [coordinateTextVisible, setCoordinateTextVisible] = useState(false);
   
   // Inter-page transition hook - simplified like original CSS class approach
-  const { 
+  const {
     isTransitioning,
     textFadeStarted,
     heightMorphStarted,
@@ -216,17 +216,17 @@ export const SubsystemsPage: React.FC = () => {
       </div>
 
       {/* Grid Area - PURE TAILWIND like ContentPanel */}
-      <div 
+      <div
         className={cn(
           "grid grid-cols-3 grid-rows-2 gap-0 bg-[#090a09]",
           // DIMENSIONS + MARGIN: Match ContentPanel positioning exactly
-          !isTransitioning 
-            ? "w-[calc(100vw-300px)] h-screen" 
+          !isTransitioning
+            ? "w-[calc(100vw-300px)] h-screen"
             : "w-[420px] h-[calc(73vh+20.75vh)] mt-5 mr-5 mb-0 ml-0"
         )}
         style={{
           // SIMPLE: All dimensions change together after text fade
-          transition: isTransitioning 
+          transition: isTransitioning
             ? 'all 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms'
             : 'none'
         }}
