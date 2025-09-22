@@ -38,8 +38,68 @@ export default function CallbackPage() {
   const [statusMessage, setStatusMessage] = useState('Initializing authentication...');
 
   useEffect(() => {
-    handleOAuthCallback();
+    // Check if this is a popup window
+    const isPopup = window.opener && window.opener !== window;
+    
+    if (isPopup) {
+      handlePopupCallback();
+    } else {
+      handleOAuthCallback();
+    }
   }, []);
+
+  const handlePopupCallback = async () => {
+    try {
+      // Extract URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const hash = window.location.hash.substring(1);
+      const hashParams = new URLSearchParams(hash);
+      
+      const code = urlParams.get('code') || hashParams.get('code');
+      const state = urlParams.get('state') || hashParams.get('state');
+      const error = urlParams.get('error') || hashParams.get('error');
+      
+      if (error) {
+        // Notify parent window of error
+        window.opener.postMessage({ 
+          type: 'oauth-error', 
+          error: error 
+        }, window.location.origin);
+        window.close();
+        return;
+      }
+      
+      if (code && state) {
+        try {
+          // Process OAuth callback
+          await processCallback('google', code, state);
+          
+          // Notify parent window of success
+          window.opener.postMessage({ 
+            type: 'oauth-success' 
+          }, window.location.origin);
+          window.close();
+        } catch (err) {
+          console.error('OAuth completion failed:', err);
+          window.opener.postMessage({ 
+            type: 'oauth-error', 
+            error: err instanceof Error ? err.message : 'OAuth completion failed'
+          }, window.location.origin);
+          window.close();
+        }
+      }
+    } catch (err) {
+      console.error('OAuth callback handling failed:', err);
+      
+      if (window.opener && window.opener !== window) {
+        window.opener.postMessage({ 
+          type: 'oauth-error', 
+          error: 'Callback handling failed'
+        }, window.location.origin);
+        window.close();
+      }
+    }
+  };
 
   const handleOAuthCallback = async () => {
     try {

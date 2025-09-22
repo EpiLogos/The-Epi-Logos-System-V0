@@ -590,6 +590,321 @@ This gives you the best of both worlds: proven business logic + modern animation
 
 **Ready to proceed with copying in your new architecture?**
 
+---
+
+# PHASE 4: ACCOUNT COMPONENTS INTEGRATION PLAN
+
+## Executive Summary
+
+Phase 4 focuses on porting the comprehensive account management system from the original frontend into the new Epi-Logos modal system. This involves integrating 6 major account components with their complete business logic, OAuth success flows, and billing functionality into the post-authentication state of the Epi-Logos page modal.
+
+## Current Account System Analysis
+
+### **Existing Account Components (Preserve Logic)**
+1. **`/app/account/page.tsx`** - Main account dashboard with 6 sections
+2. **`SubscriptionManager.tsx`** - Stripe billing integration
+3. **`BillingHistory.tsx`** - Payment history display
+4. **`UserProfile.tsx`** - Profile editing with validation
+5. **`AccountSettings.tsx`** - Preferences and security settings
+6. **`SessionManager.tsx`** - Active session management
+7. **`MfaSetupComponent.tsx`** - Multi-factor authentication
+8. **`PasswordSetupComponent.tsx`** - Password management
+
+### **OAuth Success Flow Integration Points**
+- **OAuth Callback** → `/auth/callback/page.tsx` → Redirects to `/account`
+- **Post-Auth State** → Account dashboard with sidebar navigation
+- **Account Linking** → `/auth/link-account/page.tsx` → Returns to account
+- **Session Management** → Persistent auth state with JWT tokens
+
+### **Current Account Page Structure**
+```typescript
+// 6 Main Sections with Sidebar Navigation
+const sidebarItems = [
+  { id: 'profile', label: 'Profile', icon: UserIcon },
+  { id: 'security', label: 'Security', icon: ShieldCheckIcon },
+  { id: 'notifications', label: 'Notifications', icon: BellIcon },
+  { id: 'billing', label: 'Billing', icon: CreditCardIcon },
+  { id: 'sessions', label: 'Sessions', icon: DevicePhoneMobileIcon },
+  { id: 'preferences', label: 'Preferences', icon: CogIcon }
+];
+```
+
+## Integration Strategy: Epi-Logos Modal Post-Auth State
+
+### **New Modal State Architecture**
+```typescript
+// Extend EpiLogosTransitionState for account integration
+interface EpiLogosAccountState extends EpiLogosTransitionState {
+  // Post-authentication states
+  isAuthenticated: boolean;
+  showAccountContent: boolean;
+  activeAccountSection: string;
+  accountContentVisible: boolean;
+
+  // Account-specific animations
+  accountSidebarVisible: boolean;
+  accountTransitionPhase: 'auth-success' | 'content-loading' | 'content-ready';
+}
+```
+
+### **OAuth Success → Modal Integration Flow**
+1. **OAuth Success** → Callback handler detects success
+2. **Modal Activation** → Trigger `enterModal()` from EpiLogos transition
+3. **Auth State Update** → Set `isAuthenticated: true` in modal state
+4. **Content Transition** → Replace modal content with account dashboard
+5. **Account Navigation** → Enable sidebar navigation within modal
+
+## Detailed Implementation Plan
+
+### **Task 1: Extend EpiLogos Transition Hook (2 hours)**
+
+**Subtask 1.1: Add Account State Management**
+- Extend `useEpiLogosTransition` with account-specific states
+- Add `showAccountContent`, `activeAccountSection` states
+- Create `transitionToAccount()` action for OAuth success flow
+- Add `setAccountSection()` for sidebar navigation
+
+**Subtask 1.2: OAuth Success Integration**
+- Modify OAuth callback to trigger modal expansion
+- Add account content transition after modal expansion completes
+- Integrate with existing `useAuth` hook for authentication state
+- Handle OAuth success → account modal flow
+
+**Subtask 1.3: Account Navigation State**
+- Add account sidebar visibility controls
+- Create section switching animations within modal
+- Preserve modal expansion while changing account sections
+- Add account content loading states
+
+### **Task 2: Create Account Modal Content Component (3 hours)**
+
+**Subtask 2.1: Base Account Modal Structure**
+```typescript
+// New component: AccountModalContent.tsx
+interface AccountModalContentProps {
+  isVisible: boolean;
+  activeSection: string;
+  onSectionChange: (section: string) => void;
+  onClose: () => void;
+}
+```
+- Create main account modal container
+- Implement sidebar navigation within modal
+- Add section content area with proper styling
+- Integrate with new UI system animations
+
+**Subtask 2.2: Sidebar Navigation Integration**
+- Port existing sidebar items configuration
+- Style sidebar with new UI system patterns
+- Add hover effects and active state styling
+- Implement smooth section transitions
+
+**Subtask 2.3: Content Area Framework**
+- Create content switching mechanism
+- Add loading states for section changes
+- Implement proper content mounting/unmounting
+- Style content area to match new UI system
+
+### **Task 3: Port Profile Section Components (4 hours)**
+
+**Subtask 3.1: UserProfile Component Integration**
+- Copy `UserProfile.tsx` business logic completely
+- Restyle with new UI system components and animations
+- Integrate with modal content area
+- Preserve all form validation and editing functionality
+
+**Subtask 3.2: Profile Editing Modal States**
+- Add profile editing states to modal transition system
+- Create edit mode animations within account modal
+- Implement save/cancel transitions
+- Add success/error state animations
+
+**Subtask 3.3: Avatar and Image Handling**
+- Port existing `UserAvatar` component integration
+- Add image upload functionality within modal
+- Style avatar display with new UI patterns
+- Implement avatar editing animations
+
+### **Task 4: Port Security Section Components (4 hours)**
+
+**Subtask 4.1: Password Management Integration**
+- Port `PasswordSetupComponent` with complete logic
+- Integrate `PasswordResetComponent` functionality
+- Style password forms with new UI system
+- Preserve all validation and security features
+
+**Subtask 4.2: MFA Setup Integration**
+- Port `MfaSetupComponent` with complete business logic
+- Add MFA setup flows within modal context
+- Style MFA interfaces with new UI patterns
+- Implement MFA success/error animations
+
+**Subtask 4.3: Session Management Integration**
+- Port `SessionManager` component functionality
+- Add session display within modal
+- Implement session termination actions
+- Style session list with new UI components
+
+### **Task 5: Port Billing Section Components (4 hours)**
+
+**Subtask 5.1: Subscription Manager Integration**
+- Port `SubscriptionManager` with complete Stripe integration
+- Preserve all billing logic and API calls
+- Style subscription display with new UI system
+- Add upgrade/downgrade animations within modal
+
+**Subtask 5.2: Billing History Integration**
+- Port `BillingHistory` component with complete functionality
+- Add payment history display within modal
+- Style billing tables with new UI patterns
+- Implement billing action animations
+
+**Subtask 5.3: Payment Flow Integration**
+- Preserve Stripe checkout integration
+- Add payment success/failure handling within modal
+- Implement billing status animations
+- Style payment forms with new UI system
+
+### **Task 6: Port Settings and Notifications (3 hours)**
+
+**Subtask 6.1: Account Settings Integration**
+- Port `AccountSettings` component with complete logic
+- Add preferences management within modal
+- Style settings forms with new UI system
+- Preserve all settings validation and persistence
+
+**Subtask 6.2: Notifications Section**
+- Port notifications preferences functionality
+- Add notification settings within modal
+- Style notification controls with new UI patterns
+- Implement settings change animations
+
+**Subtask 6.3: Preferences Integration**
+- Port user preferences management
+- Add theme/language settings within modal
+- Style preference controls with new UI system
+- Implement preference change animations
+
+### **Task 7: OAuth Flow Integration (3 hours)**
+
+**Subtask 7.1: Callback Handler Updates**
+- Modify `/auth/callback/page.tsx` to trigger modal
+- Update OAuth success flow to open account modal
+- Preserve all OAuth security and validation
+- Add modal activation on authentication success
+
+**Subtask 7.2: Account Linking Integration**
+- Update `/auth/link-account/page.tsx` flow
+- Integrate account linking with modal system
+- Add linking success animations within modal
+- Preserve all linking security features
+
+**Subtask 7.3: Authentication State Synchronization**
+- Sync `useAuth` hook with modal account state
+- Add authentication status to modal transitions
+- Implement logout flow from within modal
+- Add authentication error handling in modal context
+
+### **Task 8: Testing and Polish (2 hours)**
+
+**Subtask 8.1: Component Integration Testing**
+- Test all account sections within modal
+- Verify OAuth success → modal flow
+- Test account navigation and transitions
+- Validate all business logic preservation
+
+**Subtask 8.2: Animation and UX Polish**
+- Fine-tune account section transitions
+- Polish modal content animations
+- Add loading states for account operations
+- Implement error state animations
+
+**Subtask 8.3: Responsive and Accessibility**
+- Ensure modal account content is responsive
+- Test accessibility within modal context
+- Add proper ARIA labels for modal account sections
+- Test keyboard navigation within account modal
+
+## Technical Implementation Details
+
+### **State Management Integration**
+```typescript
+// Hybrid approach: Animation state + Business logic state
+const { isAuthenticated, user, signOut } = useAuth(); // Business logic
+const [epiLogosState, epiLogosActions] = useEpiLogosTransition(); // Animation state
+
+// Clean integration
+const handleOAuthSuccess = () => {
+  epiLogosActions.enterModal(); // Trigger modal expansion
+  setTimeout(() => {
+    epiLogosActions.transitionToAccount(); // Show account content
+  }, 4200); // After modal expansion completes
+};
+```
+
+### **Component Architecture**
+```typescript
+// Modal content switching
+const renderAccountContent = () => {
+  switch (activeAccountSection) {
+    case 'profile':
+      return <UserProfile user={user} isEditing={isEditing} />;
+    case 'security':
+      return <SecuritySection user={user} />;
+    case 'billing':
+      return <BillingSection subscription={user?.subscription} />;
+    // ... other sections
+  }
+};
+```
+
+### **Styling Integration**
+- **Preserve**: All business logic, API integrations, form validation
+- **Replace**: Visual styling, animations, layout components
+- **Integrate**: Modal animations with account section transitions
+
+## Success Criteria
+
+### **Functional Requirements**
+- ✅ All 6 account sections fully functional within modal
+- ✅ OAuth success flow triggers account modal
+- ✅ Complete billing integration preserved
+- ✅ All security features (MFA, passwords, sessions) working
+- ✅ Profile editing and preferences fully functional
+
+### **Technical Requirements**
+- ✅ Zero business logic changes
+- ✅ Complete UI system integration
+- ✅ Smooth modal transitions
+- ✅ Responsive design within modal
+- ✅ Accessibility compliance
+
+### **UX Requirements**
+- ✅ Intuitive account navigation within modal
+- ✅ Smooth section transitions
+- ✅ Clear visual feedback for all actions
+- ✅ Consistent styling with new UI system
+
+## Risk Mitigation
+
+### **High Risk Areas**
+1. **Billing Integration Complexity** - Mitigate with careful Stripe preservation
+2. **Modal Content Overflow** - Mitigate with proper scrolling and responsive design
+3. **Authentication State Conflicts** - Mitigate with clear state separation
+4. **Form Validation in Modal Context** - Mitigate with thorough testing
+
+### **Dependencies**
+- Phase 1-3 completion (new UI system integration)
+- OAuth system preservation
+- Billing system preservation
+- Authentication context preservation
+
+## Estimated Timeline: 25 hours (5 working days)
+
+This comprehensive plan ensures complete preservation of all account functionality while seamlessly integrating with the new Epi-Logos modal system and UI architecture.
+
+---
+
 ## **Vite → Next.js Migration Concerns**
 
 ### **Critical Routing Differences**

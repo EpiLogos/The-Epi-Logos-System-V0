@@ -374,9 +374,9 @@ export const QuaternalLogicPage: React.FC = () => {
                     <div className={`absolute top-[12%] left-[25%] -translate-x-[35%] w-[52%] max-w-[650px] h-[80%] max-h-[800px] bg-gray-300/10 border-0 rounded-none px-[25px] py-[30px] transition-[opacity,visibility] duration-300 ease-in-out z-[50] pointer-events-none overflow-y-auto ${showQLModal ? 'opacity-100 visible' : 'opacity-0 invisible'}`}>
                       <h2 className="font-mono text-[24px] font-normal text-[#f5f5f5] text-center mb-[25px] tracking-[2px] uppercase">QL Overview</h2>
                       <div className="font-mono text-[11px] leading-[1.6] text-[#f5f5f5] tracking-[0.5px]">
-                        <p className="mb-[16px] text-justify">Quaternal Logic represents a revolutionary approach to computational reasoning, integrating four-dimensional thinking patterns that transcend traditional binary frameworks.</p>
-                        <p className="mb-[16px] text-justify">This system enables deeper cognitive processing through multi-layered decision trees and adaptive intelligence pathways.</p>
-                        <p className="mb-0 text-justify">The QL framework supports advanced pattern recognition and complex problem-solving methodologies across diverse application domains.</p>
+                        <p className="mb-[16px] text-justify text-[#f5f5f5]">Quaternal Logic represents a revolutionary approach to computational reasoning, integrating four-dimensional thinking patterns that transcend traditional binary frameworks.</p>
+                        <p className="mb-[16px] text-justify text-[#f5f5f5]">This system enables deeper cognitive processing through multi-layered decision trees and adaptive intelligence pathways.</p>
+                        <p className="mb-0 text-justify text-[#f5f5f5]">The QL framework supports advanced pattern recognition and complex problem-solving methodologies across diverse application domains.</p>
                       </div>
                     </div>
                   </>

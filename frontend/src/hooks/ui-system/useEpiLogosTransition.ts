@@ -15,12 +15,20 @@ export interface EpiLogosTransitionState {
   logoVisible: boolean;
   imageMovedToCorner: boolean;
   imageExpanded: boolean;
+  // Auth modal states
+  showAuthModal: boolean;
+  authModalType: 'auth-signin' | 'auth-signup' | 'auth-oauth' | 'auth-success' | null;
 }
 
 export interface EpiLogosTransitionActions {
   enterModal: () => void;
   resetState: () => void;
   transitionToDashboard: () => void; // Dashboard transition action
+  // Auth modal actions
+  showSigninModal: () => void;
+  showSignupModal: () => void;
+  showAuthSuccessModal: () => void;
+  hideAuthModal: () => void;
 }
 
 export const useEpiLogosTransition = (): [EpiLogosTransitionState, EpiLogosTransitionActions] => {
@@ -42,6 +50,10 @@ export const useEpiLogosTransition = (): [EpiLogosTransitionState, EpiLogosTrans
   // PNG position state
   const [imageMovedToCorner, setImageMovedToCorner] = useState(false);
   const [imageExpanded, setImageExpanded] = useState(false);
+  
+  // Auth modal state
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalType, setAuthModalType] = useState<'auth-signin' | 'auth-signup' | 'auth-oauth' | 'auth-success' | null>(null);
 
 
   const enterModal = useCallback(() => {
@@ -105,7 +117,33 @@ export const useEpiLogosTransition = (): [EpiLogosTransitionState, EpiLogosTrans
     // Step 2: After brief delay, shrink to center
     setTimeout(() => {
       setImageMovedToCorner(true);
+      
+      // Step 3: After PNG animation completes, show auth modal
+      setTimeout(() => {
+        setShowAuthModal(true);
+        setAuthModalType('auth-signin'); // Default to signin
+      }, 1800); // Wait for PNG shrink animation to complete
     }, 200); // Brief 200ms expansion phase
+  }, []);
+
+  const showSigninModal = useCallback(() => {
+    setShowAuthModal(true);
+    setAuthModalType('auth-signin');
+  }, []);
+
+  const showSignupModal = useCallback(() => {
+    setShowAuthModal(true);
+    setAuthModalType('auth-signup');
+  }, []);
+
+  const showAuthSuccessModal = useCallback(() => {
+    setShowAuthModal(true);
+    setAuthModalType('auth-success');
+  }, []);
+
+  const hideAuthModal = useCallback(() => {
+    setShowAuthModal(false);
+    setAuthModalType(null);
   }, []);
 
   const state: EpiLogosTransitionState = {
@@ -119,12 +157,18 @@ export const useEpiLogosTransition = (): [EpiLogosTransitionState, EpiLogosTrans
     logoVisible,
     imageMovedToCorner,
     imageExpanded,
+    showAuthModal,
+    authModalType,
   };
 
   const actions: EpiLogosTransitionActions = {
     enterModal,
     resetState,
     transitionToDashboard, // Dashboard transition action
+    showSigninModal,
+    showSignupModal,
+    showAuthSuccessModal,
+    hideAuthModal,
   };
 
   return [state, actions];

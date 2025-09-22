@@ -12,6 +12,7 @@ import { TextSwitch } from '../ui/TextSwitch';
 import { GlowParticles } from '../ui/GlowParticles';
 import { useEpiLogosTransition } from '@/hooks/ui-system/useEpiLogosTransition';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
+import { AuthModalContent } from '../auth/AuthModalContent';
 import { cn } from '../../utils/cn';
 
 export const EpiLogosPage: React.FC = () => {
@@ -24,6 +25,7 @@ export const EpiLogosPage: React.FC = () => {
     currentTransitionDirection,
     transitionToSubsystemsFromEpiLogos
   } = useInterPageTransition();
+  
   
   // Logo text state
   const [logoText] = useState("EPI : LOGOS");
@@ -40,7 +42,7 @@ export const EpiLogosPage: React.FC = () => {
   useEffect(() => {
     if (epiLogosState.isExpanded && epiLogosState.animationPhase === 'complete') {
       const coordTimer = setTimeout(() => {
-        setCoordinateTextVisible(true);
+        // setCoordinateTextVisible(true); // ✅ COMMENTED OUT: Keep coordinate text transparent
       }, 500); // Short delay after content appears
       return () => clearTimeout(coordTimer);
     } else {
@@ -85,7 +87,6 @@ export const EpiLogosPage: React.FC = () => {
   const handleEnterClick = () => {
     epiLogosActions.enterModal();
   };
-
 
   const handleDashboardClick = () => {
     epiLogosActions.transitionToDashboard();
@@ -286,7 +287,7 @@ export const EpiLogosPage: React.FC = () => {
                   )}
 
                 {/* Image - Direct render like ParamasivaImage */}
-                {epiLogosState.imageFullyVisible && (
+                {epiLogosState.imageFullyVisible && !epiLogosState.showAuthModal && (
                   <img 
                     src="/ui-system/modal-image.png" 
                     alt="Modal Design"
@@ -305,6 +306,30 @@ export const EpiLogosPage: React.FC = () => {
                       epiLogosState.imageMovedToCorner && "epi-png-corner-state"
                     )}
                   />
+                )}
+
+                {/* Auth Modal Content - Using existing working component */}
+                {epiLogosState.showAuthModal && epiLogosState.authModalType && (
+                  <div className="content-transition-container content-visible auth-modal-container">
+                    <div className="auth-modal-content">
+                      <AuthModalContent
+                      businessState={epiLogosState.authModalType}
+                      onStateChange={(newState) => {
+                        if (newState === 'auth-signin') {
+                          epiLogosActions.showSigninModal();
+                        } else if (newState === 'auth-signup') {
+                          epiLogosActions.showSignupModal();
+                        } else if (newState === 'auth-success') {
+                          // Handle auth success - transition to success modal state
+                          epiLogosActions.showAuthSuccessModal();
+                        } else if (newState === 'png-displayed') {
+                          // Back button clicked
+                          epiLogosActions.hideAuthModal();
+                        }
+                      }}
+                      />
+                    </div>
+                  </div>
                 )}
                 
                 {/* Coordinate Text */}

@@ -391,11 +391,12 @@ export class HTTPAPIClient implements APIClientAdapter {
     const state = this.generateRandomString(32);
     const nonce = this.generateRandomString(32);
 
-    // Store PKCE parameters for later use in completeOAuth
+    // Store PKCE parameters and callback URL for later use in completeOAuth
     sessionStorage.setItem(`oauth_${state}_code_verifier`, codeVerifier);
     sessionStorage.setItem(`oauth_${state}_nonce`, nonce);
+    sessionStorage.setItem(`oauth_${state}_callback_url`, params.returnUrl);
 
-    // Build Google OAuth URL directly
+    // Build Google OAuth URL directly - must use registered callback
     const redirectUri = `${window.location.origin}/auth/callback`;
     const scope = 'openid email profile';
 
@@ -449,17 +450,19 @@ export class HTTPAPIClient implements APIClientAdapter {
   }
 
   async completeOAuth(provider: string, params: OAuthCompleteRequest): Promise<OAuthCompleteResponse> {
-    // Retrieve stored PKCE parameters
+    // Retrieve stored PKCE parameters and callback URL
     const codeVerifier = sessionStorage.getItem(`oauth_${params.state}_code_verifier`);
     const nonce = sessionStorage.getItem(`oauth_${params.state}_nonce`);
+    const callbackUrl = sessionStorage.getItem(`oauth_${params.state}_callback_url`);
 
-    if (!codeVerifier || !nonce) {
+    if (!codeVerifier || !nonce || !callbackUrl) {
       throw new APIError('OAuth state not found or expired', 400, 'INVALID_STATE');
     }
 
     // Clean up stored parameters
     sessionStorage.removeItem(`oauth_${params.state}_code_verifier`);
     sessionStorage.removeItem(`oauth_${params.state}_nonce`);
+    sessionStorage.removeItem(`oauth_${params.state}_callback_url`);
 
     // Use the stateless JWT exchange endpoint
     const exchangeParams = {
