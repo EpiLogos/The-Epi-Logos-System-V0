@@ -64,21 +64,25 @@ export const PortfolioContainer: React.FC<PortfolioContainerProps> = ({
   return (
     <div className={cn(
       // Base portfolio container - conditional layout based on transition
-      isTransitioning && transitionDirection === 'to-subsystems' 
+      isTransitioning && transitionDirection === 'to-subsystems'
         ? "flex h-screen bg-ui-gray relative"  // Keep flex layout but allow relative positioning
         : pageType === 'quaternal-logic' && isModalExpanded
         ? "flex min-h-screen bg-ui-gray"  // Allow expansion beyond screen height for modal
         : "flex h-screen bg-ui-gray",     // Normal flex layout
-      
+
+      // CSS classes for transition targeting
+      pageType === 'paramasiva' && "paramasiva-page",
+      pageType === 'paramasiva' && isModalExpanded && "modal-expanded",
+
       // Page-specific styles (pure Tailwind equivalents)
       getPageStyles(),
-      
+
       // Transition states (pure Tailwind equivalents)
       getTransitionStyles(),
-      
+
       // Page fade-in animation - exact from original timing
       "animate-page-fade-in",
-      
+
       className
     )}>
       {children}

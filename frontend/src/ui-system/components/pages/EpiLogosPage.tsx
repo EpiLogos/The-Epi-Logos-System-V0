@@ -18,9 +18,11 @@ import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 
-export const EpiLogosPage: React.FC = () => {
+export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEntered = false }) => {
   // SEPARATED CONCERNS: Modal hook + Navigation hook (like ParamasivaPage)
-  const [epiLogosState, epiLogosActions] = useEpiLogosTransition();
+  const [epiLogosState, epiLogosActions] = useEpiLogosTransition({
+    initialMode: initialEntered ? 'post' : 'pre',
+  });
   const {
     whiteOverlayVisible,
     isTransitioning,
@@ -111,6 +113,11 @@ export const EpiLogosPage: React.FC = () => {
 
   const handleEnterClick = () => {
     epiLogosActions.enterModal();
+    try {
+      // Mark this browser session as having entered the app
+      document.cookie = 'epilogos_entered=1; path=/; samesite=lax';
+      sessionStorage.setItem('epilogos_entered', '1');
+    } catch {}
   };
 
   const handleDashboardClick = () => {

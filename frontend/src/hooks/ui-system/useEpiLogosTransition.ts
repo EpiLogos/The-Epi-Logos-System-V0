@@ -31,21 +31,32 @@ export interface EpiLogosTransitionActions {
   hideAuthModal: () => void;
 }
 
-export const useEpiLogosTransition = (): [EpiLogosTransitionState, EpiLogosTransitionActions] => {
+type InitialMode = 'pre' | 'post';
+
+interface UseEpiLogosTransitionOptions {
+  initialMode?: InitialMode;
+}
+
+export const useEpiLogosTransition = (
+  options: UseEpiLogosTransitionOptions = {}
+): [EpiLogosTransitionState, EpiLogosTransitionActions] => {
+  const initialMode: InitialMode = options.initialMode ?? 'pre';
   
   // Core modal state
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [animationPhase, setAnimationPhase] = useState<EpiLogosAnimationPhase>('initial');
+  const [isExpanded, setIsExpanded] = useState(initialMode === 'post');
+  const [animationPhase, setAnimationPhase] = useState<EpiLogosAnimationPhase>(
+    initialMode === 'post' ? 'complete' : 'initial'
+  );
   
   // Content visibility states
-  const [showEnterButton, setShowEnterButton] = useState(true);
-  const [showExpandedContent, setShowExpandedContent] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [imageVisible, setImageVisible] = useState(false);
-  const [imageFullyVisible, setImageFullyVisible] = useState(false);
+  const [showEnterButton, setShowEnterButton] = useState(initialMode !== 'post');
+  const [showExpandedContent, setShowExpandedContent] = useState(initialMode === 'post');
+  const [modalVisible, setModalVisible] = useState(initialMode === 'post');
+  const [imageVisible, setImageVisible] = useState(initialMode === 'post');
+  const [imageFullyVisible, setImageFullyVisible] = useState(initialMode === 'post');
   
   // Text visibility states
-  const [logoVisible, setLogoVisible] = useState(true);
+  const [logoVisible, setLogoVisible] = useState(initialMode !== 'post');
   
   // PNG position state
   const [imageMovedToCorner, setImageMovedToCorner] = useState(false);

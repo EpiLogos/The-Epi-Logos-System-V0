@@ -65,8 +65,8 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
       const height = panelMoved ? "h-[calc(60vh+20vh)]" : "h-[calc(60vh+35vh)]";
       
       if (isModalExpanded) {
-        // Modal expanded state - responsive to sidebar collapse
-        const widthClass = isSidebarCollapsed ? "paramasiva-modal-expanded" : "paramasiva-modal-normal";
+        // Modal expanded state - Tailwind utilities handle transitions
+        const widthClass = isSidebarCollapsed ? "w-[calc(100vw-74px-40px)]" : "w-[calc(100vw-420px-40px)]";
         return `absolute top-0 right-0 ${widthClass} h-[calc(100vh-40px)] m-[20px]`;
       } else {
         // Normal state - FIXED: Was missing bottom margin (mb-5)
@@ -89,22 +89,24 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
   };
 
   return (
-    <div 
+    <div
       className={cn(
         // Base styling
         "flex-shrink-0 relative overflow-hidden",
-        
+
+        // Removed: adjusted-container adjusted-main classes (pure Tailwind v4 approach)
+
         // Background color based on page type
         // pageType === 'subsystems' && "!bg-[#090a09]", // Black background for subsystems/grid only
         // pageType === 'epi-logos' && "bg-[#f5f5f5]", // Same background as sidebar
-        
+
         // Dimensions based on page type and state
         getDimensions(),
 
-        // TRANSITION CLASSES: Apply based on UPCOMING state, not current state
+        // TRANSITION CLASSES: Use custom utilities instead of inline CSS
         pageType === 'paramasiva' && !isTransitioning && (
-          // ALWAYS apply smooth transition - let state changes trigger the transition
-          "transition-[width,height,margin] duration-[800ms,800ms,800ms] ease-[cubic-bezier(0.19,1,0.22,1)] delay-[1000ms,200ms,200ms]"
+          // Use the working custom utility for modal transitions
+          isModalExpanded ? "transition-paramasiva-modal-expanded" : "transition-paramasiva-modal-collapsed"
         ),
         
         // Inter-page transitions use different timing based on direction

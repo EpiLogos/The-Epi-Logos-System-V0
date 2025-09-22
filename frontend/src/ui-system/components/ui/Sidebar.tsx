@@ -74,7 +74,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className={cn(
       // Base sidebar styling - FIXED: Remove overflow-hidden when modal expanded to allow scrolling
-      "bg-[#f5f5f5] px-10 py-8 flex flex-col justify-between flex-shrink-0 h-screen max-h-screen relative",
+      "bg-[#f5f5f5] px-10 py-8 flex flex-col justify-between flex-shrink-0 h-screen max-h-screen relative modal-sidebar-panel",
       // Only hide overflow when NOT in modal expanded state (to allow scrollable content)
       !isModalExpanded && "overflow-hidden",
 

@@ -1027,20 +1027,11 @@ body {
 
 /* Modal expansion - ANIMATE THE ACTUAL PANEL STRUCTURE */
 
-/* PHASE 2a: Height expansion of content area (after text fade-out) */
-.paramasiva-page.modal-expanded .adjusted-container {
-  height: calc(100vh - 40px);
-  margin: 20px;
-  z-index: 20;
-  transition: height var(--panel-height) var(--paramasiva-easing) var(--text-fade-out),
-              margin var(--panel-height) var(--paramasiva-easing) var(--text-fade-out);
-}
-
-/* PHASE 2b: Width expansion of right panel (after height) */  
-.paramasiva-page.modal-expanded .adjusted-main {
-  width: calc(100vw - 420px - 40px);
-  transition: width var(--panel-width) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height));
-}
+/* REMOVED: CSS classes that clash with Tailwind v4 utilities
+   Modal transitions now handled by pure Tailwind utilities:
+   - transition-paramasiva-modal-expanded
+   - transition-paramasiva-modal-collapsed
+*/
 
 /* Keep left sidebar visible during expansion but ensure it stays in place */
 .paramasiva-page.modal-expanded .expanded-left {

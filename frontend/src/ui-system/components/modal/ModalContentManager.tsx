@@ -44,7 +44,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
   if (businessState.startsWith('auth-')) {
     return (
       <div className={cn(
-        'content-transition-container',
+        'content-transition-container modal-content-panel',
         showContent ? 'content-visible' : 'content-hidden'
       )}>
         <AuthModalContent 
@@ -59,7 +59,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
   if (businessState.startsWith('account-')) {
     return (
       <div className={cn(
-        'content-transition-container',
+        'content-transition-container modal-content-panel',
         showContent ? 'content-visible' : 'content-hidden'
       )}>
         <AccountModalContent 
