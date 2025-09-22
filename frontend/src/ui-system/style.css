@@ -1,0 +1,1599 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background-color: #f5f5f5;
+}
+
+.portfolio-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+.left-sidebar {
+  width: 420px;
+  background-color: #f5f5f5;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid #e0e0e0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
+.logo-top {
+  font-size: 18px;
+  font-weight: normal;
+  letter-spacing: 2px;
+  color: #333;
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+.projects-logo {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  z-index: 10;
+}
+
+.projects-logo-image {
+  width: 100px;
+  height: 100px;
+  filter: brightness(80) contrast(1.2) grayscale(10%);
+  animation: brightnessPulse 8s ease-in-out infinite;
+}
+
+@keyframes logoFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes brightnessPulse {
+  0%, 100% {
+    filter: brightness(80) contrast(1.2) grayscale(10%);
+  }
+  50% {
+    filter: brightness(0.2) contrast(1.2) grayscale(100%);
+  }
+}
+
+@keyframes opacityPulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+@keyframes imageContentFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
+@keyframes pageTwoImageFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+
+.title-section h1 {
+  font-size: 18px;
+  font-weight: normal;
+  color: #333;
+  line-height: 1.3;
+  margin-bottom: 2px;
+  text-align: center;
+}
+
+.title-section h2 {
+  font-size: 18px;
+  font-weight: normal;
+  color: #333;
+  line-height: 1.3;
+  margin-bottom: 2px;
+}
+
+.portfolio-label {
+  font-size: 11px;
+  color: #666;
+  margin-top: 20px;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.footer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.link {
+  font-size: 12px;
+  color: #333;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+
+.link:hover {
+  color: #666;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.page-container {
+  position: relative;
+  height: 60vh;
+  overflow: hidden;
+  margin: 20px 20px 0 0;
+  background-color: #090a09;
+  transition: height 0.5s ease-out;
+}
+
+.page-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  transition: opacity 0.3s ease-in-out, filter 0.2s ease-in-out;
+  will-change: opacity, filter;
+  opacity: 1;
+}
+
+.page-content.active {
+  opacity: 1;
+}
+
+.page-content.inactive {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.page-content.transitioning {
+  pointer-events: none;
+}
+
+.page-content.blurring {
+  filter: blur(12px);
+}
+
+.page-content.fading-to-black {
+  background-color: #000000;
+  opacity: 1;
+}
+
+.image-placeholder {
+  height: 100%;
+  background-color: #090a09;
+  border: 2px solid #ccc;
+  position: relative;
+  overflow: hidden;
+}
+
+.image-placeholder::after {
+  opacity: 0;
+  animation: imageContentFadeIn 1.5s ease-in-out 0.8s forwards;
+}
+
+.page-two-layout {
+  display: flex;
+  background-color: #090a09;
+}
+
+.page-two-layout::before,
+.page-two-layout::after {
+  display: none !important;
+}
+
+.page-two-left {
+  width: 100%;
+  background-color: #090a09;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+  transition: height 0.6s ease-out, z-index 0s, padding 0.5s ease-out;
+}
+
+.page-two-left::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #090a09;
+  opacity: 0.15;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.page-two-right {
+  width: 50%;
+  background-color: #090a09;
+}
+
+.page-two-image {
+  width: 400px;
+  height: 400px;
+  object-fit: contain;
+  border-radius: 8px;
+  opacity: 0;
+  filter: contrast(3.5) brightness(1.4);
+  animation: pageTwoImageFadeIn 1.5s ease-in-out 0.8s forwards, opacityPulse 8s ease-in-out infinite;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.5s ease-out, filter 0.5s ease-out;
+}
+
+
+.image-placeholder canvas.waves-fade-in {
+  opacity: 1;
+}
+
+.particles-canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  z-index: 3 !important; /* Above waves (z-index: 1) but below other content */
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  filter: none !important;
+  /* Smooth fade back up when returning to normal state */
+  transition: opacity calc(var(--panel-height) + var(--panel-width)) cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+/* Waves canvas positioning */
+.image-placeholder canvas {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1 !important; /* Behind particles */
+  filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  pointer-events: none !important; /* Don't block icon hover */
+}
+
+/* Ensure waves canvas is specifically targeted for both main and paramasiva pages */
+.page-two-left canvas:not(.particles-canvas) {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1 !important; /* Behind particles */
+  filter: blur(2px);
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  pointer-events: none !important; /* Don't block icon hover */
+}
+
+.page-two-left canvas:not(.particles-canvas).waves-fade-in {
+  opacity: 1;
+}
+
+/* Waves fade out and blur during PHASE 1: Height expansion (0-300ms) */
+.paramasiva-page.modal-expanded canvas:not(.particles-canvas) {
+  opacity: 0 !important;
+  filter: blur(8px) !important;
+  transition: opacity var(--panel-height) var(--paramasiva-easing), 
+              filter var(--panel-height) var(--paramasiva-easing) !important; /* Synchronized with PHASE 1 */
+}
+
+/* Waves styling to match main index page */
+.paramasiva-page:not(.modal-expanded) canvas:not(.particles-canvas) {
+  opacity: 0; /* Start invisible */
+  filter: blur(2px); /* Match main index page blur */
+  transition: opacity 0.5s ease-in-out; /* Match main index page timing */
+}
+
+/* Waves fully visible after fade-in - match main index page style */
+.paramasiva-page:not(.modal-expanded) canvas:not(.particles-canvas).waves-fade-in {
+  opacity: 1 !important; /* Override and become visible */
+}
+
+/* Particles fade out immediately on modal expansion, then back in after canvas re-render */
+.paramasiva-page.modal-expanded .particles-canvas {
+  opacity: 0 !important; /* Immediate fade out like waves */
+  transition: opacity 300ms ease; /* Quick fade out */
+  animation: particles-fade-in-after-canvas-update 1000ms ease-in-out 3200ms forwards; /* Fade in after 3200ms (after canvas update) */
+}
+
+@keyframes particles-fade-in-after-canvas-update {
+  0% { opacity: 0; } /* Start invisible */
+  30% { opacity: 0.4; } /* Begin gentle fade in */
+  100% { opacity: 1; } /* Fully visible */
+}
+
+.debug-modal-top-left,
+.debug-modal-top-right,
+.debug-modal-bottom {
+  position: absolute;
+  background: none;
+  border: none;
+  padding: 15px;
+  color: white;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: normal;
+  line-height: 1.3;
+  opacity: 0;
+  transition: opacity 0.6s ease-in-out, transform 0.5s ease-out, top 0.5s ease-out, bottom 0.5s ease-out, left 0.5s ease-out, right 0.5s ease-out, width 0.5s ease-out;
+  pointer-events: none;
+  z-index: 100;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+.debug-modal-top-left {
+  top: 20px;
+  left: 20px;
+  width: 280px;
+  height: 120px;
+  transform: translateY(-10px);
+}
+
+.debug-modal-top-right {
+  top: 20px;
+  right: 20px;
+  width: 280px;
+  height: 140px;
+  transform: translateY(-10px);
+}
+
+.debug-modal-bottom {
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px) scale(1);
+  width: 60%;
+  height: 100px;
+}
+
+.debug-modal-top-left.visible,
+.debug-modal-top-right.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.debug-modal-bottom.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.page-two-left {
+  transition: border 0.3s ease-in-out;
+}
+
+.page-two-left.debug-active {
+  border: 1px solid rgba(128, 128, 128, 0.7);
+}
+
+/* Geometry annotations for shapes in the second page */
+.geometry-annotations {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-60%, -22%);
+  width: 80%;
+  height: 80%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.annotation-square,
+.annotation-torus {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: normal;
+  color: #f5f5f5;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  opacity: 0.8;
+  transition: opacity 0.3s ease, transform 0.5s ease;
+}
+
+.annotation-square {
+  top: 48%;
+  left: 38%;
+  transform: translate(-50%, -100%);
+}
+
+.annotation-torus {
+  top: 48%;
+  right: 22%;
+  transform: translate(50%, -100%);
+}
+
+/* Annotations fade during hover expansion */
+.page-container.expanded .annotation-square,
+.page-container.expanded .annotation-torus {
+  opacity: 0.5;
+  transform: scale(1.1);
+}
+
+/* REMOVED: Converted to Tailwind v4 utilities in index.css */
+
+.image-placeholder::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 58vh;
+  height: 58vh;
+  background-color: #090a09a6;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* COMMENTED OUT: Conflicting with Tailwind v4 implementation
+.image-placeholder::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('Gemini_Generated_Image_ctzwt7ctzwt7ctzw (1).png');
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: right center;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  animation: imageContentFadeIn 1.5s ease-in-out 0.8s forwards;
+  transition: opacity 300ms ease;
+}
+
+.image-placeholder.loaded::after {
+  animation: none;
+  opacity: 0.45;
+}
+
+.image-placeholder.loaded:hover::after {
+  opacity: 0.85;
+}
+*/
+
+.project-details {
+  background-color: #f5f5f5;
+  padding: 30px 40px;
+  border-top: 1px solid #e0e0e0;
+  position: relative;
+}
+
+
+.project-nav {
+  position: absolute;
+  scale: 1.8;
+  top: 30px;
+  right: 85px;
+  display: flex;
+  align-items: center;
+}
+
+.nav-arrows {
+  display: flex;
+  gap: 15px;
+  font-size: 16px;
+  color: #333;
+}
+
+.nav-arrows span {
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.2s ease;
+}
+
+.nav-arrows span:hover {
+  color: #666;
+}
+
+.project-info {
+  flex: 1;
+  margin-left: 0;
+}
+
+.project-info h3 {
+  font-size: 16px;
+  font-weight: normal;
+  color: #333;
+  margin-bottom: 5px;
+  letter-spacing: 1px;
+}
+
+.project-subtitle {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 25px;
+}
+
+.project-metadata {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  padding-top: 10px;
+}
+
+.metadata-item {
+  display: flex;
+  justify-content: flex-start;
+  gap: 30px;
+  width: 75%;
+}
+
+.label {
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.value {
+  font-size: 11px;
+  color: #333;
+  font-weight: normal;
+  letter-spacing: 1px;
+}
+
+/* Second page specific font sizes */
+.page-two-content .label {
+  font-size: 9.9px;
+  min-width: 120px;
+}
+
+.page-two-content .value {
+  font-size: 9.4px;
+  letter-spacing: 0.5px;
+  line-height: 1.357;
+}
+
+.page-two-content .project-metadata {
+  gap: 2px;
+}
+
+
+
+.page-two-content .project-info h3 {
+  margin-bottom: 5px;
+}
+
+
+/* REMOVED: Converted to coordinate-text-overlay utility in index.css */
+
+/* Carousel Section */
+.projects-section {
+  background-color: #f5f5f5;
+  min-height: 100vh;
+  padding: 0;
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-top: 60px;
+  position: relative;
+}
+
+.projects-container {
+  max-width: 1200px;
+  margin: 0;
+  padding: 0 50px;
+  margin-left: 50px;
+}
+
+.projects-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 60px;
+}
+
+.projects-content {
+  flex: 1;
+  max-width: 600px;
+}
+
+.projects-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 48px;
+  font-weight: normal;
+  color: #333;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.projects-description {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  letter-spacing: 0.5px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.carousel-controls {
+  display: flex;
+  gap: 15px;
+  position: relative;
+  top: -24px;
+  left: 24px;
+}
+
+.carousel-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #ccc;
+  background: transparent;
+  color: #333;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.carousel-btn:hover:not(:disabled) {
+  background-color: #333;
+  color: #fff;
+}
+
+.carousel-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.carousel-wrapper {
+  overflow: hidden;
+  width: 100%;
+  padding-left: 50px;
+}
+
+.carousel-container {
+  width: 100%;
+}
+
+.carousel-track {
+  display: flex;
+  transition: transform 0.4s ease;
+  gap: 20px;
+}
+
+.carousel-item {
+  min-width: 360px;
+  flex-shrink: 0;
+  margin-right: 20px;
+}
+
+.card {
+  position: relative;
+  height: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.card:hover {
+  transform: scale(1.02);
+}
+
+.card-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--bg-color), var(--bg-color-end));
+}
+
+.card-bg-1 {
+  --bg-color: #8db4d3;
+  --bg-color-end: #6a9ac7;
+}
+
+.card-bg-2 {
+  --bg-color: #a8c4e8;
+  --bg-color-end: #8bb1db;
+}
+
+.card-bg-3 {
+  --bg-color: #d4a5c7;
+  --bg-color-end: #c291b8;
+}
+
+.card-bg-4 {
+  --bg-color: #b8d4a5;
+  --bg-color-end: #a5c291;
+}
+
+.card-bg-5 {
+  --bg-color: #d4c7a5;
+  --bg-color-end: #c7b891;
+}
+
+.card-bg-6 {
+  --bg-color: #c7a5d4;
+  --bg-color-end: #b891c7;
+}
+
+.card-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 40px 30px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.4), rgba(0,0,0,0.7));
+  color: white;
+}
+
+.card-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 20px;
+  font-weight: normal;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+
+.card-description {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-bottom: 24px;
+  opacity: 0.95;
+  letter-spacing: 0.5px;
+}
+
+.card-link {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  transition: transform 0.3s ease;
+  font-weight: 500;
+}
+
+.card:hover .card-link {
+  transform: translateX(5px);
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background-color: #ccc;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.dot.active {
+  background-color: #333;
+}
+
+/* Paramasiva Transition Animation - Forward */
+.portfolio-container.paramasiva-transitioning {
+  overflow: hidden;
+}
+
+.portfolio-container.paramasiva-transitioning .left-sidebar {
+  width: calc(100vw - 420px); /* Expand to be 420px from right edge (mirror of original 420px from left) */
+  transition: width 800ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.portfolio-container.paramasiva-transitioning .main-content {
+  width: 420px; /* Contract to match original left panel width */
+  transition: width 800ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.portfolio-container.paramasiva-transitioning .page-container {
+  height: calc(60vh + 35vh); /* Expand to full expanded height */
+  transition: height 800ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* Reverse Transition Animation - Back to Index */
+.portfolio-container.reverse-transitioning {
+  overflow: hidden;
+}
+
+.portfolio-container.reverse-transitioning .left-sidebar {
+  width: 420px; /* Contract back to original left panel width */
+  transition: width 800ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.portfolio-container.reverse-transitioning .main-content {
+  width: calc(100vw - 420px); /* Expand back to original main content width */
+  transition: width 800ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.portfolio-container.reverse-transitioning .page-container {
+  height: 60vh; /* Contract back to original height */
+  transition: height 800ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* Force the height transition during reverse animation */
+.portfolio-container.reverse-transitioning .adjusted-container {
+  height: 60vh !important; /* Override Paramasiva height and return to original page height */
+  transition: height 800ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+/* Text blur out during transition */
+.portfolio-container.paramasiva-transitioning .project-title,
+.portfolio-container.paramasiva-transitioning .metadata-item,
+.portfolio-container.paramasiva-transitioning .page-counter {
+  opacity: 0;
+  filter: blur(10px);
+  transition: opacity 300ms ease, filter 300ms ease;
+}
+
+/* Image fade during transition */
+.portfolio-container.paramasiva-transitioning .image-placeholder::after {
+  opacity: 0 !important;
+  transition: opacity 400ms ease;
+}
+
+.portfolio-container.paramasiva-transitioning .page-two-image {
+  opacity: 0 !important;
+  filter: blur(8px) contrast(3.5) brightness(1.4);
+  transition: opacity 400ms ease, filter 400ms ease;
+}
+
+/* Paramasiva Page Final State */
+.paramasiva-page {
+  opacity: 0;
+  animation: paramasiva-page-fade-in 400ms ease-out 800ms forwards; /* Start after layout transition */
+}
+
+@keyframes paramasiva-page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+.paramasiva-page .expanded-left {
+  width: calc(100vw - 420px); /* Same as transition end state */
+  border-right: none; /* Remove vertical border */
+  border-bottom: 1px solid #e0e0e0; /* Add horizontal border instead */
+}
+
+.paramasiva-page .adjusted-main {
+  width: 420px; /* Same as transition end state */
+  flex: none; /* Override flex: 1 from .main-content */
+  transition: width calc(var(--panel-width) * 1.5) var(--gentle-easing) calc(var(--text-fade-out) + var(--panel-height) + 400ms); /* Delayed and slower horizontal shift */
+}
+
+.paramasiva-page .adjusted-container {
+  height: calc(60vh + 35vh); /* Start with expanded height, will be reduced with delay */
+  margin: 20px 20px 0 0;
+  transition: height var(--panel-height) var(--gentle-easing) var(--text-fade-out),
+              margin var(--panel-height) var(--gentle-easing) var(--text-fade-out); /* Smooth margin transition */
+}
+
+.paramasiva-page .adjusted-container.height-adjusted {
+  height: calc(60vh + 20vh); /* Final reduced height to reveal coordinate text */
+}
+
+.paramasiva-page .adjusted-layout {
+  height: 100%;
+}
+
+.paramasiva-page .adjusted-right-panel {
+  width: 100%;
+  height: 100%;
+  background-color: #090a09;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  position: relative;
+  z-index: 10; /* Above coordinate text so text appears beneath the panel */
+}
+
+/* Paramasiva overlay image */
+.paramasiva-overlay-image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1);
+  width: 600px;
+  height: 600px;
+  object-fit: contain;
+  opacity: 0;
+  filter: contrast(1) brightness(1.5) blur(0px);
+  z-index: 30; /* Well above particles and waves for clickability */
+  cursor: pointer;
+  /* REVERSE transitions - when .expanded class is removed (0.6x speed = much slower) */
+  transition: top calc(var(--icon-move) / 0.6) var(--gentle-easing),
+              left calc(var(--icon-move) / 0.6) var(--gentle-easing),
+              width calc(var(--icon-move) / 0.6) var(--gentle-easing),
+              height calc(var(--icon-move) / 0.6) var(--gentle-easing),
+              transform 300ms ease,
+              opacity 300ms ease,
+              filter 300ms ease;
+  animation: paramasiva-image-fade-in 1.5s ease-in-out 1.2s forwards; /* Fade in after panel adjusts */
+}
+
+/* Image hover effect - original centered state - smooth like subsystems page */
+.paramasiva-overlay-image:hover:not(.expanded) {
+  transform: translate(-50%, -50%) scale(1.05); /* Subtle scale like subsystems page */
+  opacity: 1; /* Simple opacity change like subsystems page */
+  filter: contrast(1) brightness(1.8) blur(0px); /* Subtle brightness increase */
+}
+
+/* Image when modal is expanded - EXPANSION-ONLY transitions */
+.paramasiva-overlay-image.expanded {
+  top: 40px; /* Distance from top matching proper bezeling */
+  left: 40px; /* Distance from left matching proper bezeling */
+  width: 120px; /* Fixed absolute size - tiny corner icon */
+  height: 120px; /* Fixed absolute size - tiny corner icon */
+  transform: none; /* Remove transform to fix positioning */
+  z-index: 35; /* Well above everything for clickability when expanded */
+  /* PHASE 2c: Icon position and size change simultaneously (after panels move) */
+  transition: top var(--icon-move) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height) + var(--panel-width) + 200ms), 
+              left var(--icon-move) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height) + var(--panel-width) + 200ms), 
+              width var(--icon-move) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height) + var(--panel-width) + 200ms), 
+              height var(--icon-move) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height) + var(--panel-width) + 200ms);
+}
+
+/* Remove hover effect when expanded to avoid positioning issues */
+.paramasiva-overlay-image.expanded:hover {
+  /* No hover effect in expanded state */
+}
+
+@keyframes paramasiva-image-fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.95);
+    filter: contrast(1.5) brightness(1.2) blur(3px);
+  }
+  to {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(1);
+    filter: contrast(1) brightness(1.5) blur(0px); /* Match base state for hover consistency */
+  }
+}
+
+/* SYSTEMATIC TRANSITION HIERARCHY */
+:root {
+  --paramasiva-easing: cubic-bezier(0.19, 1, 0.22, 1);
+  --gentle-easing: cubic-bezier(0.25, 0.1, 0.25, 1);
+  
+  /* Phase Order: Text Out → Panels Move → Text In */
+  --text-fade-out: 200ms; /* PHASE 1: All text fades out first */
+  --panel-height: 800ms; /* PHASE 2a: Panel height expansion */
+  --panel-width: 1000ms; /* PHASE 2b: Panel width expansion */
+  --icon-move: 600ms; /* PHASE 2c: Icon repositioning */
+  --icon-size: 500ms; /* PHASE 2d: Icon resizing */
+  --text-fade-in: 400ms; /* PHASE 3: New text fades in last */
+  
+  --hover-duration: 300ms;
+  --smooth-hover-duration: 800ms;
+}
+
+/* Modal expansion - ANIMATE THE ACTUAL PANEL STRUCTURE */
+
+/* PHASE 2a: Height expansion of content area (after text fade-out) */
+.paramasiva-page.modal-expanded .adjusted-container {
+  height: calc(100vh - 40px);
+  margin: 20px;
+  z-index: 20;
+  transition: height var(--panel-height) var(--paramasiva-easing) var(--text-fade-out),
+              margin var(--panel-height) var(--paramasiva-easing) var(--text-fade-out);
+}
+
+/* PHASE 2b: Width expansion of right panel (after height) */  
+.paramasiva-page.modal-expanded .adjusted-main {
+  width: calc(100vw - 420px - 40px);
+  transition: width var(--panel-width) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height));
+}
+
+/* Keep left sidebar visible during expansion but ensure it stays in place */
+.paramasiva-page.modal-expanded .expanded-left {
+  opacity: 1;
+  transition: opacity var(--phase2-width) var(--paramasiva-easing) var(--phase1-height);
+}
+
+/* Original page text color transitions */
+.project-title,
+.project-subtitle,
+.footer-links .link {
+  color: #333; /* Normal dark color */
+  transition: color 800ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Text fades to white during modal expansion */
+.project-title.text-fade-out,
+.project-subtitle.text-fade-out,
+.footer-links.text-fade-out .link {
+  color: #f5f5f5 !important; /* White (invisible) */
+}
+
+/* Logo color transitions - start white, fade to dark when expanded */
+.logo-top {
+  color: #333; /* Normal dark color */
+  opacity: 1; /* Start visible - let JS handle hiding during transitions */
+  transition: color 800ms cubic-bezier(0.25, 0.46, 0.45, 0.94), /* Longer, gentler for logo */
+              opacity 300ms ease; /* Quick opacity changes for hiding during text switches */
+}
+
+/* Logo fades to white (invisible) during transitions */
+.logo-top.text-fade-out {
+  color: #f5f5f5 !important; /* White (invisible) */
+}
+
+/* Logo shows dark when modal expanded and settled */
+.paramasiva-page.modal-expanded .logo-top.color-fade {
+  color: #333 !important; /* Dark color for "PARAMASIVA" */
+}
+
+/* Protect paramasiva text content from global fade operations */
+.paramasiva-page.modal-expanded .paramasiva-text-content,
+.paramasiva-page.modal-expanded .paramasiva-text-content * {
+  opacity: inherit !important;
+  filter: inherit !important;
+  transform: inherit !important;
+}
+
+/* Override any global text fade styles for paramasiva text when visible */
+.paramasiva-text-content.visible,
+.paramasiva-text-content.visible * {
+  opacity: 1 !important;
+  filter: blur(0px) !important;
+  transform: translateX(0) !important;
+}
+
+
+/* Paramasiva Modal */
+/* Paramasiva Left-side Text Content - replaces title section when expanded */
+.paramasiva-text-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: none; /* Completely remove from layout flow until ready */
+  width: 100%; /* Use full width of title-section container */
+  max-height: calc(100vh - 200px); /* Constrain height to viewport minus header/footer space */
+  padding-right: 8px; /* Less space for thinner scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 200, 200, 0.3) transparent;
+  scroll-behavior: smooth;
+}
+
+/* Webkit scrollbar styling for thinner, more translucent scrollbar */
+.paramasiva-text-content::-webkit-scrollbar {
+  width: 1px; /* Very thin scrollbar */
+}
+
+.paramasiva-text-content::-webkit-scrollbar-track {
+  background: transparent; /* Invisible track */
+}
+
+.paramasiva-text-content::-webkit-scrollbar-thumb {
+  background: rgba(200, 200, 200, 0.2); /* Very translucent thumb */
+  border-radius: 1px;
+}
+
+.paramasiva-text-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 200, 200, 0.159); /* Slightly more visible on hover */
+}
+
+.paramasiva-text-content.visible {
+  display: flex; /* Re-enter layout flow when visible */
+  flex-direction: column;
+}
+
+/* Target the actual text paragraphs - start invisible (white) */
+.paramasiva-text-body p {
+  color: #f5f5f5; /* Start as white (invisible against background) */
+  transition: color 1200ms cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Longer, gentler transition */
+}
+
+/* Color fade from white to dark - triggered after modal movement */
+.paramasiva-text-content.color-fade .paramasiva-text-body p {
+  color: #333; /* Final dark color */
+}
+
+/* Text fades to white (invisible) when closing modal - slow and gentle */
+.paramasiva-text-content.text-fade-out .paramasiva-text-body p {
+  color: #f5f5f5 !important; /* White (invisible) */
+  transition: color 1200ms cubic-bezier(0.25, 0.46, 0.45, 0.94) !important; /* Override with slower, gentler fade */
+}
+
+/* Reverse text animation when closing */
+.paramasiva-text-content:not(.visible) {
+  display: none; /* Remove from layout immediately when closing */
+  transition: all var(--phase5-modal-text) var(--paramasiva-easing);
+}
+
+.paramasiva-main-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: normal;
+  color: #333;
+  line-height: 1.3;
+  margin-bottom: 25px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.paramasiva-text-body {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #333;
+  letter-spacing: 0.5px;
+}
+
+.paramasiva-text-body p {
+  margin-bottom: 20px;
+  text-align: justify;
+}
+
+.paramasiva-text-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Initial state for text animation elements */
+.paramasiva-text-animate {
+  opacity: 0;
+  filter: blur(10px);
+}
+
+
+/* Text Generate Effect - preserve original styling */
+.project-title,
+.project-subtitle,
+.metadata-item,
+.page-counter {
+  opacity: 0;
+}
+
+/* Grid Coordinates Page - Override text visibility */
+.grid-coordinates-page .project-title,
+.grid-coordinates-page .project-subtitle {
+  opacity: 1;
+}
+
+/* REMOVED: coordinate-text-overlay classes - Now using pure Tailwind v4 @utility coordinate-text */
+
+/* QL Overview Modal */
+.ql-overview-modal {
+  position: absolute;
+  top: 12%;
+  left: 25%;
+  transform: translateX(-35%);
+  width: 52%;
+  max-width: 650px;
+  height: 80%;
+  max-height: 800px;
+  background-color: rgba(224, 224, 224, 0.1); /* Light grey with 10% opacity */
+  border: none;
+  border-radius: 0;
+  padding: 30px 25px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+  z-index: 50;
+  pointer-events: none;
+  overflow-y: auto;
+}
+
+.ql-overview-modal.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ql-modal-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 24px;
+  font-weight: normal;
+  color: #f5f5f5; /* Same off-white as main background */
+  text-align: center;
+  margin-bottom: 25px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.ql-modal-content {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; /* Reduced by 1 from 12px */
+  line-height: 1.6;
+  color: #f5f5f5; /* Same off-white as main background */
+  letter-spacing: 0.5px;
+}
+
+.ql-modal-content p {
+  margin-bottom: 16px;
+  text-align: justify;
+}
+
+.ql-modal-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* White fade overlay for page transitions */
+.white-fade-overlay {
+  position: fixed;
+  top: -5px; /* Slight overflow to ensure full coverage */
+  left: -5px;
+  width: calc(100vw + 10px);
+  height: calc(100vh + 10px);
+  background-color: #f5f5f5;
+  box-shadow: 0 0 0 5px #f5f5f5; /* Extra background coverage */
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms ease-out; /* Faster fade up to white */
+}
+
+.white-fade-overlay.active {
+  opacity: 1.0; /* Full opacity for complete coverage */
+  pointer-events: auto;
+}
+
+/* Transition out animation for going back to main */
+.portfolio-container.transitioning-out {
+  opacity: 0;
+  transform: scale(0.95);
+  filter: blur(4px);
+  transition: opacity 800ms ease, transform 800ms ease, filter 800ms ease;
+}
+
+/* Page fade-in animation */
+.portfolio-container.page-fade-in {
+  opacity: 0;
+  transform: translateY(15px);
+  animation: page-fade-in-anim 1200ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; /* Slower fade down from white */
+}
+
+@keyframes page-fade-in-anim {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0px);
+  }
+}
+
+
+.project-title span,
+.project-subtitle span,
+.metadata-item span,
+.page-counter span {
+  font-size: inherit;
+  font-weight: inherit;
+  font-family: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  line-height: inherit;
+  text-transform: inherit;
+  margin: inherit;
+  padding: inherit;
+}
+
+/* Grid Coordinates Page Styles */
+.grid-coordinates-page {
+  opacity: 0;
+  animation: paramasiva-page-fade-in 400ms ease-out 800ms forwards;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Small left sidebar */
+.grid-coordinates-page .grid-sidebar {
+  width: 300px;
+  background-color: #f5f5f5;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-right: 1px solid #e0e0e0;
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Full-width grid area */
+.grid-main-area {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 0;
+  height: 100vh;
+  background-color: #090a09;
+}
+
+/* Individual Panel Components */
+.coordinate-panel {
+  background-color: #090a09;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.222px solid #cacaca;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+/* Remove borders between adjacent panels for seamless look */
+.panel-1 {
+  border-left: none;
+}
+
+.panel-2 {
+  border-left: none;
+}
+
+.panel-3 {
+  border-top: none;
+}
+
+.panel-4 {
+  border-top: none;
+  border-left: none;
+}
+
+.panel-5 {
+  border-top: none;
+  border-left: none;
+}
+
+/* Coordinate Text for Each Panel */
+.panel-coordinate-text {
+  position: absolute;
+  bottom: 30px;
+  right: 40px;
+  font-size: 72px;
+  color: #666666;
+  letter-spacing: 0px;
+  font-weight: bold;
+  transform: scaleX(0.9);
+  transform-origin: right;
+  opacity: 0;
+  filter: blur(10px);
+  transition: opacity 800ms ease, filter 800ms ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.panel-coordinate-text.visible {
+  opacity: 1;
+  filter: blur(0px);
+}
+
+/* Center image styling for panels */
+.panel-center-image {
+  max-width: 60%;
+  max-height: 60%;
+  object-fit: contain;
+  opacity: 0.8;
+  transition: opacity 300ms ease;
+}
+
+.coordinate-panel:hover .panel-center-image {
+  opacity: 1;
+}
+
+/* Scaled up images for panels #3, #4, #5 */
+.panel-center-image.scaled-up {
+  transform: scale(1.3);
+}
+
+/* Grid Coordinates Transition Animation - Following Paramasiva Strategy */
+
+/* PHASE 1: PNG/Image blur and fade during transition with cosine brightness curve */
+.grid-coordinates-transitioning .paramasiva-overlay-image,
+.grid-coordinates-transitioning .panel-center-image {
+  opacity: 0.1 !important;
+  filter: blur(15px) brightness(8.0) !important;
+  transition: opacity calc(var(--panel-height) + var(--panel-width)) var(--gentle-easing) var(--text-fade-out),
+              filter calc(var(--panel-height) + var(--panel-width)) cubic-bezier(0.5, 0, 0.5, 1) var(--text-fade-out); /* Blur lasts until transition end */
+}
+
+/* PHASE 1: Waves and Particles quick blur-out to avoid stretching */
+.grid-coordinates-transitioning canvas:not(.particles-canvas),
+.grid-coordinates-transitioning .particles-canvas {
+  opacity: 0 !important;
+  filter: blur(8px) !important;
+  transition: opacity var(--text-fade-out) var(--paramasiva-easing),
+              filter var(--text-fade-out) var(--paramasiva-easing);
+}
+
+/* PHASE 2a: Height expansion of content area (after text fade-out) */
+.grid-coordinates-transitioning .adjusted-container {
+  height: 100vh !important;
+  margin: 0 !important;
+  z-index: 20;
+  transition: height var(--panel-height) var(--paramasiva-easing) var(--text-fade-out),
+              margin var(--panel-height) var(--paramasiva-easing) var(--text-fade-out);
+}
+
+/* PHASE 2b: Width expansion to grid layout (after height) */
+.grid-coordinates-transitioning .adjusted-main {
+  width: calc(100vw - 300px) !important;
+  transition: width var(--panel-width) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height));
+}
+
+/* Sidebar adjusts to grid coordinates width */
+.grid-coordinates-transitioning .left-sidebar {
+  width: 300px !important;
+  transition: width var(--panel-width) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height));
+}
+
+/* Panel content fills the expanded space */
+.grid-coordinates-transitioning .adjusted-right-panel {
+  width: 100%;
+  height: 100%;
+  transition: width var(--panel-width) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height)),
+              height var(--panel-height) var(--paramasiva-easing) var(--text-fade-out);
+}
+
+/* Layout container fills the space */
+.grid-coordinates-transitioning .adjusted-layout {
+  width: 100%;
+  height: 100%;
+  transition: width var(--panel-width) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-height)),
+              height var(--panel-height) var(--paramasiva-easing) var(--text-fade-out);
+}
+
+/* Reverse Animation: Grid Coordinates to Paramasiva */
+/* PHASE 1: Content blur-out - lasts until transition end */
+.paramasiva-reverse-transitioning .panel-coordinate-text {
+  opacity: 0 !important;
+  filter: blur(10px) !important;
+  transition: opacity calc(var(--panel-width) + var(--panel-height)) ease,
+              filter calc(var(--panel-width) + var(--panel-height)) ease;
+}
+
+.paramasiva-reverse-transitioning .panel-center-image {
+  opacity: 0 !important;
+  filter: blur(12px) brightness(0.3) !important;
+  transition: opacity calc(var(--panel-width) + var(--panel-height)) ease,
+              filter calc(var(--panel-width) + var(--panel-height)) ease;
+}
+
+/* PHASE 2: Panel width contraction to Paramasiva size (from screenshot) */
+.paramasiva-reverse-transitioning .grid-main-area {
+  width: 420px !important;
+  height: calc(73vh + 20.75vh) !important;
+  margin: 35px 20px 105px 0 !important; /* Increased top and bottom margins for better centering */
+  transition: width var(--panel-width) var(--paramasiva-easing) var(--text-fade-out),
+              height var(--panel-height) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-width)),
+              margin var(--panel-height) var(--paramasiva-easing) calc(var(--text-fade-out) + var(--panel-width));
+}
+
+.paramasiva-reverse-transitioning .grid-sidebar {
+  width: calc(100vw - 420px) !important;
+  transition: width var(--panel-width) var(--paramasiva-easing) var(--text-fade-out);
+}
+
+@media (max-width: 768px) {
+  .portfolio-container {
+    flex-direction: column;
+  }
+
+  .left-sidebar {
+    width: 100%;
+    padding: 20px;
+  }
+
+  .project-details {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .project-info {
+    margin-left: 0;
+  }
+
+  .page-counter {
+    position: static;
+  }
+
+  .projects-container {
+    padding: 0 20px;
+  }
+
+  .projects-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .projects-title {
+    font-size: 32px;
+  }
+
+  .carousel-item {
+    min-width: 280px;
+  }
+
+  .carousel-controls {
+    display: none;
+  }
+
+  /* Grid responsive adjustments */
+  .grid-coordinates-page {
+    flex-direction: column;
+  }
+
+  .grid-coordinates-page .grid-sidebar {
+    width: 100%;
+    height: auto;
+    padding: 20px;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .grid-main-area {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    height: calc(100vh - 200px);
+  }
+
+  .panel-coordinate-text {
+    font-size: 48px;
+    bottom: 20px;
+    right: 25px;
+  }
+}

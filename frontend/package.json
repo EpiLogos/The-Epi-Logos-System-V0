@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.12.4",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-accessible-icon": "^1.1.7",
     "@radix-ui/react-alert-dialog": "^1.1.15",
