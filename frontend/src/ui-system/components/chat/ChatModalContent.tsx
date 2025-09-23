@@ -40,7 +40,7 @@ export const ChatModalContent: React.FC<ChatModalContentProps> = ({ onStateChang
   };
 
   return (
-    <div className="h-full flex flex-col py-6 px-4">
+    <div className="h-full flex flex-col py-6 px-4 text-white">
       {/* Back to Dashboard */}
       <div className="mb-3">
         <button
@@ -56,7 +56,7 @@ export const ChatModalContent: React.FC<ChatModalContentProps> = ({ onStateChang
       <div className="mb-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-ui-panel font-mono text-base">Chat</h2>
+            <h2 className="text-white font-mono text-base">Chat</h2>
             <p className="text-white/70 font-sans text-xs">
               Model: {chat.currentModel || '—'} • Persona: {chat.currentPersona}
             </p>
@@ -109,7 +109,7 @@ export const ChatModalContent: React.FC<ChatModalContentProps> = ({ onStateChang
                       </span>
                     )}
                   </div>
-                  <div className="whitespace-pre-wrap">{m.content}</div>
+                  <div className="whitespace-pre-wrap text-white">{m.content}</div>
                 </div>
               </div>
             ))}
@@ -118,7 +118,7 @@ export const ChatModalContent: React.FC<ChatModalContentProps> = ({ onStateChang
                 <div className="bg-black/40 border border-white/25 rounded p-2">
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white/70" />
-                    <span className="text-white/70 text-xs">{chat.streamingEnabled ? 'Streaming…' : 'Processing…'}</span>
+                    <span className="text-white text-xs">{chat.streamingEnabled ? 'Streaming…' : 'Processing…'}</span>
                   </div>
                 </div>
               </div>

@@ -1149,6 +1149,11 @@ html, body {
   to { transform: rotate(360deg); }
 }
 
+@keyframes dashboardCircleRotateReverse {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
 /* Phase offsets via negative animation delays for stagger */
 .dashboard-circle-phase-0 { animation-delay: 0s; }
 .dashboard-circle-phase-60 { animation-delay: -2s; }
@@ -1156,6 +1161,14 @@ html, body {
 .dashboard-circle-phase-180 { animation-delay: -6s; }
 .dashboard-circle-phase-240 { animation-delay: -8s; }
 .dashboard-circle-phase-300 { animation-delay: -10s; }
+
+/* Phase offsets for reverse rotation - scaled for 60s duration (60/12 = 5x longer delays) */
+.dashboard-glass-phase-0 { animation-delay: 0s; }
+.dashboard-glass-phase-60 { animation-delay: -10s; }
+.dashboard-glass-phase-120 { animation-delay: -20s; }
+.dashboard-glass-phase-180 { animation-delay: -30s; }
+.dashboard-glass-phase-240 { animation-delay: -40s; }
+.dashboard-glass-phase-300 { animation-delay: -50s; }
 
 /* Match epi-png gentle waves (brightness + size pulsing) */
 @utility dashboard-gentle-waves {
@@ -1165,6 +1178,11 @@ html, body {
 /* Rotation only — apply to wrapper to avoid transform conflicts with waves */
 @utility dashboard-rotate {
   animation: dashboardCircleRotate 12s linear infinite;
+}
+
+/* Reverse rotation for glass overlay - much slower, opposite direction */
+@utility dashboard-rotate-reverse {
+  animation: dashboardCircleRotateReverse 60s linear infinite;
 }
 
 /* Brightness + size waves — apply to inner img to avoid transform overrides */
@@ -1684,3 +1702,17 @@ html, body {
 .auth-modal-container .flex-1::-webkit-scrollbar-thumb:hover {
   background: rgba(200, 200, 200, 0.5);
 }
+/* Subsystems → Epi‑Logos: grid margin/height transition */
+@utility transition-subsys-epilogos-grid {
+  transition: height 44400ms cubic-bezier(0.19, 1, 0.22, 1) 400ms,
+              margin 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms;
+}
+
+/* Subsystems → Epi‑Logos: sidebar width transition (delayed) */
+@utility transition-subsys-epilogos-sidebar {
+  transition: width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 600ms;
+}
+
+/* Subsystems → Epi‑Logos: grid state values */
+@utility state-grid-height-0 { height: 0px; }
+@utility state-grid-margin-20 { margin: 20px; }

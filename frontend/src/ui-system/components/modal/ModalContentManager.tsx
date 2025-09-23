@@ -10,6 +10,7 @@ import { type EpiLogosBusinessState, type AccountBusinessState, type AuthBusines
 import { DashboardModalContent } from '../dashboard/DashboardModalContent';
 import { useModalContentTransition } from '../../hooks/useContentTransition';
 import { ChatModalContent } from '../chat/ChatModalContent';
+import { SplashCursor } from '@/components/splash-cursor';
 
 interface ModalContentManagerProps {
   businessState: EpiLogosBusinessState;
@@ -64,7 +65,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         <motion.div
           key="dashboard"
           className={cn(
-            'content-transition-container modal-content-panel',
+            'content-transition-container modal-content-panel relative',
             contentTransitionState.contentVisible ? 'content-visible' : 'content-hidden'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
@@ -72,7 +73,29 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
           exit={{ opacity: 0, filter: 'blur(4px)' }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
-          <DashboardModalContent onStateChange={onStateChange} />
+          {/* Subtle Splash Cursor Effect - Full modal coverage */}
+          <div className="absolute inset-0 pointer-events-none z-0" style={{ opacity: 0.6, filter: 'grayscale(100%)' }}>
+            <SplashCursor
+              SIM_RESOLUTION={64}
+              DYE_RESOLUTION={720}
+              DENSITY_DISSIPATION={4.0}
+              VELOCITY_DISSIPATION={3.0}
+              PRESSURE={0.05}
+              PRESSURE_ITERATIONS={15}
+              CURL={2}
+              SPLAT_RADIUS={0.15}
+              SPLAT_FORCE={3000}
+              SHADING={false}
+              COLOR_UPDATE_SPEED={5}
+              BACK_COLOR={{ r: 0, g: 0, b: 0 }}
+              TRANSPARENT={true}
+            />
+          </div>
+
+          {/* Dashboard content with proper z-index */}
+          <div className="relative z-10">
+            <DashboardModalContent onStateChange={onStateChange} />
+          </div>
         </motion.div>
       </AnimatePresence>
     );

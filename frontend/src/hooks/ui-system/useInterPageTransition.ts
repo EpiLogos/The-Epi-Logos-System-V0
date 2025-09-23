@@ -398,17 +398,12 @@ export const useInterPageTransition = () => {
         currentTransitionDirection: 'subsystems-to-epilogos'
       }));
 
-      // PHASE 2a: Height morph toward Epi-Logos footprint
+      // PHASE 2: Height morph toward Epi-Logos footprint
       const heightTimer = setTimeout(() => {
         setState(prev => ({ ...prev, heightMorphStarted: true }));
       }, 200);
 
-      // PHASE 2b: Width morph to Epi-Logos footprint
-      const widthTimer = setTimeout(() => {
-        setState(prev => ({ ...prev, widthMorphStarted: true }));
-      }, 1200);
-
-      // PHASE 3: White fade + navigation after morph completes
+      // PHASE 3: White fade + navigation after height morph
       const navigationTimer = setTimeout(() => {
         setState(prev => ({ ...prev, whiteOverlayVisible: true }));
 
@@ -417,9 +412,9 @@ export const useInterPageTransition = () => {
         }, 650);
 
         timerRefs.current.push(finalNavigationTimer);
-      }, 2000);
+      }, 1200);
 
-      timerRefs.current.push(heightTimer, widthTimer, navigationTimer);
+      timerRefs.current.push(heightTimer, navigationTimer);
     }),
 
     transitionToParamasivaFromQuaternal: (() => {

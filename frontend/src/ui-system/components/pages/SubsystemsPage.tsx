@@ -143,20 +143,23 @@ export const SubsystemsPage: React.FC = () => {
       <PageFadeIn>
         <div className={cn(
           "flex h-screen bg-[#f5f5f5]",
-          // CENTERING: When transitioning, right side becomes centered flex container
-          isTransitioning && "justify-center items-center"
+          // Only center for subsystems → paramasiva; keep normal flow for epi-logos
+          isTransitioning && currentTransitionDirection === 'subsystems-to-paramasiva' && "justify-center items-center"
         )}>
       {/* Sidebar - PURE TAILWIND like ContentPanel */}
       <div 
         className={cn(
           "bg-[#f5f5f5] px-10 py-8 flex flex-col justify-between border-r border-[#e0e0e0] h-screen max-h-screen overflow-hidden flex-shrink-0",
-          // Width changes like modal: normal → expanded
-          !isTransitioning ? "w-[300px]" : "w-[calc(100vw-420px)]"
-        )}
-        style={{
-          // Clean transition like ContentPanel: width after height completes
-          transition: isTransitioning ? 'width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 1000ms' : 'none'
-        }}>
+          // Sidebar width per route
+          currentTransitionDirection === 'subsystems-to-epilogos' && isTransitioning && "transition-subsys-epilogos-sidebar",
+          currentTransitionDirection === 'subsystems-to-epilogos' && isTransitioning
+            ? (heightMorphStarted ? "w-[420px]" : "w-[300px]")
+            : (!isTransitioning
+                ? "w-[300px]"
+                : currentTransitionDirection === 'subsystems-to-paramasiva'
+                ? "w-[calc(100vw-420px)]"
+                : "w-[300px]")
+        )}>
         {/* Logo */}
         <TextAnimate 
           visible={!textFadeStarted}
@@ -220,24 +223,22 @@ export const SubsystemsPage: React.FC = () => {
       {/* Grid Area - PURE TAILWIND like ContentPanel */}
       <div
         className={cn(
-          "grid grid-cols-3 grid-rows-2 gap-0 bg-[#090a09]",
-          // Default grid footprint
-          !isTransitioning
-            ? "w-[calc(100vw-300px)] h-screen"
-            : "w-[420px] h-[calc(73vh+20.75vh)] mt-5 mr-5 mb-0 ml-0",
-
-          // Subsystems → Epi‑Logos: apply base transition and final target geometry
-          isTransitioning && currentTransitionDirection === 'subsystems-to-epilogos' && [
-            "transition-subsystems-to-epilogos",
-            "state-epilogos-target-panel"
-          ]
+          'grid grid-cols-3 grid-rows-2 gap-0 bg-[#090a09]',
+          // Apply margin/height transition only for epi-logos route
+          currentTransitionDirection === 'subsystems-to-epilogos' && isTransitioning && 'transition-subsys-epilogos-grid',
+          // For epi-logos route, keep flexible width so it follows sidebar smoothly (no hard cuts)
+          currentTransitionDirection === 'subsystems-to-epilogos'
+            ? [
+                'flex-1 h-screen',
+                // Collapse height from the beginning of the transition
+                isTransitioning && 'state-grid-height-0',
+                // Apply final margin at morph start
+                heightMorphStarted && 'state-grid-margin-20',
+              ]
+            : (!isTransitioning
+                ? 'w-[calc(100vw-300px)] h-screen'
+                : 'w-[420px] h-[calc(73vh+20.75vh)] mt-5 mr-5 mb-0 ml-0')
         )}
-        style={{
-          // Avoid inline transition when using base utility
-          transition: isTransitioning && currentTransitionDirection !== 'subsystems-to-epilogos'
-            ? 'all 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms'
-            : 'none'
-        }}
       >
         {subsystemPanels.map((panel) => (
           <SubsystemPanel

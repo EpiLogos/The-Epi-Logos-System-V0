@@ -6,6 +6,7 @@ import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 import { DashboardGrid } from './DashboardGrid';
 
+
 interface DashboardModalContentProps {
   onStateChange: (state: EpiLogosBusinessState) => void;
 }
@@ -14,9 +15,10 @@ export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ on
   const { user, signOut } = useAuth();
 
   return (
-    <div className="dashboard-modal-container pt-6 pb-0 px-4 max-w-4xl mx-auto">
+    <div className="dashboard-modal-container pt-6 pb-0 px-4 max-w-4xl mx-auto relative">
+
       {/* Header */}
-      <div className="dashboard-header mb-8 text-center">
+      <div className="dashboard-header mb-8 text-center relative z-10">
         <h1 className="text-2xl font-mono text-ui-panel mb-2">
           Welcome, {user?.firstName || user?.name || 'User'}
         </h1>
@@ -24,10 +26,12 @@ export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ on
       </div>
 
       {/* Grid */}
-      <DashboardGrid onNavigate={onStateChange} />
+      <div className="relative z-10">
+        <DashboardGrid onNavigate={onStateChange} />
+      </div>
 
       {/* Footer */}
-      <div className="dashboard-footer mt-12 pt-4 border-t border-ui-coord-text/20 text-center">
+      <div className="dashboard-footer mt-12 pt-4 border-t border-ui-coord-text/20 text-center relative z-10">
         <button
           onClick={() => {
             void signOut().then(() => onStateChange('auth-signin'));

@@ -3,6 +3,7 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
+import CircularGlassOverlay from './CircularGlassOverlay';
 
 interface DashboardCircleProps {
   id: string;
@@ -36,28 +37,47 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
       type="button"
       aria-label={label}
       className={cn(
-        'dashboard-circle-container relative flex flex-col items-center justify-center w-36 min-h-36 mx-auto outline-none',
+        'dashboard-circle-container relative isolate flex flex-col items-center justify-center w-36 min-h-36 mx-auto outline-none',
         enabled ? 'cursor-pointer' : 'cursor-default',
       )}
       onClick={handleClick}
       disabled={!enabled}
     >
-      <div
-        className={cn(
-          'dashboard-circle-wrapper relative z-0 w-28 h-28 rounded-full overflow-hidden',
-          'dashboard-circle-base',
-          'dashboard-rotate',
-          enabled && 'dashboard-circle-hover',
-          !enabled && 'dashboard-circle-disabled',
-          phaseClass,
-        )}
-      >
-        <img src={image} alt={`${label} Dashboard Circle`} className="w-full h-full object-contain dashboard-waves" />
+      {/* Container for both rotating PNG and static glass overlay */}
+      <div className="relative w-28 h-28">
+        {/* Rotating PNG container */}
+        <div
+          className={cn(
+            'dashboard-circle-wrapper relative z-0 w-28 h-28 rounded-full overflow-hidden',
+            'dashboard-circle-base',
+            'dashboard-rotate',
+            enabled && 'dashboard-circle-hover',
+            !enabled && 'dashboard-circle-disabled',
+            phaseClass,
+          )}
+        >
+          <img src={image} alt={`${label} Dashboard Circle`} className="w-full h-full object-contain dashboard-waves" />
+        </div>
+
+        {/* Counter-rotating glass overlay - rotates opposite to PNG */}
+        <CircularGlassOverlay
+          size={112} // w-28 h-28 = 112px
+          backgroundOpacity={0.15}
+          brightness={enabled ? 60 : 40}
+          opacity={enabled ? 0.85 : 0.95}
+          blur={8}
+          saturation={enabled ? 1.2 : 0.8}
+          enableRotation={true}
+          rotationPhase={rotationPhase}
+          className="z-10"
+        />
       </div>
       <span
         className={cn(
           'relative z-10 mt-3 text-sm font-mono tracking-wide',
-          enabled ? 'text-ui-panel' : 'text-ui-coord-text',
+          enabled
+            ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]'
+            : 'text-ui-coord-text',
         )}
       >
         {label}
