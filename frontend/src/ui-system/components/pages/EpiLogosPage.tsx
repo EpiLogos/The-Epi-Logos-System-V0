@@ -126,7 +126,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
     
     // Set the appropriate business state based on authentication
     if (isAuthenticated) {
-      setBusinessState('account-profile');
+      setBusinessState('dashboard');
     } else {
       setBusinessState('auth-signin');
     }
@@ -310,13 +310,13 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                   {particlesVisible && (
                     <GlowParticles
                       isVisible={particlesVisible}
-                      particleCount={50}  
+                      particleCount={100}
                       baseHue={180}
                       monochrome={true}
                       mode="default"
                       saturation={120}
                       lightness={70}
-                      radiusScale={0.6}
+                      radiusScale={0.3}
                       parentRef={modalPanelRef}
                       showDebug={false}
                       scaleOnHover={false}
@@ -365,6 +365,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                     imageMovedToCorner={epiLogosState.imageMovedToCorner}
                     imageExpanded={epiLogosState.imageExpanded}
                     showContent={epiLogosState.showAuthModal}
+                    modalExpansionComplete={epiLogosState.animationPhase === 'complete'}
                   />
                 )}
                 

@@ -1127,6 +1127,42 @@ html, body {
   transition: all 300ms ease;
 }
 
+/* DASHBOARD ANIMATION UTILITIES - Match epi-png system */
+@utility dashboard-circle-base {
+  @apply transition-all duration-300 ease-out opacity-90;
+  animation: dashboardCircleRotate 12s linear infinite;
+  transform-origin: center;
+}
+
+@utility dashboard-circle-hover {
+  &:hover {
+    @apply scale-110 opacity-90;
+  }
+}
+
+@utility dashboard-circle-disabled {
+  @apply opacity-60 cursor-not-allowed;
+  filter: grayscale(0.6) brightness(0.7);
+}
+
+@keyframes dashboardCircleRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Phase offsets via negative animation delays for stagger */
+.dashboard-circle-phase-0 { animation-delay: 0s; }
+.dashboard-circle-phase-60 { animation-delay: -2s; }
+.dashboard-circle-phase-120 { animation-delay: -4s; }
+.dashboard-circle-phase-180 { animation-delay: -6s; }
+.dashboard-circle-phase-240 { animation-delay: -8s; }
+.dashboard-circle-phase-300 { animation-delay: -10s; }
+
+/* Match epi-png gentle waves (brightness + size pulsing) */
+@utility dashboard-gentle-waves {
+  animation: brightness-wave 8s ease-in-out infinite, size-wave 4s ease-in-out infinite;
+}
+
 /* ================= PROJECTS CAROUSEL VARIANT UTILITIES ================= */
 @utility projects-carousel-container {
   max-width: 1354px;
@@ -1382,39 +1418,173 @@ html, body {
   opacity: 0;
 }
 
-/* AUTH MODAL UTILITIES - updated to use modal content font */
+/* AUTH MODAL UTILITIES - updated for scrollable layout */
 .auth-modal-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 40px;
   color: var(--color-ui-panel);
   font-family: var(--font-modal-content);
-  max-width: 500px;
-  margin: 0 auto;
+  /* Remove fixed centering and padding - handled by inner wrapper */
 }
 
 .auth-form-input {
   background: rgba(245, 245, 245, 0.1);
   border: 1px solid var(--color-ui-coord-text);
-  color: var(--color-ui-panel);
+  color: #f5f5f5; /* Light text for visibility */
   padding: 12px 16px;
   font-family: var(--font-modal-content);
   font-size: 14px;
   border-radius: 4px;
   width: 100%;
-  min-width: 320px;
+  min-width: 280px; /* Reduced for better name field sizing */
   margin-bottom: 16px;
-  transition: border-color 200ms ease, background-color 200ms ease;
+  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease;
 }
 
 .auth-form-input:focus {
   border-color: var(--color-ui-panel);
   background: rgba(245, 245, 245, 0.15);
+  color: #ffffff; /* Bright white text on focus */
   outline: none;
+}
+
+.auth-form-input:hover {
+  background: rgba(245, 245, 245, 0.12);
+  color: #f5f5f5; /* Maintain light text on hover */
+}
+
+.auth-form-input::placeholder {
+  color: rgba(245, 245, 245, 0.6); /* Light placeholder text */
+  transition: color 200ms ease;
+}
+
+.auth-form-input:focus::placeholder {
+  color: rgba(255, 255, 255, 0.7); /* Brighter placeholder on focus */
+}
+
+/* NAME FIELD SPECIFIC STYLING - Fix spacing and sizing */
+.auth-name-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px; /* Proper spacing between name fields */
+  margin-bottom: 16px;
+}
+
+.auth-name-input {
+  background: rgba(245, 245, 245, 0.1);
+  border: 1px solid var(--color-ui-coord-text);
+  color: #f5f5f5;
+  padding: 12px 16px;
+  font-family: var(--font-modal-content);
+  font-size: 14px;
+  border-radius: 4px;
+  width: 100%;
+  min-width: 140px; /* Smaller min-width for name fields */
+  margin-bottom: 0; /* Remove individual margin - handled by grid gap */
+  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease;
+}
+
+.auth-name-input:focus {
+  border-color: var(--color-ui-panel);
+  background: rgba(245, 245, 245, 0.15);
+  color: #ffffff;
+  outline: none;
+}
+
+.auth-name-input:hover {
+  background: rgba(245, 245, 245, 0.12);
+  color: #f5f5f5;
+}
+
+.auth-name-input::placeholder {
+  color: rgba(245, 245, 245, 0.6);
+  transition: color 200ms ease;
+}
+
+.auth-name-input:focus::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* PASSWORD FIELD SPECIFIC STYLING - Fix icon interference */
+.auth-password-input {
+  background: rgba(245, 245, 245, 0.1);
+  border: 1px solid var(--color-ui-coord-text);
+  color: #f5f5f5;
+  padding: 12px 48px 12px 16px; /* Extra right padding for eye icon */
+  font-family: var(--font-modal-content);
+  font-size: 14px;
+  border-radius: 4px;
+  width: 100%;
+  min-width: 280px;
+  margin-bottom: 16px;
+  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease;
+}
+
+.auth-password-input.has-left-icon {
+  padding-left: 48px; /* Extra left padding when lock icon is present */
+}
+
+.auth-password-input:focus {
+  border-color: var(--color-ui-panel);
+  background: rgba(245, 245, 245, 0.15);
+  color: #ffffff;
+  outline: none;
+}
+
+.auth-password-input:hover {
+  background: rgba(245, 245, 245, 0.12);
+  color: #f5f5f5;
+}
+
+.auth-password-input::placeholder {
+  color: rgba(245, 245, 245, 0.6);
+  transition: color 200ms ease;
+}
+
+.auth-password-input:focus::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* EMAIL FIELD SPECIFIC STYLING - Match password field improvements */
+.auth-email-input {
+  background: rgba(245, 245, 245, 0.1);
+  border: 1px solid var(--color-ui-coord-text);
+  color: #f5f5f5;
+  padding: 12px 16px;
+  font-family: var(--font-modal-content);
+  font-size: 14px;
+  border-radius: 4px;
+  width: 100%;
+  min-width: 280px;
+  margin-bottom: 16px;
+  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease;
+}
+
+.auth-email-input.has-left-icon {
+  padding-left: 48px; /* Extra left padding when envelope icon is present */
+}
+
+.auth-email-input:focus {
+  border-color: var(--color-ui-panel);
+  background: rgba(245, 245, 245, 0.15);
+  color: #ffffff;
+  outline: none;
+}
+
+.auth-email-input:hover {
+  background: rgba(245, 245, 245, 0.12);
+  color: #f5f5f5;
+}
+
+.auth-email-input::placeholder {
+  color: rgba(245, 245, 245, 0.6);
+  transition: color 200ms ease;
+}
+
+.auth-email-input:focus::placeholder {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .auth-form-button {
@@ -1481,4 +1651,28 @@ html, body {
   padding: 1.5rem;
   margin: 0 auto;
   max-width: 440px;
+}
+
+/* AUTH MODAL SCROLLBAR STYLING - Match account modal pattern */
+.auth-modal-container .flex-1 {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(200, 200, 200, 0.3) transparent;
+  scroll-behavior: smooth;
+}
+
+.auth-modal-container .flex-1::-webkit-scrollbar {
+  width: 6px;
+}
+
+.auth-modal-container .flex-1::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.auth-modal-container .flex-1::-webkit-scrollbar-thumb {
+  background: rgba(200, 200, 200, 0.3);
+  border-radius: 3px;
+}
+
+.auth-modal-container .flex-1::-webkit-scrollbar-thumb:hover {
+  background: rgba(200, 200, 200, 0.5);
 }

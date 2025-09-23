@@ -24,6 +24,7 @@ from backend.epi_logos_system.users.models import (
 )
 from backend.epi_logos_system.users.services import UserService
 from backend.epi_logos_system.auth.services.jwt_service import JWTService
+from backend.epi_logos_system.auth.services.password_service import PasswordService
 # TODO: Import billing services once they're migrated
 # from backend.epi_logos_system.billing.services import stripe_service
 from backend.epi_logos_system.users.services.billing_service import stripe_service
@@ -207,10 +208,38 @@ async def login_user(
         if not validation_result.is_valid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail={"message": "Validation failed", "errors": validation_result.errors}
+                detail={"message": "Validation failed", "code": "validation_error", "errors": validation_result.errors}
             )
-        
-        # Authenticate user
+
+        # Specific error detection: check existence and password separately
+        # 1) Check if user exists
+        user = await user_service.get_user_by_email(login_data.email)
+        if not user:
+            logger.info(f"Login failed - user not found: {login_data.email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"code": "user_not_found", "message": "No account found with this email"}
+            )
+
+        # 2) Ensure password auth is available for the user
+        if not user.has_password():
+            logger.info(f"Login failed - password auth unavailable for: {login_data.email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"code": "invalid_credentials", "message": "Invalid email or password"}
+            )
+
+        # 3) Verify password explicitly for specific error reporting
+        password_service = PasswordService()
+        is_valid_password = await password_service.verify_password(login_data.password, user.passwordHash)  # type: ignore[arg-type]
+        if not is_valid_password:
+            logger.info(f"Login failed - invalid password for: {login_data.email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"code": "invalid_password", "message": "Invalid password"}
+            )
+
+        # 4) Proceed with standard authentication flow to issue tokens and update last login
         auth_data = await user_service.authenticate_user(
             email=login_data.email,
             password=login_data.password,
@@ -219,10 +248,11 @@ async def login_user(
         )
         
         if not auth_data:
+            # Fallback - treat as invalid credentials if something unexpected happened
             logger.info(f"Failed login attempt for {login_data.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"message": "Invalid email or password"}
+                detail={"code": "invalid_credentials", "message": "Invalid email or password"}
             )
         
         logger.info(f"User logged in successfully: {login_data.email}")
@@ -234,12 +264,13 @@ async def login_user(
         )
         
     except HTTPException:
+        # Pass through specific HTTP errors
         raise
     except Exception as e:
         logger.error(f"Login failed for {login_data.email}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"message": "Login failed"}
+            detail={"message": "Login failed", "code": "server_error"}
         )
 
 

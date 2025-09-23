@@ -22,7 +22,8 @@ import {
   ArrowRightOnRectangleIcon,
   BellIcon,
   ComputerDesktopIcon,
-  CogIcon
+  CogIcon,
+  ChevronLeftIcon
 } from '@heroicons/react/24/outline';
 import { type EpiLogosBusinessState, type AccountBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 
@@ -176,6 +177,15 @@ export const AccountModalContent: React.FC<AccountModalContentProps> = ({
 
   return (
     <div className="account-modal-container h-full flex flex-col">
+      <div className="account-header mb-4">
+        <button
+          onClick={() => onStateChange('dashboard')}
+          className="flex items-center text-ui-coord-text hover:text-ui-panel transition-colors font-mono text-sm mb-2"
+        >
+          <ChevronLeftIcon className="w-4 h-4 mr-2" />
+          Back to Dashboard
+        </button>
+      </div>
       {renderNavigation()}
       <div className="flex-1 overflow-y-auto">
         {renderContent()}

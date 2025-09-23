@@ -1,6 +1,7 @@
 // Business state type definition for EpiLogos modal system
 export type EpiLogosBusinessState = 
   | 'png-displayed'                    // PNG image shown (default)
+  | 'dashboard'                        // NEW: Dashboard with 6 circles (default for authenticated)
   | 'auth-signin' | 'auth-signup'      // Authentication states
   | 'auth-oauth' | 'auth-success'      // OAuth flow states
   | 'account-profile' | 'account-security' | 'account-billing' // Current account states

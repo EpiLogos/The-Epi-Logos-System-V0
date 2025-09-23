@@ -290,7 +290,33 @@ export class HTTPAPIClient implements APIClientAdapter {
    */
   private async parseErrorResponse(response: Response): Promise<any> {
     try {
-      return await response.json();
+      const raw = await response.json();
+      // Unwrap FastAPI-style { detail: ... } payloads
+      const payload = typeof raw?.detail !== 'undefined' ? raw.detail : raw;
+
+      // If payload is an object with message/code, return normalized structure
+      if (payload && typeof payload === 'object') {
+        const { message, code, errors, details } = payload as any;
+        return {
+          message: message || response.statusText || `HTTP ${response.status}`,
+          code: code || 'HTTP_ERROR',
+          details: details || errors || payload
+        };
+      }
+
+      // If payload is a string, treat as message
+      if (typeof payload === 'string') {
+        return {
+          message: payload,
+          code: 'HTTP_ERROR'
+        };
+      }
+
+      // Fallback
+      return {
+        message: response.statusText || 'Unknown error',
+        code: 'UNKNOWN_ERROR'
+      };
     } catch {
       return {
         message: response.statusText || 'Unknown error',

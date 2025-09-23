@@ -365,17 +365,11 @@ export const useInterPageTransition = () => {
         currentTransitionDirection: 'paramasiva-to-epilogos'
       }));
 
-      // PHASE 2a: Height morph to Epi-Logos footprint
+      // COLLAPSE-ONLY: Height settle then white fade (no width phase)
       const heightTimer = setTimeout(() => {
         setState(prev => ({ ...prev, heightMorphStarted: true }));
       }, 200);
 
-      // PHASE 2b: Width morph to Epi-Logos footprint
-      const widthTimer = setTimeout(() => {
-        setState(prev => ({ ...prev, widthMorphStarted: true }));
-      }, 1200);
-
-      // PHASE 3: White fade + navigate after morph completes
       const navigationTimer = setTimeout(() => {
         setState(prev => ({ ...prev, whiteOverlayVisible: true }));
 
@@ -384,9 +378,9 @@ export const useInterPageTransition = () => {
         }, 650);
 
         timerRefs.current.push(finalNavigationTimer);
-      }, 2000);
+      }, 1200);
 
-      timerRefs.current.push(heightTimer, widthTimer, navigationTimer);
+      timerRefs.current.push(heightTimer, navigationTimer);
     }),
 
     transitionToEpiLogosFromSubsystems: (() => {

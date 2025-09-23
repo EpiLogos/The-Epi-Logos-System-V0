@@ -379,13 +379,7 @@ export const ParamasivaPage: React.FC = () => {
             heightMorphStarted={heightMorphStarted}
             widthMorphStarted={widthMorphStarted}
             isSidebarCollapsed={isCollapsed}
-            className={cn(
-              // Base transition + final target geometry (no per-phase toggles)
-              isTransitioning && currentTransitionDirection === 'paramasiva-to-epilogos' && [
-                "transition-paramasiva-to-epilogos",
-                "state-epilogos-target-panel"
-              ]
-            )}
+            className={cn()}
           >
           {/* Main Panel Content */}
           <ModalPanel

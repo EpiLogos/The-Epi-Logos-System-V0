@@ -112,15 +112,25 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
 
   const getErrorMessage = (errorCode: string): string => {
     const errorMessages: Record<string, string> = {
+      // Network/Server
+      'network_error': 'Unable to connect to authentication server. Please check your connection and try again.',
+      'server_error': 'We encountered a server error. Please try again in a moment.',
+      
+      // Auth-specific
+      'invalid_credentials': 'Invalid email or password. Please check your credentials and try again.',
+      'invalid_password': 'The password you entered is incorrect. Please try again.',
+      'user_not_found': 'No account found with this email. Please sign up or check your email address.',
+      'user_exists': 'An account with this email already exists. Please sign in instead.',
+
+      // OAuth/UI flow
       'access_denied': 'You cancelled the sign-in process. Please try again to continue.',
       'invalid_request': 'There was a problem with your sign-in request. Please try again.',
-      'server_error': 'We encountered a server error. Please try again in a moment.',
       'temporarily_unavailable': 'Authentication is temporarily unavailable. Please try again later.',
       'token_expired': 'Your session has expired. Please sign in again.',
       'token_revoked': 'Your authentication has been revoked. Please sign in again.',
-      'invalid_credentials': 'Invalid email or password. Please check your credentials and try again.',
-      'user_not_found': 'No account found with this email. Please sign up or check your email address.',
-      'user_exists': 'An account with this email already exists. Please sign in instead.',
+
+      // Validation
+      'validation_error': 'Please check your input and try again.'
     };
     
     return errorMessages[errorCode] || 'An unexpected error occurred during authentication. Please try again.';
@@ -243,12 +253,25 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
     } catch (err) {
       console.error('Email auth failed:', err);
       
-      const errorMessage = err instanceof Error ? err.message : 'Authentication failed';
-      
+      // Map specific API error codes to user-friendly messages
+      let code = 'auth_error';
+      let userMessage = 'Authentication failed';
+      if (err && typeof err === 'object' && 'name' in err && (err as any).name === 'APIError') {
+        const apiErr = err as any as { code?: string; message: string };
+        if (apiErr.code) {
+          code = apiErr.code;
+          userMessage = getErrorMessage(apiErr.code);
+        } else {
+          userMessage = apiErr.message || userMessage;
+        }
+      } else if (err instanceof Error) {
+        userMessage = err.message;
+      }
+
       setError({
-        code: 'auth_error',
-        message: errorMessage,
-        userMessage: errorMessage
+        code,
+        message: userMessage,
+        userMessage
       });
       setAuthState('error');
     }
@@ -319,70 +342,120 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
     setAuthState('idle');
   };
 
-  // Render different states
+  // Render different states with smooth transitions
   if (businessState === 'auth-oauth') {
     return (
-      <div className="auth-modal-container">
-        <div className="text-center space-y-6">
-          <div className="flex justify-center">
-            <div className="h-16 w-16 border-4 border-ui-coord-text border-t-ui-panel rounded-full animate-spin"></div>
-          </div>
-          <div>
-            <h3 className="text-xl font-heading text-ui-panel mb-2">
-              Connecting with Google...
-            </h3>
-            <p className="text-ui-coord-text font-mono">
-              A secure browser tab has been opened for Google sign-in.
-            </p>
+      <motion.div
+        className="auth-modal-container h-full flex flex-col"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
+        <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-120px)]">
+          <div className="max-w-[500px] mx-auto px-4 py-6">
+            <div className="text-center space-y-6 flex flex-col items-center justify-center min-h-[400px]">
+              <div className="flex justify-center">
+                <div className="h-16 w-16 border-4 border-ui-coord-text border-t-ui-panel rounded-full animate-spin"></div>
+              </div>
+              <div>
+                <h3 className="text-xl font-heading text-ui-panel mb-2">
+                  Connecting with Google...
+                </h3>
+                <p className="text-ui-coord-text font-mono">
+                  A secure browser tab has been opened for Google sign-in.
+                </p>
+              </div>
+            </div>
+
+            {/* OAuth Iframe overlay for in-modal flow */}
+            <AnimatePresence>
+              {modalOAuthState.showIframe && modalOAuthState.oauthUrl && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <OAuthIframe
+                    oauthUrl={modalOAuthState.oauthUrl}
+                    onSuccess={iframeHandlers.onSuccess}
+                    onError={iframeHandlers.onError}
+                    onCancel={iframeHandlers.onCancel}
+                    isVisible={modalOAuthState.showIframe}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
-
-        {/* OAuth Iframe overlay for in-modal flow */}
-        {modalOAuthState.showIframe && modalOAuthState.oauthUrl && (
-          <OAuthIframe
-            oauthUrl={modalOAuthState.oauthUrl}
-            onSuccess={iframeHandlers.onSuccess}
-            onError={iframeHandlers.onError}
-            onCancel={iframeHandlers.onCancel}
-            isVisible={modalOAuthState.showIframe}
-          />
-        )}
-      </div>
+      </motion.div>
     );
   }
 
   if (businessState === 'auth-success') {
     return (
-      <div className="auth-modal-container">
-        <div className="text-center space-y-6">
-          <div className="flex justify-center">
-            <div className="h-16 w-16 bg-green-600/30 border border-green-400/50 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            </div>
-          </div>
-          <div>
-            <h3 className="text-xl font-heading text-ui-panel mb-2">
-              {authMode === 'signin' ? 'Welcome back!' : 'Account created successfully!'}
-            </h3>
-            <p className="text-ui-coord-text font-mono">
-              Redirecting to your account...
-            </p>
+      <motion.div
+        className="auth-modal-container h-full flex flex-col"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+      >
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center space-y-6">
+              <motion.div
+                className="flex justify-center"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, duration: 0.5, type: 'spring', stiffness: 200 }}
+              >
+                <div className="h-16 w-16 bg-green-600/30 border border-green-400/50 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.3 }}
+              >
+                <h3 className="text-xl font-heading text-ui-panel mb-2">
+                  {authMode === 'signin' ? 'Welcome back!' : 'Account created successfully!'}
+                </h3>
+                <p className="text-ui-coord-text font-mono">
+                  Redirecting to your account...
+                </p>
+              </motion.div>
           </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="auth-modal-container">
+    <motion.div
+      className="auth-modal-container h-full flex flex-col"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+    >
+      {/* Scrollable Content Container */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-120px)]">
+        <div className="max-w-[500px] mx-auto px-4 py-6">{/* Content wrapper for proper centering and padding */}
       {/* Mode Toggle */}
-      <div className="flex mb-8 bg-ui-panel/10 border border-ui-coord-text/30 p-1">
+      <motion.div
+        className="flex mb-8 bg-ui-panel/10 border border-ui-coord-text/30 p-1"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.3 }}
+      >
         <button
           onClick={() => onStateChange('auth-signin')}
           className={cn(
-            'flex-1 py-3 px-4 font-medium text-sm transition-all',
+            'flex-1 py-3 px-4 font-medium text-sm transition-all duration-200',
             authMode === 'signin'
               ? 'bg-ui-coord-text text-ui-gray'
               : 'text-ui-panel hover:text-ui-coord-text'
@@ -393,7 +466,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
         <button
           onClick={() => onStateChange('auth-signup')}
           className={cn(
-            'flex-1 py-3 px-4 font-medium text-sm transition-all',
+            'flex-1 py-3 px-4 font-medium text-sm transition-all duration-200',
             authMode === 'signup'
               ? 'bg-ui-coord-text text-ui-gray'
               : 'text-ui-panel hover:text-ui-coord-text'
@@ -401,20 +474,25 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
         >
           Sign Up
         </button>
-      </div>
+      </motion.div>
 
       {/* Welcome Message */}
-      <div className="text-center mb-4">
+      <motion.div
+        className="text-center mb-4"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.3 }}
+      >
         <h2 className="font-heading text-xl text-ui-panel mb-2">
           {authMode === 'signin' ? 'Welcome Back' : 'Join the System'}
         </h2>
         <p className="font-mono text-ui-coord-text text-xs leading-relaxed">
-          {authMode === 'signin' 
+          {authMode === 'signin'
             ? 'Sign in to continue your journey through consciousness-computing synthesis.'
             : 'Create your account to explore the six-fold architecture of Epi-Logos.'
           }
         </p>
-      </div>
+      </motion.div>
 
       {/* Error Display */}
       <AnimatePresence>
@@ -455,41 +533,57 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       </AnimatePresence>
 
       {/* Email/Password Form */}
-      <div className="space-y-3 mb-4">
+      <motion.div
+        className="space-y-3 mb-4"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.3 }}
+      >
         {/* Name fields for signup */}
-        {authMode === 'signup' && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-mono text-ui-panel text-sm font-medium">First Name</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
-                  className="auth-form-input"
-                  placeholder="John"
-                  disabled={authState === 'loading'}
-                />
-                {!formData.firstName && (
-                  <UserIcon className="absolute right-3 top-3.5 h-5 w-5 text-ui-coord-text" />
-                )}
+        <AnimatePresence>
+          {authMode === 'signup' && (
+            <motion.div
+              className="auth-name-fields"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="space-y-1">
+                <label className="font-mono text-ui-panel text-sm font-medium">First Name</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    className="auth-name-input transition-all duration-200"
+                    placeholder="First Name"
+                    disabled={authState === 'loading'}
+                  />
+                  {!formData.firstName && (
+                    <UserIcon className="absolute right-3 top-3.5 h-4 w-4 text-ui-coord-text/60 transition-opacity duration-200" />
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="space-y-1">
-              <label className="font-mono text-ui-panel text-sm font-medium">Last Name</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
-                  className="auth-form-input"
-                  placeholder="Doe"
-                  disabled={authState === 'loading'}
-                />
+              <div className="space-y-1">
+                <label className="font-mono text-ui-panel text-sm font-medium">Last Name</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    className="auth-name-input transition-all duration-200"
+                    placeholder="Last Name"
+                    disabled={authState === 'loading'}
+                  />
+                  {!formData.lastName && (
+                    <UserIcon className="absolute right-3 top-3.5 h-4 w-4 text-ui-coord-text/60 transition-opacity duration-200" />
+                  )}
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Email field */}
         <div className="space-y-1">
@@ -499,13 +593,25 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
               type="email"
               value={formData.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
-              className={`auth-form-input ${!formData.email ? 'pl-12' : ''}`}
+              className={cn(
+                'auth-email-input transition-all duration-200',
+                !formData.email ? 'has-left-icon' : ''
+              )}
               placeholder="your@email.com"
               disabled={authState === 'loading'}
             />
-            {!formData.email && (
-              <EnvelopeIcon className="absolute left-3 top-3.5 h-5 w-5 text-ui-coord-text" />
-            )}
+            <AnimatePresence>
+              {!formData.email && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <EnvelopeIcon className="absolute left-3 top-3.5 h-4 w-4 text-ui-coord-text/60" />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -517,12 +623,18 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
               type={showPassword ? 'text' : 'password'}
               value={formData.password}
               onChange={(e) => handleInputChange('password', e.target.value)}
-              className={`auth-form-input pr-12 ${!formData.password ? 'pl-12' : ''}`}
+              className={`auth-password-input ${!formData.password ? 'has-left-icon' : ''}`}
               placeholder={authMode === 'signup' ? 'At least 8 characters' : 'Your password'}
+              autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
               disabled={authState === 'loading'}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleEmailAuth();
+                }
+              }}
             />
             {!formData.password && (
-              <LockClosedIcon className="absolute left-3 top-3.5 h-5 w-5 text-ui-coord-text" />
+              <LockClosedIcon className="absolute left-3 top-3.5 h-4 w-4 text-ui-coord-text/60" />
             )}
             <button
               type="button"
@@ -552,12 +664,12 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={formData.confirmPassword}
                 onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                className={`auth-form-input pr-12 ${!formData.confirmPassword ? 'pl-12' : ''}`}
+                className={`auth-password-input ${!formData.confirmPassword ? 'has-left-icon' : ''}`}
                 placeholder="Confirm your password"
                 disabled={authState === 'loading'}
               />
               {!formData.confirmPassword && (
-                <LockClosedIcon className="absolute left-3 top-3.5 h-5 w-5 text-ui-coord-text" />
+                <LockClosedIcon className="absolute left-3 top-3.5 h-4 w-4 text-ui-coord-text/60" />
               )}
               <button
                 type="button"
@@ -585,26 +697,36 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
             <span>{authMode === 'signin' ? 'Sign In' : 'Create Account'}</span>
           )}
         </button>
-      </div>
+      </motion.div>
 
       {/* Divider */}
-      <div className="relative flex items-center my-4">
+      <motion.div
+        className="relative flex items-center my-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4, duration: 0.3 }}
+      >
         <div className="flex-1 border-t border-ui-coord-text/30" />
         <span className="px-4 text-ui-coord-text text-sm font-medium">or</span>
         <div className="flex-1 border-t border-ui-coord-text/30" />
-      </div>
+      </motion.div>
 
       {/* OAuth Sign-In Button */}
-      <button
+      <motion.button
         onClick={handleGoogleSignIn}
         disabled={modalOAuthState.isLoading || authState === 'loading'}
-        className="w-full bg-ui-coord-text/10 hover:bg-ui-coord-text/20 text-ui-panel border border-ui-coord-text/30 hover:border-ui-panel/50 font-mono font-medium text-sm h-12 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center rounded-md"
+        className="group w-full bg-ui-coord-text/10 hover:bg-ui-coord-text/20 text-gray-200 hover:text-white border border-ui-coord-text/30 hover:border-ui-panel/50 font-mono font-medium text-sm h-12 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center rounded-md"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.3 }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
       >
         <div className="flex items-center justify-center space-x-3">
           {modalOAuthState.isLoading ? (
             <>
               <div className="w-5 h-5 border-2 border-ui-coord-text/30 border-t-ui-panel rounded-full animate-spin" />
-              <span>Connecting to Google...</span>
+              <span className="text-gray-200">Connecting to Google...</span>
             </>
           ) : (
             <>
@@ -626,43 +748,64 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              <span>Continue with Google</span>
+              <span className="text-gray-200 group-hover:text-white transition-colors">Continue with Google</span>
             </>
           )}
         </div>
-      </button>
+      </motion.button>
 
       {/* Security Notice */}
-      <div className="text-center mt-4">
+      <motion.div
+        className="text-center mt-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6, duration: 0.3 }}
+      >
         <p className="font-mono text-xs text-ui-coord-text leading-relaxed">
-          By continuing, you agree to our secure authentication practices. 
+          By continuing, you agree to our secure authentication practices.
           We use industry-standard OAuth 2.0 with PKCE and encrypted password storage.
         </p>
-      </div>
+      </motion.div>
 
       {/* Auth Mode Toggle */}
-      <div className="text-center mt-4 pt-3 border-t border-ui-coord-text/20">
+      <motion.div
+        className="text-center mt-4 pt-3 border-t border-ui-coord-text/20"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.7, duration: 0.3 }}
+      >
         <p className="font-mono text-sm text-ui-coord-text">
           {authMode === 'signin' ? "Don't have an account?" : 'Already have an account?'}
           <button
             onClick={toggleAuthMode}
-            className="ml-2 text-ui-panel hover:text-ui-coord-text transition-colors font-medium underline"
+            className="ml-2 text-ui-panel hover:text-ui-coord-text transition-colors duration-200 font-medium underline"
           >
             {authMode === 'signin' ? 'Sign up' : 'Sign in'}
           </button>
         </p>
-      </div>
+      </motion.div>
 
       {/* OAuth Iframe - Render when OAuth is initiated */}
-      {modalOAuthState.showIframe && modalOAuthState.oauthUrl && (
-        <OAuthIframe
-          oauthUrl={modalOAuthState.oauthUrl}
-          onSuccess={iframeHandlers.onSuccess}
-          onError={iframeHandlers.onError}
-          onCancel={iframeHandlers.onCancel}
-          isVisible={modalOAuthState.showIframe}
-        />
-      )}
-    </div>
+      <AnimatePresence>
+        {modalOAuthState.showIframe && modalOAuthState.oauthUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <OAuthIframe
+              oauthUrl={modalOAuthState.oauthUrl}
+              onSuccess={iframeHandlers.onSuccess}
+              onError={iframeHandlers.onError}
+              onCancel={iframeHandlers.onCancel}
+              isVisible={modalOAuthState.showIframe}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+        </div>{/* End content wrapper */}
+      </div>{/* End scrollable container */}
+    </motion.div>
   );
 };

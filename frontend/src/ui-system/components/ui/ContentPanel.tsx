@@ -59,8 +59,10 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
           // Initial state (before transition starts) - Modal expanded state
           return "absolute top-0 right-0 w-[calc(100vw-420px-40px)] h-[calc(100vh-40px)] m-[20px] !bg-[#090a09]";
         } else if (transitionDirection === 'to-main') {
-          // PARAMASIVA → EPI‑LOGOS: Start from Paramasiva's initial panel footprint
-          // Base transition + state utility will drive to final Epi‑Logos footprint
+          // PARAMASIVA → EPI‑LOGOS (collapse-only): height settle, keep width constant
+          if (heightMorphStarted) {
+            return "absolute top-0 right-0 w-[420px] h-[calc(60vh-30px)] mt-5 mr-5 mb-5 ml-0 !bg-[#090a09]";
+          }
           return "absolute top-0 right-0 w-[420px] h-[calc(60vh+35vh)] mt-5 mr-5 mb-5 ml-0 !bg-[#090a09]";
         }
       }
@@ -131,7 +133,11 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
           "transition-paramasiva-to-quaternal",
         
         pageType === 'epi-logos' && isTransitioning && "transition-epi-logos-transitioning",
-        
+
+        // Collapse-only height animation for Paramasiva → Epi‑Logos
+        pageType === 'paramasiva' && isTransitioning && transitionDirection === 'to-main' &&
+          "transition-[height] duration-[800ms] ease-paramasiva delay-[200ms]",
+
         className
       )}
     >
