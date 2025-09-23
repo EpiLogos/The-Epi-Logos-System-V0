@@ -9,6 +9,7 @@ import { AccountModalContent } from '../account/AccountModalContent';
 import { type EpiLogosBusinessState, type AccountBusinessState, type AuthBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 import { DashboardModalContent } from '../dashboard/DashboardModalContent';
 import { useModalContentTransition } from '../../hooks/useContentTransition';
+import { ChatModalContent } from '../chat/ChatModalContent';
 
 interface ModalContentManagerProps {
   businessState: EpiLogosBusinessState;
@@ -72,6 +73,27 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
           <DashboardModalContent onStateChange={onStateChange} />
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
+  // Chat State
+  if (businessState === 'chat') {
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key="chat"
+          className={cn(
+            'content-transition-container modal-content-panel',
+            contentTransitionState.contentVisible ? 'content-visible' : 'content-hidden'
+          )}
+          initial={{ opacity: 0, filter: 'blur(4px)' }}
+          animate={{ opacity: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, filter: 'blur(4px)' }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+          <ChatModalContent onStateChange={onStateChange} />
         </motion.div>
       </AnimatePresence>
     );

@@ -378,7 +378,7 @@ export const useInterPageTransition = () => {
         }, 650);
 
         timerRefs.current.push(finalNavigationTimer);
-      }, 1200);
+      }, 700);
 
       timerRefs.current.push(heightTimer, navigationTimer);
     }),

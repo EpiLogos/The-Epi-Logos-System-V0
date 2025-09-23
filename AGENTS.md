@@ -65,3 +65,10 @@
 - Do not change architecture or folder layout without explicit approval.
 - Keep boundaries strict (Frontend ↔ Backend ↔ Agentic via APIs only).
 - Ensure lint and tests pass locally before opening PRs.
+
+## Tailwind v4 Utilities: Repo Anti‑Patterns
+- Never define pseudo‑selectors in the utility name (e.g., `@utility foo:hover`). This breaks Tailwind v4 parsing and can wipe global styles.
+- Always nest pseudos within the utility block:
+  - Correct: `@utility foo { &:hover { @apply opacity-90; } }`
+  - Incorrect: `@utility foo:hover { @apply opacity-90; }`
+- When multiple animations are needed, define a single utility that sets the full `animation:` list. Two utilities that both set `animation:` will override, not merge.

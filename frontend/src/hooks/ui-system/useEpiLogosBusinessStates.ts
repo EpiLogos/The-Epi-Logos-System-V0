@@ -5,7 +5,8 @@ export type EpiLogosBusinessState =
   | 'auth-signin' | 'auth-signup'      // Authentication states
   | 'auth-oauth' | 'auth-success'      // OAuth flow states
   | 'account-profile' | 'account-security' | 'account-billing' // Current account states
-  | 'account-notifications' | 'account-sessions' | 'account-preferences'; // NEW: Additional account states
+  | 'account-notifications' | 'account-sessions' | 'account-preferences' // NEW: Additional account states
+  | 'chat';                             // Chat modal (new)
 
 // Account state type subset for AccountModalContent
 export type AccountBusinessState = 

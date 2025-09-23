@@ -20,7 +20,7 @@ const dashboardCircles: Array<{
   { id: 'system', label: 'System', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 60 },
   { id: 'subsystems', label: 'Subsystems', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 120 },
   { id: 'coordinates', label: 'Coordinates', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 180 },
-  { id: 'agents', label: 'Agents', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 240 },
+  { id: 'agents', label: 'Chat', image: '/ui-system/zen-circle.png', route: 'chat', enabled: true, rotationPhase: 240 },
   { id: 'settings', label: 'Settings', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 300 },
 ];
 
@@ -37,4 +37,3 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ onNavigate }) => {
 };
 
 export default DashboardGrid;
-

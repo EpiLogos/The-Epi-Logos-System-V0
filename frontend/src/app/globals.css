@@ -1130,7 +1130,6 @@ html, body {
 /* DASHBOARD ANIMATION UTILITIES - Match epi-png system */
 @utility dashboard-circle-base {
   @apply transition-all duration-300 ease-out opacity-90;
-  animation: dashboardCircleRotate 12s linear infinite;
   transform-origin: center;
 }
 
@@ -1160,6 +1159,16 @@ html, body {
 
 /* Match epi-png gentle waves (brightness + size pulsing) */
 @utility dashboard-gentle-waves {
+  animation: brightness-wave 8s ease-in-out infinite, size-wave 4s ease-in-out infinite;
+}
+
+/* Rotation only — apply to wrapper to avoid transform conflicts with waves */
+@utility dashboard-rotate {
+  animation: dashboardCircleRotate 12s linear infinite;
+}
+
+/* Brightness + size waves — apply to inner img to avoid transform overrides */
+@utility dashboard-waves {
   animation: brightness-wave 8s ease-in-out infinite, size-wave 4s ease-in-out infinite;
 }
 
@@ -1611,7 +1620,6 @@ html, body {
   flex-direction: column;
   width: 100%;
   height: 100%;
-  padding: 40px;
   color: var(--color-ui-panel);
   font-family: var(--font-modal-content);
   max-width: 800px;

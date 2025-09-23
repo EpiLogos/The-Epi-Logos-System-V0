@@ -14,7 +14,7 @@ export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ on
   const { user, signOut } = useAuth();
 
   return (
-    <div className="dashboard-modal-container p-8 max-w-4xl mx-auto">
+    <div className="dashboard-modal-container pt-6 pb-0 px-4 max-w-4xl mx-auto">
       {/* Header */}
       <div className="dashboard-header mb-8 text-center">
         <h1 className="text-2xl font-mono text-ui-panel mb-2">
@@ -27,7 +27,7 @@ export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ on
       <DashboardGrid onNavigate={onStateChange} />
 
       {/* Footer */}
-      <div className="dashboard-footer mt-12 pt-6 border-t border-ui-coord-text/20 text-center">
+      <div className="dashboard-footer mt-12 pt-4 border-t border-ui-coord-text/20 text-center">
         <button
           onClick={() => {
             void signOut().then(() => onStateChange('auth-signin'));
@@ -42,4 +42,3 @@ export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ on
 };
 
 export default DashboardModalContent;
-

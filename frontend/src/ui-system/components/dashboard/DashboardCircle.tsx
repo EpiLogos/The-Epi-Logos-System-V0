@@ -36,7 +36,7 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
       type="button"
       aria-label={label}
       className={cn(
-        'dashboard-circle-container relative flex flex-col items-center justify-center w-36 h-36 mx-auto outline-none',
+        'dashboard-circle-container relative flex flex-col items-center justify-center w-36 min-h-36 mx-auto outline-none',
         enabled ? 'cursor-pointer' : 'cursor-default',
       )}
       onClick={handleClick}
@@ -44,19 +44,19 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
     >
       <div
         className={cn(
-          'dashboard-circle-wrapper relative w-28 h-28 rounded-full overflow-hidden',
+          'dashboard-circle-wrapper relative z-0 w-28 h-28 rounded-full overflow-hidden',
           'dashboard-circle-base',
-          'dashboard-gentle-waves',
+          'dashboard-rotate',
           enabled && 'dashboard-circle-hover',
           !enabled && 'dashboard-circle-disabled',
           phaseClass,
         )}
       >
-        <img src={image} alt={`${label} Dashboard Circle`} className="w-full h-full object-contain" />
+        <img src={image} alt={`${label} Dashboard Circle`} className="w-full h-full object-contain dashboard-waves" />
       </div>
       <span
         className={cn(
-          'mt-3 text-sm font-mono tracking-wide',
+          'relative z-10 mt-3 text-sm font-mono tracking-wide',
           enabled ? 'text-ui-panel' : 'text-ui-coord-text',
         )}
       >

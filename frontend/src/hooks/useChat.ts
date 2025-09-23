@@ -116,6 +116,9 @@ export function useChat(initialConfig: UseChatConfig): UseChatReturn {
       throw new Error('No stream reader available');
     }
 
+    const start = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+    let firstTokenMs: number | undefined;
+
     try {
       while (true) {
         const chunk = await readStreamChunk(streamReader);
@@ -125,6 +128,10 @@ export function useChat(initialConfig: UseChatConfig): UseChatReturn {
         for (const line of lines) {
           const parsed = parseStreamingChunk(line);
           if (parsed?.type === 'TEXT_MESSAGE_CONTENT' && parsed.delta) {
+            if (firstTokenMs === undefined) {
+              const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+              firstTokenMs = Math.round(now - start);
+            }
             setSession(prev => updateLastMessage(prev, msg => 
               appendToMessage(msg, parsed.delta!)
             ));
@@ -135,6 +142,18 @@ export function useChat(initialConfig: UseChatConfig): UseChatReturn {
       }
     } finally {
       closeStreamReader(streamReader);
+      const end = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+      const totalMs = Math.round(end - start);
+      setSession(prev => updateLastMessage(prev, msg => ({
+        ...msg,
+        metadata: {
+          ...msg.metadata,
+          timing: {
+            total_ms: totalMs,
+            ...(firstTokenMs !== undefined ? { first_token_ms: firstTokenMs } : {})
+          }
+        }
+      })));
     }
   }, []);
 

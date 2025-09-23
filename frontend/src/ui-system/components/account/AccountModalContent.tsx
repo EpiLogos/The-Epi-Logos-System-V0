@@ -176,7 +176,7 @@ export const AccountModalContent: React.FC<AccountModalContentProps> = ({
   };
 
   return (
-    <div className="account-modal-container h-full flex flex-col">
+    <div className="account-modal-container h-full flex flex-col pt-6 pb-1 px-4">
       <div className="account-header mb-4">
         <button
           onClick={() => onStateChange('dashboard')}

@@ -353,7 +353,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
         <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-120px)]">
-          <div className="max-w-[500px] mx-auto px-4 py-6">
+          <div className="max-w-[500px] mx-auto px-4 pt-6 pb-1">
             <div className="text-center space-y-6 flex flex-col items-center justify-center min-h-[400px]">
               <div className="flex justify-center">
                 <div className="h-16 w-16 border-4 border-ui-coord-text border-t-ui-panel rounded-full animate-spin"></div>
@@ -444,7 +444,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
     >
       {/* Scrollable Content Container */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-120px)]">
-        <div className="max-w-[500px] mx-auto px-4 py-6">{/* Content wrapper for proper centering and padding */}
+        <div className="max-w-[500px] mx-auto px-4 pt-6 pb-1">{/* Content wrapper for proper centering and padding */}
       {/* Mode Toggle */}
       <motion.div
         className="flex mb-8 bg-ui-panel/10 border border-ui-coord-text/30 p-1"
