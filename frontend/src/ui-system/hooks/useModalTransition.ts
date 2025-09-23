@@ -62,14 +62,15 @@ export const useModalTransition = (): [ModalTransitionState, ModalTransitionActi
       setIsModalExpanded(true);
       setAnimationPhase('height-expanding');
       
-      // PHASE 3: Content fade-in - DELAYED: +200ms = 1500ms after modal expansion starts
-      // Original: text-fade-out(500ms) + panel-height(800ms) + half of panel-width(500ms) = 1800ms
+      // PHASE 3: Content fade-in - ALIGNED WITH WIDTH TRANSITION COMPLETION
+      // Width transition: 1000ms delay + 1000ms duration = completes at 2000ms
+      // Total timing: 750ms (initial) + 1250ms = 2000ms (matches width completion)
       setTimeout(() => {
         setAnimationPhase('complete');
         setLogoVisible(true);
         setModalTextVisible(true);
         setShowModalContent(true);
-      }, 1500); // 1800ms total - 300ms already elapsed = 1500ms
+      }, 1250); // 750ms + 1250ms = 2000ms (width transition completion)
     }, 750); // Text fade-out duration (450ms CSS transition + 300ms buffer for DOM removal)
   }, []);
 

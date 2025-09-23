@@ -17,7 +17,11 @@ export type TransitionDirection =
   | 'subsystems-to-paramasiva'    // Grid → Expanded modal layout
   | 'paramasiva-to-subsystems'    // Expanded modal → Grid layout
   | 'epilogos-to-subsystems'      // EpiLogos expanded → Grid layout (reverse modal)
-  | 'paramasiva-to-quaternal';    // Paramasiva modal → Quaternal Logic layout
+  | 'paramasiva-to-quaternal'     // Paramasiva modal → Quaternal Logic layout
+  | 'paramasiva-to-epilogos'      // Paramasiva → Epi-Logos (to main)
+  | 'subsystems-to-epilogos'      // Subsystems → Epi-Logos (to main)
+  | 'quaternal-to-paramasiva'     // Quaternal Logic → Paramasiva
+  | 'quaternal-to-epilogos';      // Quaternal Logic → Epi-Logos
 
 // Simplified state - just like original CSS class approach
 interface InterPageTransitionState {
@@ -345,6 +349,162 @@ export const useInterPageTransition = () => {
     transitionToSubsystems,
     transitionToSubsystemsFromEpiLogos,
     transitionToQuaternalFromParamasiva,
+    // New transitions
+    transitionToEpiLogosFromParamasiva: (() => {
+      // STRICTMODE PROTECTION: Prevent double-execution race conditions
+      if (state.isTransitioning || state.isExecuting) return;
+
+      clearAllTimers();
+
+      // PHASE 1: Text fade-out + lock execution + set direction
+      setState(prev => ({
+        ...prev,
+        isTransitioning: true,
+        textFadeStarted: true,
+        isExecuting: true,
+        currentTransitionDirection: 'paramasiva-to-epilogos'
+      }));
+
+      // PHASE 2a: Height morph to Epi-Logos footprint
+      const heightTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, heightMorphStarted: true }));
+      }, 200);
+
+      // PHASE 2b: Width morph to Epi-Logos footprint
+      const widthTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, widthMorphStarted: true }));
+      }, 1200);
+
+      // PHASE 3: White fade + navigate after morph completes
+      const navigationTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+        const finalNavigationTimer = setTimeout(() => {
+          navigateWithLoading('/');
+        }, 650);
+
+        timerRefs.current.push(finalNavigationTimer);
+      }, 2000);
+
+      timerRefs.current.push(heightTimer, widthTimer, navigationTimer);
+    }),
+
+    transitionToEpiLogosFromSubsystems: (() => {
+      // STRICTMODE PROTECTION: Prevent double-execution race conditions
+      if (state.isTransitioning || state.isExecuting) return;
+
+      clearAllTimers();
+
+      // PHASE 1: Text fade-out + lock execution + set direction
+      setState(prev => ({
+        ...prev,
+        isTransitioning: true,
+        textFadeStarted: true,
+        isExecuting: true,
+        currentTransitionDirection: 'subsystems-to-epilogos'
+      }));
+
+      // PHASE 2a: Height morph toward Epi-Logos footprint
+      const heightTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, heightMorphStarted: true }));
+      }, 200);
+
+      // PHASE 2b: Width morph to Epi-Logos footprint
+      const widthTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, widthMorphStarted: true }));
+      }, 1200);
+
+      // PHASE 3: White fade + navigation after morph completes
+      const navigationTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+        const finalNavigationTimer = setTimeout(() => {
+          navigateWithLoading('/');
+        }, 650);
+
+        timerRefs.current.push(finalNavigationTimer);
+      }, 2000);
+
+      timerRefs.current.push(heightTimer, widthTimer, navigationTimer);
+    }),
+
+    transitionToParamasivaFromQuaternal: (() => {
+      // STRICTMODE PROTECTION: Prevent double-execution race conditions
+      if (state.isTransitioning || state.isExecuting) return;
+
+      clearAllTimers();
+
+      // PHASE 1: Text fade-out + lock execution + set direction
+      setState(prev => ({
+        ...prev,
+        isTransitioning: true,
+        textFadeStarted: true,
+        isExecuting: true,
+        currentTransitionDirection: 'quaternal-to-paramasiva'
+      }));
+
+      // PHASE 2: Container morph (height focus first)
+      const heightTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, heightMorphStarted: true }));
+      }, 200);
+
+      // PHASE 3: Width/structure settle
+      const widthTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, widthMorphStarted: true }));
+      }, 1200);
+
+      // PHASE 4: White fade + navigate
+      const navigationTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+        const finalNavigationTimer = setTimeout(() => {
+          navigateWithLoading('/paramasiva');
+        }, 650);
+
+        timerRefs.current.push(finalNavigationTimer);
+      }, 2000);
+
+      timerRefs.current.push(heightTimer, widthTimer, navigationTimer);
+    }),
+
+    transitionToEpiLogosFromQuaternal: (() => {
+      // STRICTMODE PROTECTION: Prevent double-execution race conditions
+      if (state.isTransitioning || state.isExecuting) return;
+
+      clearAllTimers();
+
+      // PHASE 1: Text fade-out + lock execution + set direction
+      setState(prev => ({
+        ...prev,
+        isTransitioning: true,
+        textFadeStarted: true,
+        isExecuting: true,
+        currentTransitionDirection: 'quaternal-to-epilogos'
+      }));
+
+      // PHASE 2a: Container morph (height)
+      const heightTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, heightMorphStarted: true }));
+      }, 200);
+
+      // PHASE 2b: Width morph
+      const widthTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, widthMorphStarted: true }));
+      }, 1200);
+
+      // PHASE 3: White fade + navigate
+      const navigationTimer = setTimeout(() => {
+        setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+        const finalNavigationTimer = setTimeout(() => {
+          navigateWithLoading('/');
+        }, 650);
+
+        timerRefs.current.push(finalNavigationTimer);
+      }, 2000);
+
+      timerRefs.current.push(heightTimer, widthTimer, navigationTimer);
+    }),
     resetTransition,
   };
 };

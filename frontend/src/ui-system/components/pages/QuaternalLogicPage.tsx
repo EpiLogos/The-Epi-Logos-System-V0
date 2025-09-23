@@ -19,7 +19,12 @@ export const QuaternalLogicPage: React.FC = () => {
     whiteOverlayVisible,
     isTransitioning,
     textFadeStarted,
-    transitionToSubsystems
+    heightMorphStarted,
+    widthMorphStarted,
+    currentTransitionDirection,
+    transitionToSubsystems,
+    transitionToParamasivaFromQuaternal,
+    transitionToEpiLogosFromQuaternal
   } = useInterPageTransition();
   
   // Current page state for content switching
@@ -121,7 +126,7 @@ export const QuaternalLogicPage: React.FC = () => {
 
   // Navigation handlers
   const handleParamasivaClick = () => {
-    window.location.href = '/paramasiva';
+    transitionToParamasivaFromQuaternal();
   };
 
   const handleSubsystemsClick = () => {
@@ -129,7 +134,7 @@ export const QuaternalLogicPage: React.FC = () => {
   };
 
   const handleEpiLogosClick = () => {
-    window.location.href = '/';
+    transitionToEpiLogosFromQuaternal();
   };
 
   const handleBottomPanelToggle = () => {
@@ -301,6 +306,17 @@ export const QuaternalLogicPage: React.FC = () => {
               (isTransitioning || isModalExpanded)
                 ? "page-container-quaternal-expanded"  // QUATERNAL LOGIC SPECIFIC: Expand during page transitions OR hover
                 : "h-[60vh]"
+            ,
+            // Quaternal → Paramasiva: base transition + final state
+            isTransitioning && currentTransitionDirection === 'quaternal-to-paramasiva' && [
+              "transition-quaternal-to-paramasiva",
+              "state-paramasiva-target-panel"
+            ],
+            // Quaternal → Epi‑Logos: base transition + final state
+            isTransitioning && currentTransitionDirection === 'quaternal-to-epilogos' && [
+              "transition-quaternal-to-epilogos",
+              "state-epilogos-target-panel"
+            ]
             )}>
               {/* Image Placeholder - EXACT original structure */}
               <div 

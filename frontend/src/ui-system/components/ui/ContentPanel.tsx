@@ -9,7 +9,7 @@ interface ContentPanelProps {
   animationPhase?: 'idle' | 'height-expanding' | 'width-expanding' | 'icon-moving' | 'complete';
   isTransitioning?: boolean; // For inter-page transitions
   secondPhaseCollapse?: boolean; // Second phase: collapse to width 0
-  transitionDirection?: 'to-subsystems' | 'to-quaternal' | 'idle'; // New transition directions
+  transitionDirection?: 'to-subsystems' | 'to-quaternal' | 'to-main' | 'idle'; // New transition directions
   heightMorphStarted?: boolean; // For quaternal transition height collapse phase
   widthMorphStarted?: boolean; // For quaternal transition width collapse phase
   isSidebarCollapsed?: boolean; // For sidebar collapse coordination
@@ -21,6 +21,7 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
   pageType,
   isModalExpanded = false,
   panelMoved = false,
+  animationPhase = 'idle',
   isTransitioning = false,
   secondPhaseCollapse = false,
   transitionDirection = 'idle',
@@ -57,6 +58,10 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
           }
           // Initial state (before transition starts) - Modal expanded state
           return "absolute top-0 right-0 w-[calc(100vw-420px-40px)] h-[calc(100vh-40px)] m-[20px] !bg-[#090a09]";
+        } else if (transitionDirection === 'to-main') {
+          // PARAMASIVA → EPI‑LOGOS: Start from Paramasiva's initial panel footprint
+          // Base transition + state utility will drive to final Epi‑Logos footprint
+          return "absolute top-0 right-0 w-[420px] h-[calc(60vh+35vh)] mt-5 mr-5 mb-5 ml-0 !bg-[#090a09]";
         }
       }
       
@@ -65,8 +70,12 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
       const height = panelMoved ? "h-[calc(60vh+20vh)]" : "h-[calc(60vh+35vh)]";
       
       if (isModalExpanded) {
-        // Modal expanded state - Tailwind utilities handle transitions
-        const widthClass = isSidebarCollapsed ? "w-[calc(100vw-74px-40px)]" : "w-[calc(100vw-420px-40px)]";
+        // Modal expanded state - conditional utility application
+        // Use fast sidebar utilities only when modal transition is complete
+        const shouldUseFastSidebarResponse = !isTransitioning && animationPhase === 'complete';
+        const widthClass = shouldUseFastSidebarResponse
+          ? (isSidebarCollapsed ? "paramasiva-modal-expanded" : "paramasiva-modal-normal")
+          : "w-[calc(100vw-420px-40px)]"; // Fallback width, let modal transition utility handle timing
         return `absolute top-0 right-0 ${widthClass} h-[calc(100vh-40px)] m-[20px]`;
       } else {
         // Normal state - FIXED: Was missing bottom margin (mb-5)
@@ -103,11 +112,16 @@ export const ContentPanel: React.FC<ContentPanelProps> = ({
         // Dimensions based on page type and state
         getDimensions(),
 
-        // TRANSITION CLASSES: Use custom utilities instead of inline CSS
-        pageType === 'paramasiva' && !isTransitioning && (
-          // Use the working custom utility for modal transitions
-          isModalExpanded ? "transition-paramasiva-modal-expanded" : "transition-paramasiva-modal-collapsed"
-        ),
+        // TRANSITION CLASSES: Conditional application to prevent conflicts
+        pageType === 'paramasiva' && !isTransitioning && (() => {
+          // Calculate if we should use fast sidebar response
+          const shouldUseFastSidebarResponse = !isTransitioning && animationPhase === 'complete';
+
+          // Only apply modal transition when NOT using sidebar utilities (prevents CSS conflicts)
+          return !shouldUseFastSidebarResponse && (
+            isModalExpanded ? "transition-paramasiva-modal-expanded" : "transition-paramasiva-modal-collapsed"
+          );
+        })(),
         
         // Inter-page transitions use different timing based on direction
         pageType === 'paramasiva' && isTransitioning && transitionDirection === 'to-subsystems' && "transition-paramasiva-transitioning",

@@ -89,15 +89,17 @@ export const SubsystemsPage: React.FC = () => {
   // Inter-page transition hook - simplified like original CSS class approach
   const {
     isTransitioning,
+    currentTransitionDirection,
     textFadeStarted,
     heightMorphStarted,
     widthMorphStarted,
     whiteOverlayVisible,
-    transitionToParamasiva
+    transitionToParamasiva,
+    transitionToEpiLogosFromSubsystems
   } = useInterPageTransition();
 
   const handleBackToMain = () => {
-    window.location.href = '/';
+    transitionToEpiLogosFromSubsystems();
   };
 
   // Coordinate text animation after 2200ms (matching original timing)
@@ -219,14 +221,20 @@ export const SubsystemsPage: React.FC = () => {
       <div
         className={cn(
           "grid grid-cols-3 grid-rows-2 gap-0 bg-[#090a09]",
-          // DIMENSIONS + MARGIN: Match ContentPanel positioning exactly
+          // Default grid footprint
           !isTransitioning
             ? "w-[calc(100vw-300px)] h-screen"
-            : "w-[420px] h-[calc(73vh+20.75vh)] mt-5 mr-5 mb-0 ml-0"
+            : "w-[420px] h-[calc(73vh+20.75vh)] mt-5 mr-5 mb-0 ml-0",
+
+          // Subsystems → Epi‑Logos: apply base transition and final target geometry
+          isTransitioning && currentTransitionDirection === 'subsystems-to-epilogos' && [
+            "transition-subsystems-to-epilogos",
+            "state-epilogos-target-panel"
+          ]
         )}
         style={{
-          // SIMPLE: All dimensions change together after text fade
-          transition: isTransitioning
+          // Avoid inline transition when using base utility
+          transition: isTransitioning && currentTransitionDirection !== 'subsystems-to-epilogos'
             ? 'all 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms'
             : 'none'
         }}

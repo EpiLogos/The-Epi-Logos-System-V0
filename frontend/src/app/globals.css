@@ -302,6 +302,8 @@ html, body {
   flex-shrink: 0;
 }
 
+/* (Reverted) */
+
 /* PNG SMOOTH TRANSITION SYSTEM - Base Transition + State Pattern */
 
 /* BASE TRANSITION - Always applied for smooth bidirectional transitions */
@@ -359,6 +361,68 @@ html, body {
   pointer-events: none;
   z-index: 100;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+/* ============================= */
+/* PAGE TRANSITION (Option A)    */
+/* Direction base + state values */
+/* ============================= */
+
+/* Base transitions: values only in target-* utilities */
+@utility transition-paramasiva-to-epilogos {
+  transition:
+    height 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms,
+    margin 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms,
+    width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 1000ms,
+    opacity 600ms ease-out;
+  transform-origin: bottom center;
+}
+
+@utility transition-subsystems-to-epilogos {
+  transition:
+    height 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms,
+    margin 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms,
+    width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 1000ms,
+    opacity 600ms ease-out;
+  transform-origin: bottom center;
+}
+
+@utility transition-quaternal-to-paramasiva {
+  transition:
+    height 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms,
+    margin 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms,
+    width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 1200ms,
+    opacity 600ms ease-out;
+  transform-origin: bottom right;
+}
+
+@utility transition-quaternal-to-epilogos {
+  transition:
+    height 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms,
+    margin 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms,
+    width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 1000ms,
+    opacity 600ms ease-out;
+  transform-origin: bottom center;
+}
+
+/* Target state utilities (values only) */
+/* State utilities: final geometry only (no transitions) */
+@utility state-epilogos-target-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: calc(100vw - 40px);
+  height: calc(100vh - 40px);
+  margin: 20px;
+}
+
+@utility state-paramasiva-target-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 420px;
+  height: calc(60vh + 35vh);
+  margin: 20px 20px 20px 0px;
 }
 
 @utility debug-modal-top-left-normal {
@@ -447,15 +511,15 @@ html, body {
   padding-right: 0 !important;
 }
 
-/* PARAMASIVA MODAL WIDTH UTILITIES - Responsive to sidebar state with 20px margin */
+/* PARAMASIVA MODAL WIDTH UTILITIES - Fast sidebar-responsive timing */
 @utility paramasiva-modal-expanded {
   width: calc(100vw - 74px) !important; /* Full width minus collapsed sidebar (54px) and margin (20px) */
-  transition: width 400ms cubic-bezier(0.25, 0.1, 0.25, 1) !important; /* 200ms faster transition */
+  transition: width 300ms cubic-bezier(0.25, 0.1, 0.25, 1) !important; /* Fast sidebar timing */
 }
 
 @utility paramasiva-modal-normal {
   width: calc(100vw - 440px) !important; /* Full width minus expanded sidebar (420px) and margin (20px) */
-  transition: width 400ms cubic-bezier(0.25, 0.1, 0.25, 1) !important; /* 200ms faster transition */
+  transition: width 300ms cubic-bezier(0.25, 0.1, 0.25, 1) !important; /* Fast sidebar timing */
 }
 
 /* CAROUSEL NAVIGATION TRANSITION - Smooth left position changes */

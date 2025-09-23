@@ -36,7 +36,8 @@ export const ParamasivaPage: React.FC = () => {
     widthMorphStarted,
     gridLinesVisible,
     transitionToSubsystems,
-    transitionToQuaternalFromParamasiva
+    transitionToQuaternalFromParamasiva,
+    transitionToEpiLogosFromParamasiva
   } = useInterPageTransition();
 
   // Convert hook transition direction to component transition direction
@@ -48,6 +49,8 @@ export const ParamasivaPage: React.FC = () => {
         return 'to-subsystems';
       case 'paramasiva-to-quaternal':
         return 'to-quaternal';
+      case 'paramasiva-to-epilogos':
+        return 'to-main';
       default:
         return 'idle';
     }
@@ -237,7 +240,7 @@ export const ParamasivaPage: React.FC = () => {
   };
 
   const handleBackToMain = () => {
-    window.location.href = '/';
+    transitionToEpiLogosFromParamasiva();
   };
 
   const handleQuaternalLogicClick = () => {
@@ -368,6 +371,7 @@ export const ParamasivaPage: React.FC = () => {
           <ContentPanel
             pageType="paramasiva"
             isModalExpanded={modalState.isModalExpanded}
+            animationPhase={modalState.animationPhase}
             panelMoved={!initialPanelAnimation}
             isTransitioning={isTransitioning}
             secondPhaseCollapse={gridLinesVisible}
@@ -375,6 +379,13 @@ export const ParamasivaPage: React.FC = () => {
             heightMorphStarted={heightMorphStarted}
             widthMorphStarted={widthMorphStarted}
             isSidebarCollapsed={isCollapsed}
+            className={cn(
+              // Base transition + final target geometry (no per-phase toggles)
+              isTransitioning && currentTransitionDirection === 'paramasiva-to-epilogos' && [
+                "transition-paramasiva-to-epilogos",
+                "state-epilogos-target-panel"
+              ]
+            )}
           >
           {/* Main Panel Content */}
           <ModalPanel
