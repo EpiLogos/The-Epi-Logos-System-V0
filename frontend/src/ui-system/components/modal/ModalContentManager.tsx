@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { cn } from '../../utils/cn';
@@ -46,6 +46,9 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
     }
   );
 
+  // Ref to the dashboard modal container for cursor scoping
+  const dashboardContainerRef = useRef<HTMLDivElement | null>(null);
+
   // PNG Image State
   if (businessState === 'png-displayed') {
     return (
@@ -64,6 +67,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
       <AnimatePresence mode="wait">
         <motion.div
           key="dashboard"
+          ref={dashboardContainerRef}
           className={cn(
             'content-transition-container modal-content-panel relative',
             contentTransitionState.contentVisible ? 'content-visible' : 'content-hidden'
@@ -74,21 +78,22 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
           {/* Subtle Splash Cursor Effect - Full modal coverage */}
-          <div className="absolute inset-0 pointer-events-none z-0" style={{ opacity: 0.6, filter: 'grayscale(100%)' }}>
+          <div className="absolute inset-0 pointer-events-none z-0" style={{ opacity: 0.3, filter: 'grayscale(100%)' }}>
             <SplashCursor
               SIM_RESOLUTION={64}
               DYE_RESOLUTION={720}
-              DENSITY_DISSIPATION={4.0}
+              DENSITY_DISSIPATION={8.0}
               VELOCITY_DISSIPATION={3.0}
-              PRESSURE={0.05}
+              PRESSURE={0.25}
               PRESSURE_ITERATIONS={15}
               CURL={2}
-              SPLAT_RADIUS={0.15}
+              SPLAT_RADIUS={0.25}
               SPLAT_FORCE={3000}
               SHADING={false}
               COLOR_UPDATE_SPEED={5}
               BACK_COLOR={{ r: 0, g: 0, b: 0 }}
               TRANSPARENT={true}
+              eventTargetRef={dashboardContainerRef}
             />
           </div>
 

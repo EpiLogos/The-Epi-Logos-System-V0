@@ -96,6 +96,7 @@ export interface UserUpdateRequest {
   displayName?: string;
   profilePicture?: string;
   preferences?: any;
+  isAdmin?: boolean;  // Admin status (requires admin privileges to change)
 }
 
 export interface ChangePasswordRequest {

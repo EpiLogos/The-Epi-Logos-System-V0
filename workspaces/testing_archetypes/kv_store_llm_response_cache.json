@@ -64,5 +64,27 @@
     "create_time": 1757437031,
     "update_time": 1757437031,
     "_id": "global:keywords:27a0a8adb9f8081513c2da24673b63e4"
+  },
+  "global:keywords:a52be63516e565f128e41fb942379ab4": {
+    "return": "{\"high_level_keywords\": [\"System architecture\"], \"low_level_keywords\": [\"Terminus model\", \"Epi-Logos system\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "Terminus model Epi-Logos system architecture",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "hl_keywords": [],
+      "ll_keywords": [],
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1758662469,
+    "update_time": 1758662469,
+    "_id": "global:keywords:a52be63516e565f128e41fb942379ab4"
   }
 }

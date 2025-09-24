@@ -81,6 +81,7 @@ class User(BaseModel):
     lastName: Optional[str] = None
     profilePicture: Optional[str] = None
     tier: str = "free"  # free, patron
+    isAdmin: bool = False  # Admin privileges flag
     createdAt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     lastLoginAt: Optional[datetime] = None
     lastActiveAt: Optional[datetime] = None
@@ -310,19 +311,21 @@ class UserLoginRequest(BaseModel):
 class UserProfileUpdateRequest(BaseModel):
     """Request model for user profile updates."""
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     firstName: Optional[str] = None
     lastName: Optional[str] = None
     profilePicture: Optional[str] = None
     preferences: Optional[UserPreferences] = None
-    
+    isAdmin: Optional[bool] = None  # Admin status (requires admin privileges to change)
+
     def has_updates(self) -> bool:
         """Check if request contains any updates."""
         return any([
             self.firstName is not None,
             self.lastName is not None,
             self.profilePicture is not None,
-            self.preferences is not None
+            self.preferences is not None,
+            self.isAdmin is not None
         ])
 
 

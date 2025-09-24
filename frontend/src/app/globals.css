@@ -1704,13 +1704,13 @@ html, body {
 }
 /* Subsystems → Epi‑Logos: grid margin/height transition */
 @utility transition-subsys-epilogos-grid {
-  transition: height 44400ms cubic-bezier(0.19, 1, 0.22, 1) 400ms,
+  transition: height 3600ms cubic-bezier(0.19, 1, 0.22, 1) 600ms,
               margin 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms;
 }
 
 /* Subsystems → Epi‑Logos: sidebar width transition (delayed) */
 @utility transition-subsys-epilogos-sidebar {
-  transition: width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 600ms;
+  transition: width 1600ms cubic-bezier(0.19, 1, 0.22, 1) 400ms;
 }
 
 /* Subsystems → Epi‑Logos: grid state values */

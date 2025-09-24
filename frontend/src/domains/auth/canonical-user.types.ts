@@ -31,7 +31,10 @@ export interface User {
   
   // Subscription and tier
   tier: 'free' | 'patron';              // From backend tier (normalized case)
-  
+
+  // Authorization fields
+  isAdmin: boolean;                     // From backend isAdmin
+
   // Authentication status fields
   hasPassword: boolean;                 // From backend has_password() method
   isEmailVerified: boolean;             // From backend isEmailVerified
@@ -155,6 +158,7 @@ export interface UserUpdateData {
   profilePicture?: string;
   preferences?: Partial<UserPreferences>;
   profile?: Partial<UserProfile>;
+  isAdmin?: boolean;  // Admin status (requires admin privileges to change)
 }
 
 export interface LoginCredentials {
@@ -234,6 +238,7 @@ export const normalizeUserFromBackend = (backendUser: any): User => {
     profilePicture: backendUser.profilePicture,
     picture: backendUser.profilePicture || backendUser.picture,
     tier: backendUser.tier === 'patron' ? 'patron' : 'free',
+    isAdmin: backendUser.isAdmin === true,
     hasPassword: backendUser.hasPassword === true,
     isEmailVerified: backendUser.isEmailVerified === true,
     mfaEnabled: backendUser.mfaEnabled === true,

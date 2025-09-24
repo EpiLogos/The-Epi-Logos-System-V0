@@ -320,10 +320,11 @@ async def update_user_profile(
                 detail={"message": "Validation failed", "errors": validation_result.errors}
             )
         
-        # Update user profile
-        updated_user_data = await user_service.update_user(
+        # Update user profile with admin validation if needed
+        updated_user_data = await user_service.update_user_with_admin_check(
             user_id=str(current_user.id),
-            update_data=update_data
+            update_data=update_data,
+            requesting_user_id=str(current_user.id)
         )
         
         if not updated_user_data:
@@ -377,10 +378,11 @@ async def update_user_profile_put(
                 detail={"message": "Validation failed", "errors": validation_result.errors}
             )
         
-        # Update user profile
-        updated_user_data = await user_service.update_user(
+        # Update user profile with admin validation if needed
+        updated_user_data = await user_service.update_user_with_admin_check(
             user_id=str(current_user.id),
-            update_data=update_data
+            update_data=update_data,
+            requesting_user_id=str(current_user.id)
         )
         
         if not updated_user_data:

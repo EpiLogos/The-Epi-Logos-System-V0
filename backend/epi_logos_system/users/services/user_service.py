@@ -207,7 +207,10 @@ class UserService:
             
             if update_data.preferences is not None:
                 update_dict["preferences"] = update_data.preferences.model_dump()
-            
+
+            if update_data.isAdmin is not None:
+                update_dict["isAdmin"] = update_data.isAdmin
+
             # Update via repository
             result = await self.user_repository.update_user(user_id, update_dict)
             
@@ -550,7 +553,60 @@ class UserService:
             
             logger.info(f"User data exported for: {user_id}")
             return export_data
-            
+
+        except Exception as e:
+            logger.error(f"Failed to export user data for {user_id}: {e}")
+            raise UserServiceError("User data export failed") from e
+
+    async def update_user_with_admin_check(
+        self,
+        user_id: str,
+        update_data: UserProfileUpdateRequest,
+        requesting_user_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Update user with admin permission validation.
+
+        Args:
+            user_id: ID of user to update
+            update_data: Update data
+            requesting_user_id: ID of user making the request
+
+        Returns:
+            Updated user data if successful, None otherwise
+
+        Raises:
+            ValidationError: If admin permission is required but not granted
+            UserNotFoundError: If user doesn't exist
+            UserServiceError: If update fails
+        """
+        try:
+            # Check if admin status is being changed
+            if update_data.isAdmin is not None:
+                # Get requesting user to check admin status
+                requesting_user = await self.get_user_by_id(requesting_user_id)
+                if not requesting_user or not requesting_user.isAdmin:
+                    raise ValidationError(
+                        "Admin privileges required to change admin status",
+                        field_errors={"isAdmin": ["Only admins can change admin status"]}
+                    )
+
+                # Prevent self-demotion (optional safety check)
+                if user_id == requesting_user_id and not update_data.isAdmin:
+                    raise ValidationError(
+                        "Cannot remove your own admin privileges",
+                        field_errors={"isAdmin": ["Cannot demote yourself from admin"]}
+                    )
+
+            # Proceed with normal update
+            return await self.update_user(user_id, update_data)
+
+        except (ValidationError, UserNotFoundError):
+            raise
+        except Exception as e:
+            logger.error(f"Failed to update user with admin check {user_id}: {e}")
+            raise UserServiceError("User update failed") from e
+
         except Exception as e:
             logger.error(f"Failed to export user data {user_id}: {e}")
             raise

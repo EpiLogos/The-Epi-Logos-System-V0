@@ -236,6 +236,76 @@ if PYDANTIC_AI_AVAILABLE:
 
 
         @agent.tool
+        async def get_coordinate_relationships(
+            ctx: RunContext[OrchestratorDeps],
+            coordinate: str,
+        ) -> Dict[str, Any]:
+            """Fetch direct relationships for a Bimba coordinate via Backend GraphQL.
+
+            This reads connection edges for a node anchored by exact `bimbaCoordinate` equality
+            through the backend API. It performs no mutations and preserves trilaminar boundaries.
+
+            Args:
+                coordinate: The Bimba coordinate (e.g., "#2-3")
+            """
+            try:
+                logger.info(f"🔧 TOOL CALL: get_coordinate_relationships for {coordinate}")
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "error": "Bimba client not available"}
+
+                result = await ctx.deps.bimba_client.get_node_relationships(coordinate)
+                return result
+            except Exception as e:
+                logger.error(f"Error getting relationships for {coordinate}: {e}")
+                return {"success": False, "error": str(e), "coordinate": coordinate, "edges": []}
+
+
+        @agent.tool
+        async def get_path_between_coordinates(
+            ctx: RunContext[OrchestratorDeps],
+            start_coordinate: str,
+            end_coordinate: str,
+            max_hops: int = 5,
+        ) -> Dict[str, Any]:
+            """Find an ordered relationship path between two Bimba coordinates via Backend GraphQL.
+
+            - Uses literal hop counts; no parameterized variable-length patterns.
+            - Defaults `max_hops` to 5 and respects backend safety caps.
+            - Anchors nodes by exact `bimbaCoordinate` equality.
+
+            Args:
+                start_coordinate: Start coordinate (e.g., "#2")
+                end_coordinate: End coordinate (e.g., "#4-1")
+                max_hops: Maximum hops to traverse (default 5)
+            """
+            try:
+                import os
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "error": "Bimba client not available"}
+
+                # Enforce a local safety cap aligned with backend defaults
+                try:
+                    cap = int(os.getenv("BIMBA_MAX_HOPS_CAP", "10"))
+                except Exception:
+                    cap = 10
+                hops = max(1, min(max_hops, cap))
+
+                logger.info(
+                    f"🔧 TOOL CALL: get_path_between_coordinates {start_coordinate} -> {end_coordinate} (maxHops={hops})"
+                )
+                result = await ctx.deps.bimba_client.get_path_between_coordinates(
+                    start_coordinate, end_coordinate, hops
+                )
+                return result
+            except Exception as e:
+                logger.error(
+                    f"Error getting path between {start_coordinate} and {end_coordinate}: {e}"
+                )
+                return {"success": False, "error": str(e), "path": None}
+
+
+        @agent.tool
         def get_session_context(ctx: RunContext[OrchestratorDeps]) -> Dict[str, Any]:
             """Retrieve current session context and metadata.
 
@@ -782,7 +852,7 @@ def get_agent_info() -> Dict[str, Any]:
         "available": True,
         "agent_type": "Pydantic AI Agent",
         "output_type": "OrchestratorResponse",
-        "tools_count": 5,  # resolve_coordinate, search_knowledge, store_memory, get_session_context, check_context_window_status
+        "tools_count": 13,
         "supports_streaming": True,
         "supports_personas": True,
         "supports_dynamic_models": True,

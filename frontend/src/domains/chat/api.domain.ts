@@ -42,18 +42,21 @@ export interface APIEndpoints {
   simple: string;
   stream: string;
   models: string;
-  sessions: string;
+  sessions: string; // agentic sessions mapping
   cliBridge: string;
+  backendConversations: string; // backend conversations base
 }
 
 // Default API endpoints
 export const DEFAULT_ENDPOINTS: APIEndpoints = {
   agui: 'http://localhost:8001/api/v1/ag-ui/run',
   simple: '/api/dev/orchestrator/simple',
-  stream: '/api/dev/orchestrator/stream',
+  // Stream via AG-UI + persistence wrapper to preserve native behavior
+  stream: 'http://localhost:8001/api/v1/ag-ui/run-persist',
   models: '/api/dev/orchestrator/models',
   sessions: 'http://localhost:8001/api/v1/sessions',
-  cliBridge: '/api/dev/orchestrator/cli-bridge'
+  cliBridge: '/api/dev/orchestrator/cli-bridge',
+  backendConversations: 'http://localhost:8000/api/conversations'
 };
 
 // Pure API request builders
@@ -86,15 +89,7 @@ export const buildSimpleChatRequest = (
   model
 });
 
-export const buildStreamRequest = (
-  message: string,
-  persona: string,
-  model: string
-): SimpleChatRequest => ({
-  message,
-  persona,
-  model
-});
+// Runner stream builder is unused; AG-UI requests built via buildAGUIRequest
 
 // CLI command parsing
 export const parseCLICommand = (input: string): CLICommand | null => {
@@ -137,6 +132,19 @@ export const buildCLIBridgeURL = (baseEndpoint: string, command?: string): strin
   const url = baseEndpoint;
   return command ? `${url}?command=${encodeURIComponent(command)}` : url;
 };
+
+// Threads endpoints (Agentic)
+export const buildThreadsListURL = (backendBase: string, userId: string, limit = 50, page = 1): string =>
+  `${backendBase}/threads?user_id=${encodeURIComponent(userId)}&limit=${limit}&page=${page}`;
+
+export const buildThreadMessagesURL = (backendBase: string, threadId: string, limit = 200): string =>
+  `${backendBase}/threads/${encodeURIComponent(threadId)}/messages?limit=${limit}`;
+
+export const buildCreateThreadURL = (baseEndpoint: string): string =>
+  `${baseEndpoint}/threads`;
+
+export const buildDeleteThreadURL = (baseEndpoint: string, threadId: string): string =>
+  `${baseEndpoint}/threads/${encodeURIComponent(threadId)}`;
 
 // Response type guards and parsers
 export interface APIResponse<T = any> {

@@ -50,6 +50,7 @@ class JWTService:
             "sub": str(user.id),  # Subject - user ID
             "email": user.email,
             "tier": user.tier,
+            "isAdmin": user.isAdmin,  # Admin status for authorization
             "iat": now,  # Issued at
             "exp": expires,  # Expiration
             "type": "access"
@@ -173,15 +174,17 @@ class JWTService:
             user_data = {
                 "id": user_id,
                 "email": email,
-                "tier": payload.get("tier", "free")
+                "tier": payload.get("tier", "free"),
+                "isAdmin": payload.get("isAdmin", False)
             }
-            
+
             # Create new tokens
             # Note: We create both new access and refresh tokens for security
             new_access_token = jwt.encode({
                 "sub": user_id,
                 "email": email,
                 "tier": user_data["tier"],
+                "isAdmin": user_data["isAdmin"],
                 "iat": datetime.now(timezone.utc),
                 "exp": datetime.now(timezone.utc) + timedelta(hours=self.access_token_expire_hours),
                 "type": "access"

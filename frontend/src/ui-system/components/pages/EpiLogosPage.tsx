@@ -14,6 +14,7 @@ import { useEpiLogosTransition } from '@/hooks/ui-system/useEpiLogosTransition';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
 import { AuthModalContent } from '../auth/AuthModalContent';
 import { ModalContentManager } from '../modal/ModalContentManager';
+import { ThreadHistoryPanel } from '../chat/ThreadHistoryPanel';
 import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
@@ -231,6 +232,13 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                     EPI : LOGOS
                   </TextAnimate>
                 </div>
+
+                {/* Chat Threads Sidebar Panel (renders when Chat modal is active) */}
+                {epiLogosState.showAuthModal && businessState === 'chat' && (
+                  <div className="mt-6">
+                    <ThreadHistoryPanel />
+                  </div>
+                )}
 
                 {/* Navigation Links */}
                 <div className="flex flex-col gap-[10px] items-start text-left">

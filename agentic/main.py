@@ -181,7 +181,11 @@ app.include_router(ag_ui_router)
 
 # Include session metadata API
 from agentic.api.sessions import router as sessions_router
+from agentic.api.chat_runner import router as chat_runner_router
+from agentic.api.ag_ui_persist import router as ag_ui_persist_router
 app.include_router(sessions_router)
+app.include_router(chat_runner_router)
+app.include_router(ag_ui_persist_router)
 
 @app.get("/api/v1/orchestrator/status")
 async def orchestrator_status():
@@ -239,12 +243,18 @@ async def get_orchestrator_capabilities():
 
     # Return the actual tool names defined in setup_agent_tools
     tools = [
+        # Bimba (coordinate) namespace
         "resolve_coordinate",
+        "get_coordinate_relationships",
+        "get_path_between_coordinates",
+        # Gnostic namespace
         "search_gnostic_space", 
-        "get_session_context",
-        "check_context_window_status",
         "ingest_wisdom",
         "get_gnostic_workspace_info",
+        # Session/context
+        "get_session_context",
+        "check_context_window_status",
+        # Episodic namespace
         "remember_episode", 
         "search_memory_patterns",
         "form_memory_community",

@@ -196,6 +196,21 @@ export const AccountModalContent: React.FC<AccountModalContentProps> = ({
 
 // Profile Section adapted for modal
 function ProfileModalSection({ isEditing, setIsEditing, user }: { isEditing: boolean; setIsEditing: (editing: boolean) => void; user: any }) {
+  const { updateProfile, refreshProfile } = useAuth();
+  const [isPromoting, setIsPromoting] = useState(false);
+
+  const handlePromoteToAdmin = async () => {
+    setIsPromoting(true);
+    try {
+      await updateProfile({ isAdmin: true });
+      // Refresh user data instead of reloading page
+      await refreshProfile();
+    } catch (error) {
+      console.error('Failed to promote to admin:', error);
+    } finally {
+      setIsPromoting(false);
+    }
+  };
   return (
     <div className="space-y-8">
       {/* Profile Header Card */}
@@ -320,6 +335,46 @@ function ProfileModalSection({ isEditing, setIsEditing, user }: { isEditing: boo
               disabled={!isEditing}
               className="w-full min-h-[80px] border border-ui-coord-text/30 px-3 py-2 bg-ui-panel/20 font-sans text-ui-panel focus:outline-none focus:ring-2 focus:ring-ui-coord-text/50 focus:border-ui-coord-text/50 disabled:bg-ui-panel/10 disabled:text-gray-300 resize-none transition-all placeholder:text-gray-300/50 text-sm"
             />
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Status Card */}
+      <div className="relative bg-ui-panel/10 border border-amber-500/30">
+        <div className="border-b border-amber-500/30 p-4">
+          <h3 className="flex items-center gap-3 text-lg font-heading text-amber-300">
+            <ShieldCheckIcon className="h-5 w-5" />
+            Admin Status
+          </h3>
+          <p className="font-sans text-amber-400/80 text-sm mt-1">
+            {user?.isAdmin ? 'Administrative privileges active' : 'Request administrative privileges'}
+          </p>
+        </div>
+        <div className="p-6">
+          <div className="flex items-center justify-between p-4 border border-amber-500/30 bg-ui-panel/20">
+            <div>
+              <h4 className="font-heading text-amber-300 text-base">Administrator Status</h4>
+              <p className="font-sans text-amber-400/80 text-sm mt-1">
+                {user?.isAdmin
+                  ? 'You have administrative privileges in the system'
+                  : 'You currently have standard user privileges'
+                }
+              </p>
+            </div>
+            {user?.isAdmin ? (
+              <div className="flex items-center gap-2">
+                <span className="text-amber-300 font-sans text-sm">Admin Active</span>
+                <div className="w-3 h-3 bg-amber-400 rounded-full animate-pulse"></div>
+              </div>
+            ) : (
+              <button
+                onClick={handlePromoteToAdmin}
+                disabled={isPromoting}
+                className="px-4 py-2 bg-amber-600/30 hover:bg-amber-600/40 text-amber-300 border border-amber-400/50 hover:border-amber-300 font-sans text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isPromoting ? 'Promoting...' : 'Request Admin Access'}
+              </button>
+            )}
           </div>
         </div>
       </div>

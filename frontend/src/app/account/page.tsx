@@ -442,6 +442,40 @@ function ProfileSection({ isEditing, setIsEditing, user }: { isEditing: boolean;
           </div>
         </div>
       </div>
+
+      {/* Admin Privileges Card - Only show for admin users */}
+      {user?.isAdmin && (
+        <div className="relative bg-black/30 backdrop-blur-sm border border-amber-500/30 shadow-2xl">
+          <GlowingEffect
+            variant="nara"
+            proximity={100}
+            spread={30}
+            borderWidth={1}
+            movementDuration={1.5}
+          />
+          <div className="border-b border-amber-500/30 p-6">
+            <h3 className="flex items-center gap-3 text-xl font-heading text-amber-300 tracking-wide">
+              <ShieldCheckIcon className="h-6 w-6" />
+              Admin Privileges
+            </h3>
+            <p className="font-sans text-amber-400/80 mt-1">System administration settings</p>
+          </div>
+          <div className="p-8 space-y-6">
+            <div className="flex items-center justify-between p-4 border border-amber-500/30 bg-black/20 backdrop-blur-sm">
+              <div>
+                <h4 className="font-heading text-amber-300 text-lg">Administrator Status</h4>
+                <p className="font-sans text-amber-400/80 text-sm mt-1">
+                  You have administrative privileges in the system
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-amber-300 font-sans text-sm">Admin</span>
+                <div className="w-3 h-3 bg-amber-400 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

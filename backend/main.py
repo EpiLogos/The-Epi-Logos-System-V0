@@ -185,6 +185,10 @@ app.include_router(lightrag_router)
 from backend.epi_logos_system.cag.graphiti.api import router as graphiti_router
 app.include_router(graphiti_router)
 
+# Conversations (durable chat history)
+from backend.epi_logos_system.conversations.api import router as conversations_router
+app.include_router(conversations_router)
+
 # AG-UI Protocol has been moved to Agentic layer (Trilaminar Architecture compliance)
 # Frontend should communicate with Agentic layer at http://localhost:8001/api/v1/ag-ui/*
 

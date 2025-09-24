@@ -10,7 +10,7 @@ import { useCallback, useEffect } from 'react';
 import { useChat, type UseChatConfig } from './useChat';
 import { useModels, type UseModelsConfig } from './useModels';
 import { useCLICommands, type UseCLICommandsConfig } from './useCLICommands';
-import { isCLICommand } from '@/domains/chat/api.domain';
+import { isCLICommand, DEFAULT_ENDPOINTS } from '@/domains/chat/api.domain';
 import { addMessage } from '@/domains/chat/session.domain';
 
 export interface UseChatIntegrationConfig extends UseChatConfig {
@@ -23,6 +23,7 @@ export interface UseChatIntegrationReturn {
   session: ReturnType<typeof useChat>['session'];
   sendMessage: (content: string) => Promise<void>;
   clearChat: () => void;
+  loadThread: (threadId: string) => Promise<void>;
   
   // Model functionality
   models: ReturnType<typeof useModels>['models'];
@@ -56,6 +57,9 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
     enableCLI = true
   } = config;
 
+  // Merge endpoints with defaults (avoid undefined access)
+  const apiEndpoints = { ...DEFAULT_ENDPOINTS, ...(endpoints || {}) };
+
   // Initialize models first
   const {
     models,
@@ -71,7 +75,8 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
     persona,
     model: currentModel || model,
     streamingEnabled,
-    endpoints
+    endpoints,
+    userId: (config as any).userId
   };
 
   const {
@@ -79,6 +84,7 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
     sendMessage: baseSendMessage,
     clearChat,
     updateConfig,
+    hydrateThread,
     isLoading,
     error,
     canSend
@@ -86,7 +92,7 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
 
   // Initialize CLI commands
   const cliConfig: UseCLICommandsConfig = {
-    endpoints,
+    endpoints: apiEndpoints,
     onModelChange: (modelId: string) => {
       setCurrentModel(modelId);
       updateConfig({ model: modelId });
@@ -116,6 +122,24 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
     }
   }, [enableCLI, executeCommand, baseSendMessage, session]);
 
+  // Load a thread's history into the current session
+  const loadThread = useCallback(async (threadId: string) => {
+    try {
+      // Fetch messages
+      const resp = await fetch(
+        `${apiEndpoints.backendConversations}/threads/${encodeURIComponent(threadId)}/messages?limit=200`,
+        { method: 'GET' }
+      );
+      const data = await resp.json();
+      if (!resp.ok || !data?.messages) {
+        throw new Error('Failed to load thread messages');
+      }
+      hydrateThread(threadId, data.messages as Array<{ role: string; content: string }>);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [apiEndpoints.sessions, hydrateThread]);
+
   // Sync model changes
   useEffect(() => {
     if (currentModel && currentModel !== session.config.model) {
@@ -137,6 +161,7 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
     session,
     sendMessage,
     clearChat,
+    loadThread,
     
     // Model functionality
     models,

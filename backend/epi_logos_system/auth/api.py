@@ -107,6 +107,7 @@ class UserUpdateRequest(BaseModel):
     lastName: Optional[str] = None
     profilePicture: Optional[str] = None
     preferences: Optional[Dict[str, Any]] = None
+    isAdmin: Optional[bool] = None
 
 
 @router.patch("/me")

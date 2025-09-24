@@ -157,6 +157,7 @@ class AgentRunner:
                     # Store interaction in conversation history with actual Pydantic AI messages
                     await conversation_manager.add_interaction(
                         session_id=session.session_id,
+                        user_id=session.user_id,
                         user_message=message,
                         agent_response=full_response,
                         persona=structured_output.persona_used,
@@ -180,6 +181,7 @@ class AgentRunner:
                     # Still store the basic interaction
                     await conversation_manager.add_interaction(
                         session_id=session.session_id,
+                        user_id=session.user_id,
                         user_message=message,
                         agent_response=full_response,
                         persona=deps.current_persona,
@@ -199,6 +201,7 @@ class AgentRunner:
             try:
                 await conversation_manager.add_interaction(
                     session_id=session.session_id,
+                    user_id=session.user_id,
                     user_message=message,
                     agent_response=error_message,
                     persona=session.active_persona or "system",

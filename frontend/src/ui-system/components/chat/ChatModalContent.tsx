@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { useChatIntegration } from '@/hooks/useChatIntegration';
+import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 
 interface ChatModalContentProps {
@@ -11,19 +12,35 @@ interface ChatModalContentProps {
 
 export const ChatModalContent: React.FC<ChatModalContentProps> = ({ onStateChange }) => {
   const [input, setInput] = useState('');
+  const { user } = useUnifiedAuth();
+  const userId = (user as any)?.id || (user as any)?.sub || 'web-user';
 
   // Reuse existing chat integration (defaults stream on, CLI off for modal)
   const chat = useChatIntegration({
     persona: 'system',
     model: '',
     streamingEnabled: true,
-    enableCLI: false
+    enableCLI: false,
+    // Propagate real user id for correct persistence and listing
+    userId
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chat.session.messages]);
+
+  // Listen for thread selection events from the sidebar panel
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{ threadId: string }>;
+      if (ce.detail?.threadId) {
+        void chat.loadThread(ce.detail.threadId);
+      }
+    };
+    window.addEventListener('chat-select-thread', handler as EventListener);
+    return () => window.removeEventListener('chat-select-thread', handler as EventListener);
+  }, [chat]);
 
   const canSend = chat.canSend(input);
   const onSend = async () => {

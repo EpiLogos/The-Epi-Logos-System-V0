@@ -36,7 +36,6 @@ import {
 import {
   buildAGUIRequest,
   buildSimpleChatRequest,
-  buildStreamRequest,
   createRequestConfig,
   createGetRequestConfig,
   parseAPIResponse,
@@ -59,6 +58,7 @@ export interface UseChatConfig {
   model: string;
   streamingEnabled: boolean;
   endpoints?: Partial<APIEndpoints>;
+  userId?: string;
 }
 
 export interface UseChatReturn {
@@ -66,6 +66,7 @@ export interface UseChatReturn {
   sendMessage: (content: string) => Promise<void>;
   clearChat: () => void;
   updateConfig: (config: Partial<UseChatConfig>) => void;
+  hydrateThread: (threadId: string, messages: Array<{ role: string; content: string }>) => void;
   isLoading: boolean;
   error: string | null;
   canSend: (input: string) => boolean;
@@ -210,12 +211,17 @@ export function useChat(initialConfig: UseChatConfig): UseChatReturn {
         const assistantMessage = createAssistantMessage(session.config.persona, session.config.model);
         setSession(prev => addMessage(prev, assistantMessage));
 
-        // Use AG-UI streaming endpoint
+        // Use AG-UI persistence wrapper (SSE) with native AG-UI request
         const requestBody = buildAGUIRequest({ ...session, threadId: currentThreadId }, userMessage);
-        const response = await fetch(endpoints.agui, createRequestConfig(
-          requestBody, 
-          abortControllerRef.current.signal
-        ));
+        const response = await fetch(endpoints.stream, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(initialConfig.userId ? { 'X-User-Id': initialConfig.userId } : {})
+          },
+          body: JSON.stringify(requestBody),
+          signal: abortControllerRef.current.signal
+        });
 
         if (!response.ok) {
           const result = await parseAPIResponse(response);
@@ -269,6 +275,26 @@ export function useChat(initialConfig: UseChatConfig): UseChatReturn {
     setSession(prev => clearMessages(prev));
   }, []);
 
+  // Hydrate thread locally without network
+  const hydrateThread = useCallback((threadId: string, messages: Array<{ role: string; content: string }>) => {
+    setSession(prev => setThreadId(clearMessages(prev), threadId));
+    // Add messages in order
+    setSession(prev => {
+      let cur = prev;
+      for (const m of messages) {
+        if (m.role === 'user') {
+          cur = addMessage(cur, createUserMessage(m.content, cur.config.persona, cur.config.model));
+        } else if (m.role === 'assistant') {
+          cur = addMessage(cur, createAssistantMessage(cur.config.persona, cur.config.model));
+          cur = updateLastMessage(cur, msg => ({ ...msg, content: m.content }));
+        } else if (m.role === 'system') {
+          cur = addMessage(cur, createSystemMessage(m.content));
+        }
+      }
+      return cur;
+    });
+  }, []);
+
   // Update configuration
   const updateChatConfig = useCallback((configUpdates: Partial<UseChatConfig>) => {
     setSession(prev => updateConfig(prev, {
@@ -287,6 +313,7 @@ export function useChat(initialConfig: UseChatConfig): UseChatReturn {
     sendMessage,
     clearChat,
     updateConfig: updateChatConfig,
+    hydrateThread,
     isLoading: session.isLoading,
     error: session.error,
     canSend

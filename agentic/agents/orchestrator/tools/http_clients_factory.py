@@ -17,6 +17,7 @@ from agentic.clients import (
     GraphitiHttpClient,
     BimbaGraphQLClient
 )
+from .bimba.http_bimba_tools import create_http_bimba_client, HttpBimbaClient
 # Note: redis_session_tools and mongo_conversation_tools have been deprecated
 # as they mistakenly made session/conversation management part of tooling
 # Session/conversation management is now in dedicated directories
@@ -29,7 +30,8 @@ class HttpClientsContainer:
     
     def __init__(self):
         self.backend_client: Optional[BackendHttpClient] = None
-        self.bimba_client: Optional[BimbaGraphQLClient] = None
+        # Wrap BimbaGraphQLClient with HttpBimbaClient to expose full tool surface
+        self.bimba_client: Optional[HttpBimbaClient] = None
         self.lightrag_client: Optional[LightRAGHttpClient] = None
         self.graphiti_client: Optional[GraphitiHttpClient] = None
         
@@ -66,16 +68,18 @@ class HttpClientsContainer:
         # Initialize Bimba GraphQL client (depends on backend)
         if 'bimba' in required_services:
             try:
-                self.bimba_client = BimbaGraphQLClient(backend_url)
-                await self.bimba_client.connect()
+                graphql_client = BimbaGraphQLClient(backend_url)
+                await graphql_client.connect()
+                # Wrap in HTTP Bimba client to gain relationships + path traversal
+                self.bimba_client = await create_http_bimba_client(graphql_client)
                 # Test with a simple coordinate resolution
                 test_result = await self.bimba_client.resolve_coordinate("#0")
                 if test_result:
                     self.connected_services.add('bimba')
                     results['bimba'] = True
-                    logger.info("✅ Bimba GraphQL client connected")
+                    logger.info("✅ Bimba HTTP client connected (GraphQL-backed)")
                 else:
-                    raise Exception("Bimba GraphQL test failed")
+                    raise Exception("Bimba client test failed")
             except Exception as e:
                 logger.warning(f"❌ Bimba client failed: {e}")
                 self.failed_services.add('bimba')

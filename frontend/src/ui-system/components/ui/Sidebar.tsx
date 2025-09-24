@@ -2,6 +2,7 @@ import React from 'react';
 import { cn } from '../../utils/cn';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { SidebarToggle } from './SidebarToggle';
+import { useSidebarKeyboard } from '@/hooks/useSidebarKeyboard';
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -24,6 +25,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   // Get collapse state from context
   const { isCollapsed, toggle } = useSidebar();
+
+  // Enable ESC key to toggle sidebar
+  useSidebarKeyboard();
   // Calculate width based on variant, modal state, and collapse state
   const getWidth = () => {
     // COLLAPSE STATE: Override all other states when collapsed
