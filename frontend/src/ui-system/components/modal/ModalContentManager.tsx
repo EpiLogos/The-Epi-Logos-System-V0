@@ -8,7 +8,6 @@ import { AuthModalContent } from '../auth/AuthModalContent';
 import { AccountModalContent } from '../account/AccountModalContent';
 import { type EpiLogosBusinessState, type AccountBusinessState, type AuthBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 import { DashboardModalContent } from '../dashboard/DashboardModalContent';
-import { useModalContentTransition } from '../../hooks/useContentTransition';
 import { ChatModalContent } from '../chat/ChatModalContent';
 import { SplashCursor } from '@/components/splash-cursor';
 
@@ -34,20 +33,16 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
   modalExpansionComplete = true // Default to true for backward compatibility
 }) => {
   const { isAuthenticated } = useUnifiedAuth();
-
-  // Use the new content transition hook for smooth state changes
-  const [contentTransitionState] = useModalContentTransition(
-    businessState,
-    modalExpansionComplete,
-    {
-      transitionDuration: 300,
-      initialVisible: false,
-      skipInitialTransition: businessState === 'png-displayed'
-    }
-  );
+  // Framer owns fade/blur transitions here; CSS utilities handle layout/typography only
 
   // Ref to the dashboard modal container for cursor scoping
   const dashboardContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Prevent duplicate businessState updates (e.g., mount effects or StrictMode)
+  const safeOnStateChange = (next: EpiLogosBusinessState) => {
+    if (next === businessState) return;
+    onStateChange(next);
+  };
 
   // PNG Image State
   if (businessState === 'png-displayed') {
@@ -69,8 +64,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
           key="dashboard"
           ref={dashboardContainerRef}
           className={cn(
-            'content-transition-container modal-content-panel relative mb-[5px]',
-            contentTransitionState.contentVisible ? 'content-visible' : 'content-hidden'
+            'content-transition-container modal-content-panel relative mb-[5px]'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
@@ -99,7 +93,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
 
           {/* Dashboard content with proper z-index */}
           <div className="relative z-10">
-            <DashboardModalContent onStateChange={onStateChange} />
+            <DashboardModalContent onStateChange={safeOnStateChange} />
           </div>
         </motion.div>
       </AnimatePresence>
@@ -113,15 +107,14 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         <motion.div
           key="chat"
           className={cn(
-            'content-transition-container modal-content-panel mb-[5px]',
-            contentTransitionState.contentVisible ? 'content-visible' : 'content-hidden'
+            'content-transition-container modal-content-panel mb-[5px]'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
           exit={{ opacity: 0, filter: 'blur(4px)' }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
-          <ChatModalContent onStateChange={onStateChange} />
+          <ChatModalContent onStateChange={safeOnStateChange} />
         </motion.div>
       </AnimatePresence>
     );
@@ -134,8 +127,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         <motion.div
           key={businessState} // Key changes trigger transitions between auth states
           className={cn(
-            'content-transition-container modal-content-panel mt-[80px] mb-[5px]',
-            contentTransitionState.contentVisible ? 'content-visible' : 'content-hidden'
+            'content-transition-container modal-content-panel mt-[80px] mb-[5px]'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
@@ -144,7 +136,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         >
           <AuthModalContent
             businessState={businessState as AuthBusinessState}
-            onStateChange={onStateChange}
+            onStateChange={safeOnStateChange}
           />
         </motion.div>
       </AnimatePresence>
@@ -158,8 +150,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         <motion.div
           key={businessState} // Key changes trigger transitions between account states
           className={cn(
-            'content-transition-container modal-content-panel mb-[5px]',
-            contentTransitionState.contentVisible ? 'content-visible' : 'content-hidden'
+            'content-transition-container modal-content-panel mb-[5px]'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
@@ -168,7 +159,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         >
           <AccountModalContent
             businessState={businessState as AccountBusinessState}
-            onStateChange={onStateChange}
+            onStateChange={safeOnStateChange}
           />
         </motion.div>
       </AnimatePresence>
@@ -214,3 +205,5 @@ const PNGImageContent: React.FC<PNGImageContentProps> = ({
     />
   );
 };
+
+// (no ExitingOverlay; Framer handles exit/enter)

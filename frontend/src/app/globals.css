@@ -1700,3 +1700,40 @@ html, body {
 @utility state-grid-margin-20 { margin: 20px; }
 @utility transition-subsys-paramasiva-sidebar { transition: width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 1000ms; }
 @utility transition-subsys-default-grid { transition: all 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms; }
+/* Sidebar Threads fixed offset utilities (global, not inline) */
+@utility sidebar-threads-offset-40 { margin-top: -40px; }
+@keyframes sidebarThreadsFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@utility sidebar-threads-fadein-200 {
+  opacity: 0;
+  animation: sidebarThreadsFadeIn 350ms ease-out 200ms forwards;
+}
+
+@utility sidebar-threads-offset-60 { margin-top: -60px; }
+
+/* Preferred spacing utility for Threads in sidebar (padding, not margin) */
+@utility sidebar-threads-pt-60 { padding-top: 60px; }
+
+@keyframes sidebarThreadsFadeOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+@utility sidebar-threads-fadeout {
+  opacity: 1;
+  animation: sidebarThreadsFadeOut 350ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* Absolute-positioned threads container inside Sidebar (prevents layout shift) */
+@utility sidebar-threads-abs {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 160px; /* desired offset from top */
+  bottom: 0;
+  overflow-y: auto;
+}
