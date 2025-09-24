@@ -59,7 +59,7 @@ export function useThreads(config: UseThreadsConfig): UseThreadsReturn {
     } finally {
       setLoading(false);
     }
-  }, [config.userId, endpoints.sessions, activeThreadId]);
+  }, [config.userId, endpoints.backendConversations, activeThreadId]);
 
   const createThread = useCallback(async (): Promise<string | null> => {
     try {
@@ -67,7 +67,19 @@ export function useThreads(config: UseThreadsConfig): UseThreadsReturn {
       const data = await parseAPIResponse(resp);
       if (!data.success) throw new Error(data.error || 'Failed to create thread');
       const threadId = (data.thread_id || data.data?.thread_id) as string;
-      // Reload list and activate
+      // Optimistic add to improve perceived performance
+      if (threadId) {
+        setThreads(prev => [{
+          thread_id: threadId,
+          title: 'Untitled',
+          last_message: '',
+          created_at: new Date().toISOString(),
+          last_activity: new Date().toISOString(),
+          persona: 'system',
+          model: ''
+        }, ...prev]);
+      }
+      // Reload list and activate (reconcile)
       await loadThreads();
       if (threadId) {
         setActiveThreadId(threadId);
@@ -79,7 +91,7 @@ export function useThreads(config: UseThreadsConfig): UseThreadsReturn {
       setError((e as any).message || 'Failed to create thread');
       return null;
     }
-  }, [config.userId, endpoints.sessions, loadThreads]);
+  }, [config.userId, endpoints.backendConversations, loadThreads]);
 
   const selectThread = useCallback((threadId: string) => {
     setActiveThreadId(threadId);
@@ -104,7 +116,7 @@ export function useThreads(config: UseThreadsConfig): UseThreadsReturn {
       setError((e as any).message || 'Failed to delete thread');
       return false;
     }
-  }, [endpoints.sessions, activeThreadId, createThread]);
+  }, [endpoints.backendConversations, activeThreadId, createThread]);
 
   useEffect(() => {
     void loadThreads();

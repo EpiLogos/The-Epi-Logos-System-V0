@@ -83,7 +83,7 @@ const SubsystemPanel: React.FC<SubsystemPanelProps> = ({
 };
 
 
-export const SubsystemsPage: React.FC = () => {
+export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate = '#' }) => {
   const [coordinateTextVisible, setCoordinateTextVisible] = useState(false);
   
   // Inter-page transition hook - simplified like original CSS class approach
@@ -131,7 +131,7 @@ export const SubsystemsPage: React.FC = () => {
   ];
 
   return (
-    <>
+    <div data-coordinate={coordinate}>
       {/* White overlay for inter-page transitions */}
       <div className={cn(
         "fixed -top-[5px] -left-[5px] w-[calc(100vw+10px)] h-[calc(100vh+10px)] bg-[#f5f5f5] z-[9999] transition-[opacity,transform] duration-[600ms] ease-paramasiva pointer-events-none",
@@ -158,7 +158,9 @@ export const SubsystemsPage: React.FC = () => {
                 ? "w-[300px]"
                 : currentTransitionDirection === 'subsystems-to-paramasiva'
                 ? "w-[calc(100vw-420px)]"
-                : "w-[300px]")
+                : "w-[300px]"),
+          // Restore smooth width animation for subsystems → paramasiva via utility
+          (isTransitioning && currentTransitionDirection === 'subsystems-to-paramasiva' && 'transition-subsys-paramasiva-sidebar')
         )}>
         {/* Logo */}
         <TextAnimate 
@@ -237,7 +239,9 @@ export const SubsystemsPage: React.FC = () => {
               ]
             : (!isTransitioning
                 ? 'w-[calc(100vw-300px)] h-screen'
-                : 'w-[420px] h-[calc(73vh+20.75vh)] mt-5 mr-5 mb-0 ml-0')
+                : 'w-[420px] h-[calc(73vh+20.75vh)] mt-5 mr-5 mb-0 ml-0'),
+          // Restore smooth grid transition for non-epi-logos transitions via utility
+          (currentTransitionDirection !== 'subsystems-to-epilogos' && isTransitioning && 'transition-subsys-default-grid')
         )}
       >
         {subsystemPanels.map((panel) => (
@@ -258,7 +262,7 @@ export const SubsystemsPage: React.FC = () => {
       </div>
       </div>
     </PageFadeIn>
-    </>
+    </div>
   );
 };
 

@@ -8,12 +8,13 @@ import { WhiteFadeOverlay } from '../ui/WhiteFadeOverlay';
 import { PageFadeIn } from '../ui/PageFadeIn';
 import { TextAnimate } from '../ui/TextAnimate';
 import { WaveBackground } from '../ui/WaveBackground';
+import { CoordinateText } from '../ui/CoordinateText';
 import { GlowParticles } from '../ui/GlowParticles';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
 import { DetailsModalSystem } from '../ui/DetailsModalSystem';
 import { cn } from '../../lib/utils';
 
-export const QuaternalLogicPage: React.FC = () => {
+export const QuaternalLogicPage: React.FC<{ coordinate?: string }> = ({ coordinate = '#1-4' }) => {
   // Page transition state
   const {
     whiteOverlayVisible,
@@ -208,7 +209,7 @@ export const QuaternalLogicPage: React.FC = () => {
   };
 
   return (
-    <>
+    <div data-coordinate={coordinate}>
       <PageFadeIn>
         <PortfolioContainer 
           pageType="quaternal-logic"
@@ -517,16 +518,12 @@ export const QuaternalLogicPage: React.FC = () => {
             />
 
             {/* Coordinate Text Overlay - CONVERTED FROM ORIGINAL CSS */}
-            <div 
-              className={cn(
-                "coordinate-text-overlay",
-                // FIXED: Use converted CSS utilities + ADD MISSING HOVER STATE
-                (!textFadeStarted && coordinateTextVisible && !isModalExpanded) 
-                  && 'coordinate-text-overlay-visible'
-              )}
-            >
-              #1-4
-            </div>
+            <CoordinateText
+              coordinate={coordinate}
+              visible={!textFadeStarted && coordinateTextVisible && !isModalExpanded}
+              position="overlay"
+              linkToPageCoordinate
+            />
           </div>
         </PortfolioContainer>
       </PageFadeIn>
@@ -536,7 +533,7 @@ export const QuaternalLogicPage: React.FC = () => {
         visible={whiteOverlayVisible}
         onAnimationComplete={() => {}}
       />
-    </>
+    </div>
   );
 };
 

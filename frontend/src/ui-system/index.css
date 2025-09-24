@@ -1066,3 +1066,27 @@ html, body {
 @utility transition-quaternal-sidebar-shrink {
   transition: width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 1000ms;
 }
+/* Invisible scrollbar utility (used by Threads panel and others) */
+@utility no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+@utility no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Fast fade for threads panel when sidebar collapses */
+@utility threads-fade-fast {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+  pointer-events: none;
+}
+
+/* Sidebar chat spacing utilities (decouple from Sidebar padding/width changes) */
+@utility sidebar-chat-pad { padding-top: 7rem; }
+@utility sidebar-chat-pad-collapsed { padding-top: 2rem; }
+
+/* Ensure font-mono prefers JetBrains Mono */
+.font-mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}

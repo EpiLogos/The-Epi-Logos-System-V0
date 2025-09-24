@@ -7,7 +7,6 @@ import { Sidebar } from '../ui/Sidebar';
 import { CoordinateText } from '../ui/CoordinateText';
 import { WhiteFadeOverlay } from '../ui/WhiteFadeOverlay';
 import { PageFadeIn } from '../ui/PageFadeIn';
-import { TextAnimate } from '../ui/TextAnimate';
 import { TextSwitch } from '../ui/TextSwitch';
 import { GlowParticles } from '../ui/GlowParticles';
 import { useEpiLogosTransition } from '@/hooks/ui-system/useEpiLogosTransition';
@@ -15,6 +14,7 @@ import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition
 import { AuthModalContent } from '../auth/AuthModalContent';
 import { ModalContentManager } from '../modal/ModalContentManager';
 import { ThreadHistoryPanel } from '../chat/ThreadHistoryPanel';
+import { TextAnimate } from '../ui/TextAnimate';
 import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
@@ -35,6 +35,18 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
   // Authentication and business state management
   const { isAuthenticated, completeOAuth } = useUnifiedAuth();
   const [businessState, setBusinessState] = useState<EpiLogosBusinessState>('png-displayed');
+  // Mount threads only after sidebar text fade has started, then delay ~300ms
+  const [showThreads, setShowThreads] = useState(false);
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | null = null;
+    if (businessState === 'chat') {
+      // Mount threads after sidebar text fade fully completes
+      t = setTimeout(() => setShowThreads(true), 1000);
+    } else {
+      setShowThreads(false);
+    }
+    return () => { if (t) clearTimeout(t); };
+  }, [businessState]);
   
   
   // Logo text state
@@ -153,10 +165,10 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
 
             animationPhase={epiLogosState.animationPhase}
           >
-            {/* Logo - Always visible */}
+            {/* Logo - fades out in chat state via TextSwitch visible prop */}
             <TextSwitch 
               text={logoText}
-              visible={epiLogosState.logoVisible && !textFadeStarted}
+              visible={epiLogosState.logoVisible && !textFadeStarted && businessState !== 'chat'}
               delay={200}
               duration="slow"
               className="text-[18px] font-normal tracking-[2px] text-[#333] mb-10 text-center mt-[5%]"
@@ -202,7 +214,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
               />
             </div>
 
-            {/* Initial State: Only Enter Button */}
+            {/* Initial State: Only Enter Button (original behavior) */}
             {!epiLogosState.isExpanded && (
               <div className="flex flex-col items-center justify-center flex-1 -mt-[20%] relative z-20">
                 <div onClick={handleEnterClick} className="cursor-pointer relative z-20">
@@ -221,10 +233,10 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
             {/* Expanded State: Full Content */}
             {epiLogosState.isExpanded && (
               <>
-                {/* Main Section */}
+                {/* Main Section - fades out in chat state */}
                 <div className="flex flex-col">
                   <TextAnimate 
-                    visible={epiLogosState.showExpandedContent && !textFadeStarted}
+                    visible={epiLogosState.showExpandedContent && !textFadeStarted && businessState !== 'chat'}
                     delay={200}
                     duration="slow"
                     className="text-[18px] font-normal text-[#333] leading-[1.3] mb-[2px] text-center"
@@ -233,18 +245,20 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                   </TextAnimate>
                 </div>
 
-                {/* Chat Threads Sidebar Panel (renders when Chat modal is active) */}
-                {epiLogosState.showAuthModal && businessState === 'chat' && (
-                  <div className="mt-6">
-                    <ThreadHistoryPanel />
-                  </div>
+                {/* Chat Threads Sidebar Panel: mounts after ~300ms, then fades in (200ms delay) */}
+                {epiLogosState.showAuthModal && showThreads && (
+                  <TextAnimate visible={true} delay={200} duration="normal" className="w-full">
+                    <div className="-mt-[90px] flex-1 flex">
+                      <ThreadHistoryPanel className="flex-1" />
+                    </div>
+                  </TextAnimate>
                 )}
 
-                {/* Navigation Links */}
+                {/* Navigation Links - fade out in chat state */}
                 <div className="flex flex-col gap-[10px] items-start text-left">
                   <div onClick={handleSubsystemsClick}>
                     <TextAnimate 
-                      visible={epiLogosState.showExpandedContent && !textFadeStarted}
+                      visible={epiLogosState.showExpandedContent && !textFadeStarted && businessState !== 'chat'}
                       delay={600}
                       duration="normal"
                       className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
@@ -254,7 +268,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                   </div>
                   <div onClick={handleBackToParamasiva}>
                     <TextAnimate 
-                      visible={epiLogosState.showExpandedContent && !textFadeStarted}
+                      visible={epiLogosState.showExpandedContent && !textFadeStarted && businessState !== 'chat'}
                       delay={800}
                       duration="normal"
                       className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
@@ -263,7 +277,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                     </TextAnimate>
                   </div>
                   <TextAnimate 
-                    visible={epiLogosState.showExpandedContent && !textFadeStarted}
+                    visible={epiLogosState.showExpandedContent && !textFadeStarted && businessState !== 'chat'}
                     delay={1000}
                     duration="normal"
                     className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
@@ -379,7 +393,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                 
                 {/* Coordinate Text */}
                 <CoordinateText 
-                  coordinate="#5"
+                  coordinate="#"
                   visible={coordinateTextVisible}
                   position="bottom-right"
                 />

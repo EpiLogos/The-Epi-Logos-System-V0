@@ -47,6 +47,62 @@ sequenceDiagram
 
 ## Proposed File Changes
 
+### Admin System Integration (New)
+
+Align node creation with the new admin system via explicit, multi‑layer enforcement. This avoids accidental bypass while keeping the developer ergonomics simple.
+
+- Backend GraphQL (authoritative gate)
+  - Add `createBimbaNode` mutation but require admin: resolvers must read `current_user` from GraphQL context and enforce `user.isAdmin == True`. On failure, return structured error with code `UNAUTHORIZED_ADMIN` (do not mutate, do not log sensitive info).
+  - GraphQL context injection: in `/graphql` POST handler, parse `Authorization: Bearer` using existing auth services and attach `current_user` (or `None`) to `context_value`. Read paths remain public as they are; write paths require valid admin.
+  - Error taxonomy: keep `DUPLICATE_COORDINATE`, `INVALID_INPUT`, and add `UNAUTHORIZED_ADMIN` with consistent shape `{ field: null, message, code }`.
+
+- Agentic layer (tool exposure gate)
+  - Default: do not register any write tools for non‑admin sessions. Only include `create_bimba_node` (and future write tools) in the orchestrator agent when the session’s user is admin.
+  - Source of truth for admin flag: propagate user JWT from frontend to Agentic; Agentic should fetch `/api/auth/me` once per session to obtain `isAdmin` and cache in session context. Never trust a frontend‑supplied boolean alone.
+  - Tool list exposure: `/api/v1/orchestrator/capabilities` must conditionally include write tools based on session auth (if unauthenticated or non‑admin, omit them).
+
+- Token propagation (defense in depth)
+  - Pass the user’s JWT from Frontend → Agentic (AG‑UI run request) → Backend GraphQL via `Authorization: Bearer <token>` on the `BimbaGraphQLClient`.
+  - Even if a tool slips through, Backend remains the final gate for write operations.
+
+- Frontend UX (visibility gate)
+  - Use `/api/auth/me` to read `user.isAdmin`. Hide “Create Node”/write affordances when false. Do not rely on visibility alone; it’s only UX.
+
+- Guardrails alignment (Bimba/Cypher)
+  - Read paths remain mutation‑free. All creation must go through explicit mutation endpoints.
+  - Keep anchoring strictly on `bimbaCoordinate`. No implicit creation in any resolver.
+  - Maintain hop bounds literal in any traversal utility regardless of admin status.
+
+### Specific File‑Level Notes (Admin)
+
+- backend/main.py (MODIFY)
+  - In `/graphql` POST, decode JWT via existing auth services (or a small helper in `auth.services.jwt_service`) and attach `current_user` to the GraphQL `context_value`.
+
+- backend/epi_logos_system/cag/bimba/resolvers.py (MODIFY)
+  - Implement `createBimbaNode` resolver. Fetch `user = info.context.get("current_user")`; if not present or `not user.isAdmin`, return `UNAUTHORIZED_ADMIN` error payload; else call service.
+
+- backend/epi_logos_system/cag/bimba/schema.graphql (MODIFY)
+  - Define `CreateBimbaNodeInput` and `CreateBimbaNodePayload` (with `errors: [MutationError!]`, `success: Boolean!`, and optional `node`). Ensure `MutationError.code` includes `UNAUTHORIZED_ADMIN`.
+
+- agentic/api/ag_ui.py (MODIFY)
+  - Extract `Authorization` header; pass to deps factory. Optionally hit Backend `/api/auth/me` once to enrich `deps.context_package` with `user` and `isAdmin` for this session.
+
+- agentic/agents/orchestrator/tools/http_clients_factory.py (MODIFY)
+  - Accept a JWT and configure `BimbaGraphQLClient` with the `Authorization` header for all requests.
+
+- agentic/agents/orchestrator/orchestrator_agent.py (MODIFY)
+  - Register write tools conditionally (only when `ctx.deps.context_package['user']['isAdmin']` is true). Non‑admin sessions should never see or be able to call write tools.
+
+- agentic/mcp_servers/bimba_pratibimba_server.py (CONFIRM/NOOP)
+  - Keep MCP server read‑only for now (no node creation tools exposed). If write tools are later added, gate by token + admin as above.
+
+### Acceptance Criteria Updates (Admin)
+
+- Non‑admin user calling `createBimbaNode` receives `success=false` with `errors=[{ code: UNAUTHORIZED_ADMIN }]` and no side effects.
+- Non‑admin sessions never see write tools listed by Orchestrator capabilities or MCP.
+- Admin user can create a node end‑to‑end with proper uniqueness handling and receives success payload.
+- All write attempts are logged with user id and denied/allowed flag; logs must not leak secrets.
+
 ### /Users/admin/Documents/The Epi-Logos System V0/backend/epi_logos_system/cag/bimba/schema.graphql(MODIFY)
 
 References: 

@@ -509,6 +509,7 @@ html, body {
   width: 3.375rem !important; /* 54px - collapsed width (64px - 10px) */
   padding-left: 0 !important;
   padding-right: 0 !important;
+  transition: width 600ms cubic-bezier(0.25, 0.1, 0.25, 1), padding-left 600ms cubic-bezier(0.25, 0.1, 0.25, 1), padding-right 600ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 /* PARAMASIVA MODAL WIDTH UTILITIES - Fast sidebar-responsive timing */
@@ -663,10 +664,13 @@ html, body {
 /* INVISIBLE SCROLLBAR */
 @utility scrollbar-thin-custom {
   scroll-behavior: smooth;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 
   &::-webkit-scrollbar {
     width: 0px;
     height: 0px;
+    display: none; /* Chrome, Safari, Opera */
   }
 }
 
@@ -1359,6 +1363,7 @@ html, body {
   transition: opacity 300ms ease-out, filter 300ms ease-out;
 }
 
+
 @utility epi-svg-fast-transition {
   transition: opacity 600ms ease-out, filter 600ms ease-out, width 600ms cubic-bezier(0.09, 1, 0.02, 1) 450ms, height 600ms cubic-bezier(0.09, 1, 0.02, 1) 450ms;
 }
@@ -1679,29 +1684,6 @@ html, body {
   max-width: 440px;
 }
 
-/* AUTH MODAL SCROLLBAR STYLING - Match account modal pattern */
-.auth-modal-container .flex-1 {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(200, 200, 200, 0.3) transparent;
-  scroll-behavior: smooth;
-}
-
-.auth-modal-container .flex-1::-webkit-scrollbar {
-  width: 6px;
-}
-
-.auth-modal-container .flex-1::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.auth-modal-container .flex-1::-webkit-scrollbar-thumb {
-  background: rgba(200, 200, 200, 0.3);
-  border-radius: 3px;
-}
-
-.auth-modal-container .flex-1::-webkit-scrollbar-thumb:hover {
-  background: rgba(200, 200, 200, 0.5);
-}
 /* Subsystems → Epi‑Logos: grid margin/height transition */
 @utility transition-subsys-epilogos-grid {
   transition: height 3600ms cubic-bezier(0.19, 1, 0.22, 1) 600ms,
@@ -1716,3 +1698,5 @@ html, body {
 /* Subsystems → Epi‑Logos: grid state values */
 @utility state-grid-height-0 { height: 0px; }
 @utility state-grid-margin-20 { margin: 20px; }
+@utility transition-subsys-paramasiva-sidebar { transition: width 1000ms cubic-bezier(0.19, 1, 0.22, 1) 1000ms; }
+@utility transition-subsys-default-grid { transition: all 800ms cubic-bezier(0.19, 1, 0.22, 1) 200ms; }

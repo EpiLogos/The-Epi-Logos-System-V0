@@ -26,8 +26,8 @@ const dashboardCircles: Array<{
 
 export const DashboardGrid: React.FC<DashboardGridProps> = ({ onNavigate }) => {
   return (
-    <div className="dashboard-grid flex items-center justify-center min-h-[400px]">
-      <div className="grid grid-cols-3 grid-rows-2 gap-12 w-full max-w-3xl">
+    <div className="dashboard-grid flex items-center justify-center min-h-[400px] pt-12">
+      <div className="grid grid-cols-3 grid-rows-2 gap-x-12 gap-y-24 w-full max-w-3xl">
         {dashboardCircles.map((circle) => (
           <DashboardCircle key={circle.id} {...circle} onNavigate={onNavigate} />
         ))}

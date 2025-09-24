@@ -6,14 +6,32 @@ interface CoordinateTextProps {
   visible?: boolean;
   position?: 'panel' | 'overlay' | 'bottom-right'; // Panel coordinate or page overlay
   className?: string;
+  linkToPageCoordinate?: boolean; // When true, set nearest data-coordinate and broadcast simple event
 }
 
 export const CoordinateText: React.FC<CoordinateTextProps> = ({
   coordinate,
   visible = false,
   position = 'panel',
-  className
+  className,
+  linkToPageCoordinate = false
 }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  // Minimal linkage: setting text also sets simple page coordinate data
+  React.useEffect(() => {
+    if (!linkToPageCoordinate) return;
+    try {
+      const host = containerRef.current?.closest('[data-coordinate]') as HTMLElement | null;
+      if (host) {
+        host.setAttribute('data-coordinate', coordinate);
+      }
+      // Very simple global handoff for future consumers (no resolution)
+      (window as any).__CURRENT_COORDINATE_DATA__ = { coordinate };
+      window.dispatchEvent(new CustomEvent('coordinate-updated', { detail: { coordinate } }));
+    } catch {}
+  }, [coordinate, linkToPageCoordinate]);
+
   const getPositionClasses = () => {
     if (position === 'panel') {
       // Panel coordinate text - exact from original CSS .panel-coordinate-text
@@ -34,7 +52,7 @@ export const CoordinateText: React.FC<CoordinateTextProps> = ({
   };
 
   return (
-    <div className={cn(
+    <div ref={containerRef} className={cn(
       // Position-specific styling
       getPositionClasses(),
       

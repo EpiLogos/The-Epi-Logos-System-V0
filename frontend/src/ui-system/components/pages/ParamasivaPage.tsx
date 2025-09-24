@@ -23,7 +23,7 @@ import { useModalTransition } from '@/hooks/ui-system/useModalTransition';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
 import { useSidebar } from '@/contexts/SidebarContext';
 
-export const ParamasivaPage: React.FC = () => {
+export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate = '#1' }) => {
   // Use custom hooks for state management
   const [modalState, modalActions] = useModalTransition();
   const { isCollapsed, toggle } = useSidebar();
@@ -252,7 +252,7 @@ export const ParamasivaPage: React.FC = () => {
   };
 
   return (
-    <>
+    <div data-coordinate={coordinate}>
       <PageFadeIn>
         <PortfolioContainer
           pageType="paramasiva"
@@ -461,9 +461,10 @@ export const ParamasivaPage: React.FC = () => {
 
           {/* Coordinate Text - Page-bound, scrolls with content */}
           <CoordinateText
-            coordinate="#1"
+            coordinate={coordinate}
             visible={textFadeStarted ? false : coordinateTextVisible}
             position="overlay"
+            linkToPageCoordinate
           />
         </PortfolioContainer>
       </PageFadeIn>
@@ -479,7 +480,7 @@ export const ParamasivaPage: React.FC = () => {
         visible={whiteOverlayVisible}
         onAnimationComplete={() => {}}
       />
-    </>
+    </div>
   );
 };
 

@@ -45,12 +45,12 @@ interface AuthFormData {
   confirmPassword?: string;
 }
 
-export const AuthModalContent: React.FC<AuthModalContentProps> = ({ 
-  businessState, 
-  onStateChange 
+export const AuthModalContent: React.FC<AuthModalContentProps> = ({
+  businessState,
+  onStateChange
 }) => {
   const { signIn, isLoading: isUnifiedAuthLoading, isAuthenticated } = useUnifiedAuth();
-  
+
   // Modal OAuth integration
   const [modalOAuthState, modalOAuthActions, iframeHandlers] = useModalOAuth(
     () => {
@@ -67,7 +67,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       setAuthState('error');
     }
   );
-  
+
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [authState, setAuthState] = useState<AuthState>('idle');
   const [error, setError] = useState<SignInError | null>(null);
@@ -115,7 +115,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       // Network/Server
       'network_error': 'Unable to connect to authentication server. Please check your connection and try again.',
       'server_error': 'We encountered a server error. Please try again in a moment.',
-      
+
       // Auth-specific
       'invalid_credentials': 'Invalid email or password. Please check your credentials and try again.',
       'invalid_password': 'The password you entered is incorrect. Please try again.',
@@ -132,7 +132,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       // Validation
       'validation_error': 'Please check your input and try again.'
     };
-    
+
     return errorMessages[errorCode] || 'An unexpected error occurred during authentication. Please try again.';
   };
 
@@ -151,7 +151,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
 
   const validateForm = (): boolean => {
     const { email, password, firstName, lastName, confirmPassword } = formData;
-    
+
     if (!email || !password) {
       setError({
         code: 'validation_error',
@@ -220,11 +220,11 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
         });
       } else {
         // For signup, still use direct API call as unified auth context doesn't handle registration
-        const payload = { 
-          email: formData.email, 
+        const payload = {
+          email: formData.email,
           password: formData.password,
           firstName: formData.firstName,
-          lastName: formData.lastName 
+          lastName: formData.lastName
         };
 
         const response = await fetch(`http://localhost:8000/api/users/register`, {
@@ -252,7 +252,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
       onStateChange('auth-success');
     } catch (err) {
       console.error('Email auth failed:', err);
-      
+
       // Map specific API error codes to user-friendly messages
       let code = 'auth_error';
       let userMessage = 'Authentication failed';
@@ -318,11 +318,11 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
               onStateChange('account-profile');
             }
           }, 1000);
-          
+
           return () => clearTimeout(retryTimer);
         }
       }, 2000); // 2 second delay to show success message
-      
+
       return () => clearTimeout(timer);
     }
   }, [businessState, onStateChange, isAuthenticated, isUnifiedAuthLoading]);
@@ -352,7 +352,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
         exit={{ opacity: 0, y: -20 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
-        <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-120px)]">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar max-h-[calc(100vh-120px)]">
           <div className="max-w-[500px] mx-auto px-4 pt-6 pb-1">
             <div className="text-center space-y-6 flex flex-col items-center justify-center min-h-[400px]">
               <div className="flex justify-center">
@@ -436,18 +436,18 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
 
   return (
     <motion.div
-      className="auth-modal-container h-full flex flex-col"
+      className="auth-modal-container h-full flex flex-col pt-6 pb-1 px-4"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
     >
-      {/* Scrollable Content Container */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden max-h-[calc(100vh-120px)]">
-        <div className="max-w-[500px] mx-auto px-4 pt-6 pb-1">{/* Content wrapper for proper centering and padding */}
+      {/* Scrollable Content Container - Panel-relative scroll (no viewport math) */}
+      <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar">
+        <div className="max-w-[500px] mx-auto">{/* Content wrapper for proper centering and padding */}
       {/* Mode Toggle */}
       <motion.div
-        className="flex mb-8 bg-ui-panel/10 border border-ui-coord-text/30 p-1"
+        className="flex mb-6 bg-ui-panel/10 border border-ui-coord-text/30 p-1"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.3 }}
@@ -478,7 +478,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
 
       {/* Welcome Message */}
       <motion.div
-        className="text-center mb-4"
+        className="text-center mb-3"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.3 }}
@@ -534,7 +534,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
 
       {/* Email/Password Form */}
       <motion.div
-        className="space-y-3 mb-4"
+        className="space-y-2 mb-3"
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.3 }}
@@ -701,7 +701,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
 
       {/* Divider */}
       <motion.div
-        className="relative flex items-center my-4"
+        className="relative flex items-center my-3"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4, duration: 0.3 }}
@@ -803,6 +803,7 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
             />
           </motion.div>
         )}
+        {/* End content wrapper moved below */}
       </AnimatePresence>
         </div>{/* End content wrapper */}
       </div>{/* End scrollable container */}

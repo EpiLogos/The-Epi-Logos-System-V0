@@ -3,5 +3,5 @@
 import QuaternalLogicPage from '@/ui-system/components/pages/QuaternalLogicPage';
 
 export default function QuaternalLogicRoute() {
-  return <QuaternalLogicPage />;
+  return <QuaternalLogicPage coordinate="#1-4" />;
 }
