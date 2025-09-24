@@ -27,6 +27,7 @@ class BimbaGraphQLClient(BackendHttpClient):
                 operationalEssence
                 coreNature
                 function
+                architecturalFunction
                 symbol
                 uuid
                 createdAt
@@ -55,6 +56,7 @@ class BimbaGraphQLClient(BackendHttpClient):
                         "operationalEssence": node_data.get("operationalEssence"),
                         "coreNature": node_data.get("coreNature"),
                         "function": node_data.get("function"),
+                        "architecturalFunction": node_data.get("architecturalFunction") or node_data.get("function"),
                         "symbol": node_data.get("symbol"),
                         "uuid": node_data.get("uuid"),
                         "createdAt": node_data.get("createdAt"),
@@ -143,6 +145,7 @@ class BimbaGraphQLClient(BackendHttpClient):
                     operationalEssence
                     coreNature
                     function
+                    architecturalFunction
                     symbol
                     uuid
                     createdAt
@@ -183,6 +186,7 @@ class BimbaGraphQLClient(BackendHttpClient):
                     operationalEssence
                     coreNature
                     function
+                    architecturalFunction
                     symbol
                     uuid
                     createdAt
@@ -198,7 +202,7 @@ class BimbaGraphQLClient(BackendHttpClient):
                         description
                         operationalEssence
                         coreNature
-                        function
+                        architecturalFunction
                         symbol
                         uuid
                         createdAt

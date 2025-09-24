@@ -131,6 +131,54 @@ if PYDANTIC_AI_AVAILABLE:
         """Setup tools for the agent"""
 
         @agent.tool
+        async def create_bimba_node(
+            ctx: RunContext[OrchestratorDeps],
+            coordinate: str,
+            name: str,
+            subsystem: int,
+            description: Optional[str] = None,
+            operationalEssence: Optional[str] = None,
+            coreNature: Optional[str] = None,
+            architecturalFunction: Optional[str] = None,
+            symbol: Optional[str] = None,
+        ) -> Dict[str, Any]:
+            """Create a Bimba node (admin only).
+
+            Available only to admin users. Enforces trilaminar boundaries by calling Backend GraphQL.
+            """
+            try:
+                # Check admin privileges from session context
+                is_admin = False
+                if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
+                    user = ctx.deps.context_package.get("user") or {}
+                    is_admin = bool(user.get("isAdmin", False))
+                if not is_admin:
+                    return {
+                        "success": False,
+                        "errors": [{"field": None, "message": "Admin privileges required", "code": "UNAUTHORIZED_ADMIN"}],
+                    }
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "errors": [{"field": None, "message": "Bimba client not available", "code": "CLIENT_UNAVAILABLE"}]}
+
+                payload = {
+                    "coordinate": coordinate,
+                    "name": name,
+                    "subsystem": subsystem,
+                    "description": description,
+                    "operationalEssence": operationalEssence,
+                    "coreNature": coreNature,
+                    "architecturalFunction": architecturalFunction,
+                    "symbol": symbol,
+                }
+                # Remove None values
+                payload = {k: v for k, v in payload.items() if v is not None}
+                result = await ctx.deps.bimba_client.create_bimba_node(payload)  # type: ignore[attr-defined]
+                return result
+            except Exception as e:
+                logger.error(f"Error creating Bimba node: {e}")
+                return {"success": False, "errors": [{"field": None, "message": str(e), "code": "TOOL_ERROR"}]}
+
         async def resolve_coordinate(
             ctx: RunContext[OrchestratorDeps],
             coordinate: str,
@@ -708,7 +756,7 @@ if PYDANTIC_AI_AVAILABLE:
 
 **Coordinate Reasoning Protocol:**
 When resolving coordinates, synthesize and interpret the data contextually rather than regurgitating raw information. 
-Consider the operationalEssence, coreNature, function, and symbol to provide meaningful insights that connect 
+Consider the operationalEssence, coreNature, architecturalFunction, and symbol to provide meaningful insights that connect 
 the coordinate's content to the user's query. Transform technical data into wisdom.
 
 Current persona: {ctx.deps.current_persona}

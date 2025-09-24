@@ -12,15 +12,35 @@ const dashboardCircles: Array<{
   id: string;
   label: string;
   image: string;
+  innerImage?: string;
+  innerAboveGlass?: boolean;
   route: EpiLogosBusinessState | null;
   enabled: boolean;
   rotationPhase: 0 | 60 | 120 | 180 | 240 | 300;
 }> = [
-  { id: 'account', label: 'Account', image: '/ui-system/zen-circle.png', route: 'account-profile', enabled: true, rotationPhase: 0 },
+  {
+    id: 'account',
+    label: 'Account',
+    image: '/ui-system/zen-circle.png',
+    innerImage: '/ui-system/account-icon.png', // 1080x1080 PNG, scaled and centered
+    innerAboveGlass: true,
+    route: 'account-profile',
+    enabled: true,
+    rotationPhase: 0,
+  },
   { id: 'system', label: 'System', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 60 },
   { id: 'subsystems', label: 'Subsystems', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 120 },
   { id: 'coordinates', label: 'Coordinates', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 180 },
-  { id: 'agents', label: 'Chat', image: '/ui-system/zen-circle.png', route: 'chat', enabled: true, rotationPhase: 240 },
+  {
+    id: 'agents',
+    label: 'Chat',
+    image: '/ui-system/zen-circle.png',
+    innerImage: '/ui-system/chat-icon.png',
+    innerAboveGlass: true,
+    route: 'chat',
+    enabled: true,
+    rotationPhase: 240,
+  },
   { id: 'settings', label: 'Settings', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 300 },
 ];
 

@@ -1194,6 +1194,37 @@ html, body {
   animation: brightness-wave 8s ease-in-out infinite, size-wave 4s ease-in-out infinite;
 }
 
+/* Centered inner badge inside zen circle (e.g., account avatar) */
+@utility dashboard-inner-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56%;
+  height: 56%;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 5; /* under glass overlay (z-10), above base circle */
+  opacity: 1;
+  transition: transform 300ms ease;
+}
+
+/* Link circle hover to inner badge scaling without rotating the badge */
+@utility dashboard-badge-hover-link {
+  &:hover ~ .dashboard-inner-badge {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  &:hover ~ .dashboard-glass-scale {
+    transform: scale(1.1);
+  }
+}
+
+/* Glass overlay scaling wrapper (avoids transform conflict with rotation) */
+@utility dashboard-glass-scale {
+  transition: transform 300ms ease;
+  transform-origin: center;
+}
+
 /* ================= PROJECTS CAROUSEL VARIANT UTILITIES ================= */
 @utility projects-carousel-container {
   max-width: 1354px;
@@ -1673,6 +1704,11 @@ html, body {
 .content-visible {
   opacity: 1;
   filter: blur(0px);
+}
+
+/* Utility to disable CSS fade transitions when Framer handles them */
+@utility no-opacity-filter-transition {
+  transition: none !important;
 }
 
 /* AUTH MODAL SPECIFIC STYLING */

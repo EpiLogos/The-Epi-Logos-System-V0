@@ -59,11 +59,16 @@ async def run_agent(request: Request) -> Response:
         logger.info(f"🤖 Model: {model_config} | 👤 Persona: {current_persona} | 📞 Session: {thread_id}")
 
         # Create dependencies for agent (let AG-UI handle message history natively)
+        auth_header = request.headers.get('authorization') or request.headers.get('Authorization')
+        auth_token = None
+        if auth_header and auth_header.lower().startswith('bearer '):
+            auth_token = auth_header.split(' ', 1)[1].strip()
         deps = await create_enhanced_orchestrator_deps(
             session_id=thread_id,
             user_id="web-user",
             current_persona=current_persona,
-            model_config=model_config
+            model_config=model_config,
+            auth_token=auth_token,
         )
         
         # Create orchestrator agent with selected model
@@ -102,11 +107,14 @@ async def run_agent_direct(run_input: RunAgentInput):
         current_persona = state.get('persona', 'system')
 
         # Create dependencies for the agent
+        auth_token = None
+        # run_input may have forwarded headers in the future; keep interface aligned
         deps = await create_enhanced_orchestrator_deps(
             session_id=thread_id,
             user_id="web-user",
             current_persona=current_persona,
-            model_config=model_config
+            model_config=model_config,
+            auth_token=auth_token,
         )
 
         # Create orchestrator agent with selected model

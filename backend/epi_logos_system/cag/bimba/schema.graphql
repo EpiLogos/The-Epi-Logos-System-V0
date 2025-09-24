@@ -6,6 +6,7 @@ type BimbaNode {
     operationalEssence: String
     coreNature: String
     function: String
+    architecturalFunction: String
     symbol: String
     uuid: String
     createdAt: String
@@ -64,6 +65,35 @@ type Query {
     searchCoordinates(query: String!, subsystem: Int, limit: Int): SearchResponse
     getSubsystemCoordinates(subsystem: Int!, limit: Int): SubsystemCoordinatesResponse
     getPathBetweenCoordinates(startCoordinate: String!, endCoordinate: String!, maxHops: Int): GraphPath
+}
+
+"""Structured mutation error with code taxonomy"""
+type MutationError {
+    field: String
+    message: String!
+    code: String!
+}
+
+input CreateBimbaNodeInput {
+    coordinate: String!
+    name: String!
+    subsystem: Int!
+    description: String
+    operationalEssence: String
+    coreNature: String
+    function: String
+    architecturalFunction: String
+    symbol: String
+}
+
+type CreateBimbaNodePayload {
+    success: Boolean!
+    node: BimbaNode
+    errors: [MutationError!]
+}
+
+type Mutation {
+    createBimbaNode(input: CreateBimbaNodeInput!): CreateBimbaNodePayload
 }
 
 """Ordered path between two coordinates with nodes and relationships"""

@@ -19,7 +19,7 @@ export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ on
 
       {/* Header */}
       <div className="dashboard-header mb-8 text-center relative z-10">
-        <h1 className="text-2xl font-mono text-ui-panel mb-2">
+        <h1 className="text-2xl font-mono text-ui-gray mb-2">
           Welcome, {user?.firstName || user?.name || 'User'}
         </h1>
         <p className="text-ui-coord-text font-mono text-sm">Epi:Logos System Dashboard</p>

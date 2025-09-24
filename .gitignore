@@ -204,3 +204,6 @@ tmp/
 # Generated files
 generated/
 auto-generated/
+
+#Port Files
+ui-clones-extracted/

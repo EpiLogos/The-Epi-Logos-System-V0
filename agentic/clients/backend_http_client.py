@@ -17,10 +17,14 @@ logger = logging.getLogger(__name__)
 class BackendHttpClient:
     """Base HTTP client for Backend layer communication"""
     
-    def __init__(self, base_url: str = None):
+    def __init__(self, base_url: str = None, default_headers: Optional[dict] = None):
         self.base_url = base_url or os.getenv("BACKEND_URL", "http://localhost:8000")
         self.timeout = httpx.Timeout(30.0)  # 30 second timeout
         self._client: Optional[httpx.AsyncClient] = None
+        self._default_headers = {"User-Agent": "EpiLogos-Agentic/1.0"}
+        if default_headers:
+            # Merge any provided default headers (e.g., Authorization)
+            self._default_headers.update(default_headers)
         
     async def __aenter__(self):
         """Async context manager entry"""
@@ -37,7 +41,7 @@ class BackendHttpClient:
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
                 timeout=self.timeout,
-                headers={"User-Agent": "EpiLogos-Agentic/1.0"}
+                headers=self._default_headers,
             )
             logger.info(f"Connected to Backend API at {self.base_url}")
     

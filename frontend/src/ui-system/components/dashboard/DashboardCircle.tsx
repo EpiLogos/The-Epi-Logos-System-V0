@@ -9,6 +9,8 @@ interface DashboardCircleProps {
   id: string;
   label: string;
   image: string;
+  innerImage?: string;
+  innerAboveGlass?: boolean;
   route: EpiLogosBusinessState | null;
   enabled: boolean;
   rotationPhase: 0 | 60 | 120 | 180 | 240 | 300;
@@ -19,6 +21,8 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
   id,
   label,
   image,
+  innerImage,
+  innerAboveGlass = false,
   route,
   enabled,
   rotationPhase,
@@ -44,13 +48,14 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
       disabled={!enabled}
     >
       {/* Container for both rotating PNG and static glass overlay */}
-      <div className="relative w-28 h-28">
+      <div className="relative w-[157px] h-[157px]">
         {/* Rotating PNG container */}
         <div
           className={cn(
-            'dashboard-circle-wrapper relative z-0 w-28 h-28 rounded-full overflow-hidden',
+            'dashboard-circle-wrapper relative z-0 w-[157px] h-[157px] rounded-full overflow-hidden',
             'dashboard-circle-base',
             'dashboard-rotate',
+            enabled && 'dashboard-badge-hover-link',
             enabled && 'dashboard-circle-hover',
             !enabled && 'dashboard-circle-disabled',
             phaseClass,
@@ -59,18 +64,31 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
           <img src={image} alt={`${label} Dashboard Circle`} className="w-full h-full object-contain dashboard-waves" />
         </div>
 
+        {/* Non-rotating centered inner image layered above circle, below glass by default */}
+        {!innerAboveGlass && innerImage ? (
+          <img src={innerImage} alt={`${label} Inner`} className="dashboard-inner-badge" />
+        ) : null}
+
         {/* Counter-rotating glass overlay - rotates opposite to PNG */}
-        <CircularGlassOverlay
-          size={112} // w-28 h-28 = 112px
-          backgroundOpacity={0.15}
-          brightness={enabled ? 60 : 40}
-          opacity={enabled ? 0.85 : 0.95}
-          blur={8}
-          saturation={enabled ? 1.2 : 0.8}
-          enableRotation={true}
-          rotationPhase={rotationPhase}
-          className="z-10"
-        />
+        {/* Scale wrapper to grow glass on hover without interfering with its rotation transform */}
+        <div className="absolute inset-0 z-10 pointer-events-none dashboard-glass-scale">
+          <CircularGlassOverlay
+            size={157} // 1.4x of 112px → ~157px
+            backgroundOpacity={0.15}
+            brightness={enabled ? 60 : 40}
+            opacity={enabled ? 0.85 : 0.95}
+            blur={8}
+            saturation={enabled ? 1.2 : 0.8}
+            enableRotation={true}
+            rotationPhase={rotationPhase}
+            className=""
+          />
+        </div>
+
+        {/* Same inner image but layered above glass when requested */}
+        {innerAboveGlass && innerImage ? (
+          <img src={innerImage} alt={`${label} Inner`} className="dashboard-inner-badge z-20" />
+        ) : null}
       </div>
       <span
         className={cn(

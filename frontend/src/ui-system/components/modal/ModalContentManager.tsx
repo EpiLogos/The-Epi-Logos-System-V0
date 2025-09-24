@@ -64,7 +64,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
           key="dashboard"
           ref={dashboardContainerRef}
           className={cn(
-            'content-transition-container modal-content-panel relative mb-[5px]'
+            'content-transition-container no-opacity-filter-transition modal-content-panel relative mb-[5px]'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
@@ -107,7 +107,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         <motion.div
           key="chat"
           className={cn(
-            'content-transition-container modal-content-panel mb-[5px]'
+            'content-transition-container no-opacity-filter-transition modal-content-panel mb-[5px]'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
@@ -127,7 +127,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         <motion.div
           key={businessState} // Key changes trigger transitions between auth states
           className={cn(
-            'content-transition-container modal-content-panel mt-[80px] mb-[5px]'
+            'content-transition-container no-opacity-filter-transition modal-content-panel mt-[80px] mb-[5px]'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
@@ -150,7 +150,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
         <motion.div
           key={businessState} // Key changes trigger transitions between account states
           className={cn(
-            'content-transition-container modal-content-panel mb-[5px]'
+            'content-transition-container no-opacity-filter-transition modal-content-panel mb-[5px]'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}

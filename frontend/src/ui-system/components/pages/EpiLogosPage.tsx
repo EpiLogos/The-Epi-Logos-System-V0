@@ -76,9 +76,17 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
   // Particles state - EXACT same pattern as Quaternal Logic page
   const [particlesVisible, setParticlesVisible] = useState(false);
   const [particlesFadeState, setParticlesFadeState] = useState<'hidden' | 'visible' | 'modal-hiding'>('hidden');
+  
+  // Enhanced particle animation state
+  const [particleAnimationActive, setParticleAnimationActive] = useState(false);
+  const [particleAnimationCount, setParticleAnimationCount] = useState(100);
+  const [particleAnimationScale, setParticleAnimationScale] = useState(1);
 
   // PNG fade state - Same two-step pattern as particles
   const [pngFadeState, setPngFadeState] = useState<'hidden' | 'visible'>('hidden');
+  
+  // White fade state for dashboard transition
+  const [whiteFadeVisible, setWhiteFadeVisible] = useState(false);
   const modalPanelRef = useRef<HTMLDivElement>(null);
 
   // Update coordinate text visibility based on expansion state
@@ -152,15 +160,93 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
   };
 
   const handleDashboardClick = () => {
-    // Start the PNG animation
+    // Start enhanced PNG animation with particle scaling and white fade
     epiLogosActions.transitionToDashboard();
     
-    // Set the appropriate business state based on authentication
-    if (isAuthenticated) {
-      setBusinessState('dashboard');
-    } else {
-      setBusinessState('auth-signin');
-    }
+    // Start particle animation immediately (100 -> 1000 particles over full animation)
+    setParticleAnimationActive(true);
+    
+    // Animate particle count and scale over the full PNG animation duration
+    const startTime = Date.now();
+    const startCount = 100;
+    const endCount = 1000;
+    const startScale = 1;
+    const endScale = 0.02; // Shrink to 2% size for more dramatic effect
+    const duration = 2000; // 200ms expand + 1800ms shrink
+    
+    const animateParticles = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Smooth easing function for dramatic particle scaling
+      const easeProgress = 1 - Math.pow(1 - progress, 2); // ease-out quadratic for more dramatic effect
+      const currentCount = Math.floor(startCount + (endCount - startCount) * easeProgress);
+      
+      // Scale animation: particles shrink toward center as PNG shrinks
+      const scaleEaseProgress = Math.pow(progress, 1.5); // ease-in for shrinking effect
+      const currentScale = startScale + (endScale - startScale) * scaleEaseProgress;
+      
+      setParticleAnimationCount(currentCount);
+      setParticleAnimationScale(currentScale);
+      
+      if (progress < 1) {
+        requestAnimationFrame(animateParticles);
+      }
+    };
+    
+    requestAnimationFrame(animateParticles);
+    
+    // CORRECT TIMING: White fade starts at 1400ms (200ms expand + 1200ms into shrink) 
+    // More gentle, slower fade timing
+    setTimeout(() => {
+      setWhiteFadeVisible(true);
+    }, 1400); // Start white fade deeper into PNG shrink for more gentle effect
+    
+    // Dashboard modal appears at 2000ms (200ms + 1800ms), fade down after modal loads
+    setTimeout(() => {
+      // Set business state to trigger modal content
+      if (isAuthenticated) {
+        setBusinessState('dashboard');
+      } else {
+        setBusinessState('auth-signin');
+      }
+      
+      // Gentle fade down after modal content is ready with longer timing
+      setTimeout(() => {
+        setWhiteFadeVisible(false);
+        // Gradual reset particles after fade completes - no jarring jump
+        setTimeout(() => {
+          // Start gradual return animation
+          const resetStartTime = Date.now();
+          const resetDuration = 2000; // 2 seconds for smooth return
+          const fromCount = particleAnimationCount;
+          const fromScale = particleAnimationScale;
+          
+          const resetAnimation = () => {
+            const elapsed = Date.now() - resetStartTime;
+            const progress = Math.min(elapsed / resetDuration, 1);
+            
+            // Gentle ease-out for return animation
+            const easeProgress = 1 - Math.pow(1 - progress, 3);
+            
+            const currentCount = Math.floor(fromCount + (100 - fromCount) * easeProgress);
+            const currentScale = fromScale + (1 - fromScale) * easeProgress;
+            
+            setParticleAnimationCount(currentCount);
+            setParticleAnimationScale(currentScale);
+            
+            if (progress < 1) {
+              requestAnimationFrame(resetAnimation);
+            } else {
+              // Finally turn off animation mode
+              setParticleAnimationActive(false);
+            }
+          };
+          
+          requestAnimationFrame(resetAnimation);
+        }, 1200); // Wait longer for white fade to complete gently
+      }, 600); // Wait longer for framer motion + content settling
+    }, 2000); // When PNG shrink completes and modal shows
   };
 
   
@@ -363,8 +449,17 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                       showDebug={false}
                       scaleOnHover={false}
                       fadeState={particlesFadeState}
+                      animationParticleCount={particleAnimationCount}
+                      animationActive={particleAnimationActive}
+                      animationScale={particleAnimationScale}
                     />
                   )}
+
+                  {/* White Fade Overlay for Dashboard Transition - Inside Modal */}
+                  <div 
+                    className="absolute inset-0 bg-[#f5f5f5] z-[100] pointer-events-none transition-opacity duration-[1500ms] ease-in-out"
+                    style={{ opacity: whiteFadeVisible ? 1 : 0 }}
+                  />
 
                 {/* Image - Direct render like ParamasivaImage */}
                 {epiLogosState.imageFullyVisible && !epiLogosState.showAuthModal && (

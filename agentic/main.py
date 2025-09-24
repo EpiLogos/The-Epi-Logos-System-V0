@@ -233,8 +233,10 @@ async def get_session_status(session_id: str):
             "message": str(e)
         }
 
+from fastapi import Request
+
 @app.get("/api/v1/orchestrator/capabilities")
-async def get_orchestrator_capabilities():
+async def get_orchestrator_capabilities(request: Request):
     """Get orchestrator capabilities including tools from Pydantic AI agent"""
     from .agents.orchestrator.orchestrator_agent import get_agent_info, create_orchestrator_agent
 
@@ -261,6 +263,22 @@ async def get_orchestrator_capabilities():
         "retrieve_session_continuity",
         "access_agent_ruminations"
     ]
+
+    # Conditionally include admin write tools
+    try:
+        auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+        token = auth_header.split(" ", 1)[1].strip() if auth_header and auth_header.lower().startswith("bearer ") else None
+        if token:
+            from agentic.clients.backend_http_client import BackendHttpClient
+            client = BackendHttpClient(default_headers={"Authorization": f"Bearer {token}"})
+            await client.connect()
+            me = await client.get("/api/auth/me")
+            if isinstance(me, dict) and me.get("success") and me.get("data", {}).get("user", {}).get("isAdmin"):
+                tools.append("create_bimba_node")
+            await client.close()
+    except Exception:
+        # If check fails, do not expose admin tools
+        pass
 
     return {
         "success": True,

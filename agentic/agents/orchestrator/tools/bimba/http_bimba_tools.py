@@ -265,6 +265,36 @@ class HttpBimbaClient:
         if self.client:
             await self.client.close()
 
+    async def create_bimba_node(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a Bimba node via Backend GraphQL mutation.
+
+        Expects keys: coordinate, name, subsystem, and optional description,
+        operationalEssence, coreNature, architecturalFunction, symbol.
+        """
+        mutation = """
+        mutation CreateNode($input: CreateBimbaNodeInput!) {
+          createBimbaNode(input: $input) {
+            success
+            node { coordinate name subsystem description operationalEssence coreNature architecturalFunction symbol uuid createdAt updatedAt }
+            errors { field message code }
+          }
+        }
+        """
+        try:
+            resp = await self.client.post(
+                "/graphql",
+                json_data={"query": mutation, "variables": {"input": input_data}},
+            )
+            data = resp.get("data", {}).get("createBimbaNode") if isinstance(resp, dict) else None
+            if data:
+                return data
+            errors = resp.get("errors", []) if isinstance(resp, dict) else []
+            err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+            return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}
+        except Exception as e:
+            logger.error(f"Create node failed: {e}")
+            return {"success": False, "errors": [{"field": None, "message": str(e), "code": "HTTP_ERROR"}]}
+
 
 async def create_http_bimba_client(graphql_client: BimbaGraphQLClient) -> HttpBimbaClient:
     """

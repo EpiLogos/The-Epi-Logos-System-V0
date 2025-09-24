@@ -1,9 +1,10 @@
 # GraphQL Resolvers for Coordinate Resolution
-from ariadne import QueryType, UnionType
+from ariadne import QueryType, UnionType, MutationType
 from typing import Any, Optional
 
 query = QueryType()
 path_component = UnionType("PathComponent")
+mutation = MutationType()
 
 @query.field("getNodeByCoordinate")
 def resolve_get_node_by_coordinate(_: Any, info: Any, coordinate: str) -> dict | None:
@@ -65,3 +66,58 @@ def resolve_path_component_type(obj, *_):
     if isinstance(obj, dict) and "type" in obj:
         return "PathRelationship"
     return "PathNode"
+
+
+@mutation.field("createBimbaNode")
+def resolve_create_bimba_node(_: Any, info: Any, input: dict) -> dict:
+    """Create a Bimba node with admin enforcement.
+
+    Returns a payload with success flag, node (when successful), and errors array.
+    """
+    user = info.context.get("current_user") if info and info.context else None
+    if not user or not getattr(user, "isAdmin", False):
+        return {
+            "success": False,
+            "node": None,
+            "errors": [{
+                "field": None,
+                "message": "Admin privileges required",
+                "code": "UNAUTHORIZED_ADMIN",
+            }],
+        }
+
+    service = info.context["service"]
+    try:
+        node = service.create_bimba_node(input)
+        if node is None:
+            return {
+                "success": False,
+                "node": None,
+                "errors": [{
+                    "field": "coordinate",
+                    "message": "A node with this coordinate already exists",
+                    "code": "DUPLICATE_COORDINATE",
+                }],
+            }
+        return {"success": True, "node": node.model_dump(), "errors": []}
+    except ValueError as ve:
+        return {
+            "success": False,
+            "node": None,
+            "errors": [{
+                "field": None,
+                "message": str(ve),
+                "code": "INVALID_INPUT",
+            }],
+        }
+    except Exception:
+        # Do not leak internals; classify as INVALID_INPUT for now
+        return {
+            "success": False,
+            "node": None,
+            "errors": [{
+                "field": None,
+                "message": "Creation failed",
+                "code": "INVALID_INPUT",
+            }],
+        }

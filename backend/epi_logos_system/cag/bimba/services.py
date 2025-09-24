@@ -13,6 +13,7 @@ class BimbaNode(BaseModel):
     operationalEssence: Optional[str] = None
     coreNature: Optional[str] = None
     function: Optional[str] = None
+    architecturalFunction: Optional[str] = None
     symbol: Optional[str] = None
     uuid: Optional[str] = None
     createdAt: Optional[str] = None
@@ -49,7 +50,7 @@ class NodeRepository:
                     description=node_data.get("description"),
                     operationalEssence=node_data.get("operationalEssence"),
                     coreNature=node_data.get("coreNature"),
-                    function=node_data.get("function"),
+                    architecturalFunction=node_data.get("architecturalFunction") or node_data.get("function"),
                     symbol=node_data.get("symbol"),
                     uuid=node_data.get("uuid"),
                     createdAt=str(created_at) if created_at else None,
@@ -100,6 +101,73 @@ class NodeRepository:
         rels = [dict(r) for r in rec.get("rels", [])]
         return nodes, rels
 
+    def create_bimba_node(self, data: dict) -> BimbaNode | None:
+        """Create a Bimba node if it does not already exist.
+
+        Enforces uniqueness on bimbaCoordinate; returns None if duplicate exists.
+        """
+        coordinate = data.get("coordinate")
+        name = data.get("name")
+        subsystem = data.get("subsystem")
+
+        if not coordinate or not name or subsystem is None:
+            raise ValueError("coordinate, name, and subsystem are required")
+
+        # First check for existing node
+        existing = self.neo4j_client.get_bimba_node(coordinate)
+        if existing:
+            return None
+
+        query = """
+        CREATE (n:BimbaNode {
+            bimbaCoordinate: $coordinate,
+            name: $name,
+            subsystem: $subsystem,
+            description: $description,
+            operationalEssence: $operationalEssence,
+            coreNature: $coreNature,
+            function: $function,
+            architecturalFunction: $architecturalFunction,
+            symbol: $symbol,
+            uuid: randomUUID(),
+            created_at: datetime(),
+            updated_at: datetime()
+        })
+        RETURN n
+        """
+
+        params = {
+            "coordinate": coordinate,
+            "name": name,
+            "subsystem": int(subsystem),
+            "description": data.get("description"),
+            "operationalEssence": data.get("operationalEssence"),
+            "coreNature": data.get("coreNature"),
+            "function": data.get("function"),
+            "architecturalFunction": data.get("architecturalFunction") or data.get("function"),
+            "symbol": data.get("symbol"),
+        }
+
+        records, _summary, _keys = self.neo4j_client.execute_query(query, params)
+        if not records:
+            raise RuntimeError("Failed to create node")
+        n = dict(records[0]["n"]) if records[0].get("n") is not None else {}
+        # Map created node to BimbaNode model
+        return BimbaNode(
+            coordinate=n.get("bimbaCoordinate"),
+            name=n.get("name"),
+            subsystem=str(n.get("subsystem")) if n.get("subsystem") is not None else None,
+            description=n.get("description"),
+            operationalEssence=n.get("operationalEssence"),
+            coreNature=n.get("coreNature"),
+            function=n.get("function"),
+            architecturalFunction=n.get("architecturalFunction") or n.get("function"),
+            symbol=n.get("symbol"),
+            uuid=n.get("uuid"),
+            createdAt=str(n.get("created_at")) if n.get("created_at") else None,
+            updatedAt=str(n.get("updated_at")) if n.get("updated_at") else None,
+        )
+
 # The service that uses the repository
 class NodeService:
     def __init__(self, repo: NodeRepository):
@@ -138,6 +206,7 @@ class NodeService:
                 "operationalEssence": neighbor.get("operationalEssence"),
                 "coreNature": neighbor.get("coreNature"),
                 "function": neighbor.get("function"),
+                "architecturalFunction": neighbor.get("architecturalFunction") or neighbor.get("function"),
                 "symbol": neighbor.get("symbol"),
                 "uuid": neighbor.get("uuid"),
                 "createdAt": str(neighbor.get("created_at")) if neighbor.get("created_at") else None,
@@ -222,6 +291,12 @@ class NodeService:
             "pathLength": len(nodes) - 1,
             "pathComponents": components,
         }
+
+    def create_bimba_node(self, input_data: dict) -> BimbaNode | None:
+        """Create a Bimba node via repository with basic validation."""
+        # Ensure we never write to a `coordinate` property in Neo4j; only bimbaCoordinate
+        # Validation handled in repository; here we simply pass through.
+        return self._repo.create_bimba_node(input_data)
 
 # FastAPI dependency provider
 def get_node_service() -> NodeService:

@@ -204,7 +204,8 @@ async def create_enhanced_orchestrator_deps(
     session_id: str,
     user_id: str,
     current_persona: str,
-    model_config: str = "gemini-2.5-flash"
+    model_config: str = "gemini-2.5-flash",
+    auth_token: Optional[str] = None,
 ):
     """
     Create enhanced orchestrator dependencies using HTTP clients.
@@ -221,8 +222,39 @@ async def create_enhanced_orchestrator_deps(
     
     # Initialize all HTTP clients
     await container.initialize_all()
+
+    # If an auth token is provided, rebuild key clients with Authorization header
+    default_headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else None
+    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    if auth_token:
+        try:
+            # Replace backend client with authorized one
+            container.backend_client = BackendHttpClient(backend_url, default_headers=default_headers)
+            await container.backend_client.connect()
+
+            # Replace Bimba GraphQL client with authorized one
+            graphql_client = BimbaGraphQLClient(backend_url)
+            # Inject Authorization by directly setting header on underlying base client after connect
+            await graphql_client.connect()
+            # Patch headers on the underlying HTTPX client
+            if getattr(graphql_client, "_client", None):
+                graphql_client._client.headers.update(default_headers)
+            container.bimba_client = await create_http_bimba_client(graphql_client)
+        except Exception as e:
+            logger.warning(f"Failed to set Authorization on HTTP clients: {e}")
     
     # Create OrchestratorDeps with HTTP clients and state support
+    # Optional: enrich context with user info for gating (best-effort)
+    context_pkg = None
+    if auth_token and container.backend_client:
+        try:
+            me = await container.backend_client.get("/api/auth/me")
+            if isinstance(me, dict) and me.get("success") and me.get("data", {}).get("user"):
+                context_pkg = {"user": me["data"]["user"]}
+        except Exception:
+            # Non-fatal; backend might not be reachable or token invalid
+            context_pkg = None
+
     deps = OrchestratorDeps(
         session_id=session_id,
         user_id=user_id,
@@ -232,7 +264,7 @@ async def create_enhanced_orchestrator_deps(
         lightrag_client=container.lightrag_client,
         graphiti_client=container.graphiti_client,
         current_persona=current_persona,
-        context_package=None,
+        context_package=context_pkg,
         state={}  # Initialize empty state dict for StateHandler protocol
     )
     

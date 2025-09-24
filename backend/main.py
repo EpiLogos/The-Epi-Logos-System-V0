@@ -195,7 +195,7 @@ app.include_router(conversations_router)
 # Add GraphQL support
 import ariadne
 from ariadne.explorer import ExplorerGraphiQL
-from backend.epi_logos_system.cag.bimba.resolvers import query, path_component
+from backend.epi_logos_system.cag.bimba.resolvers import query, path_component, mutation
 
 # Load GraphQL schema
 import pathlib
@@ -204,7 +204,7 @@ BACKEND_DIR = pathlib.Path(__file__).parent
 type_defs = ariadne.load_schema_from_path(
     str(BACKEND_DIR / "epi_logos_system/cag/bimba/schema.graphql")
 )
-schema = ariadne.make_executable_schema(type_defs, [query, path_component])
+schema = ariadne.make_executable_schema(type_defs, [query, path_component, mutation])
 
 # GraphiQL explorer
 explorer_html = ExplorerGraphiQL().html(None)
@@ -226,11 +226,30 @@ async def graphql_endpoint(
     repo = NodeRepository(neo4j_client)
     node_service = NodeService(repo)
 
+    # Build auth-aware GraphQL context
+    # Attempt to attach current_user using stateless JWT services
+    current_user = None
+    try:
+        from backend.epi_logos_system.shared.container import get_jwt_service, get_user_service
+        jwt_service = get_jwt_service()
+        user_service = get_user_service()
+        auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+        token = None
+        if auth_header and auth_header.lower().startswith("bearer "):
+            token = auth_header.split(" ", 1)[1].strip()
+        if token:
+            payload = await jwt_service.verify_access_token(token)
+            if payload and payload.get("sub"):
+                current_user = await user_service.get_user_by_id(payload["sub"])  # type: ignore
+    except Exception:
+        # Non-fatal: current_user remains None
+        current_user = None
 
-    # Create context with the service
+    # Create context with the service and user
     context_value = {
         "request": request,
         "service": node_service,
+        "current_user": current_user,
     }
     
     # Execute GraphQL query
@@ -273,6 +292,7 @@ class BimbaNode(BaseModel):
     operationalEssence: Optional[str] = None
     coreNature: Optional[str] = None
     function: Optional[str] = None
+    architecturalFunction: Optional[str] = None
     symbol: Optional[str] = None
     uuid: Optional[str] = None
     createdAt: Optional[str] = None

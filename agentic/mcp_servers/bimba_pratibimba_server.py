@@ -256,6 +256,8 @@ The tool returns comprehensive node information including name, subsystem, conte
                                 response += f"  coreNature: {value}\n"
                             elif key == 'function':
                                 response += f"  function: {value}\n"
+                            elif key == 'architecturalFunction':
+                                response += f"  architecturalFunction: {value}\n"
                             elif key == 'symbol':
                                 response += f"  symbol: {value}\n"
                             # nodeType not used

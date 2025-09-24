@@ -16,6 +16,9 @@ interface GlowParticlesProps {
   hoverParticleCount?: number;
   hoverOpacity?: number;
   fadeState?: 'hidden' | 'visible' | 'modal-hiding' | 'quick-fade-out';
+  animationParticleCount?: number;
+  animationActive?: boolean;
+  animationScale?: number;
 }
 
 export const GlowParticles: React.FC<GlowParticlesProps> = ({
@@ -31,13 +34,17 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
   scaleOnHover = false,
   hoverParticleCount = null,
   hoverOpacity = null,
-  fadeState = 'visible'
+  fadeState = 'visible',
+  animationParticleCount = null,
+  animationActive = false,
+  animationScale = 1
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number | undefined>(undefined);
   const baseParticleCount = particleCount;
-  const maxParticleCount = hoverParticleCount || particleCount;
-  const particlePropsLength = Math.max(baseParticleCount, maxParticleCount) * 9;
+  // Use a fixed maximum that accommodates the 10x scaling (1000 particles)
+  const maxParticleCount = Math.max(baseParticleCount, hoverParticleCount || baseParticleCount, 1000);
+  const particlePropsLength = maxParticleCount * 9;
   const particleProps = useRef(new Float32Array(particlePropsLength));
   const tick = useRef(0);
   const currentScale = useRef(1);
@@ -46,6 +53,8 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
   const targetParticleCount = useRef(particleCount);
   const currentOpacity = useRef(1);
   const targetOpacity = useRef(1);
+  const currentAnimationScale = useRef(1);
+  const targetAnimationScale = useRef(1);
 
   const rand = (n: number) => n * Math.random();
   const randRange = (n: number) => n - rand(2 * n);
@@ -127,13 +136,20 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
     // Update target scale based on scaleOnHover
     targetScale.current = scaleOnHover ? 0.01 : 1;
     
-    // Update target particle count and opacity based on hover state
-    if (scaleOnHover) {
+    // Update target particle count, opacity, and animation scale based on state
+    if (animationActive && animationParticleCount) {
+      // Animation mode takes priority
+      targetParticleCount.current = animationParticleCount;
+      targetOpacity.current = 1;
+      targetAnimationScale.current = animationScale;
+    } else if (scaleOnHover) {
       targetParticleCount.current = hoverParticleCount || maxParticleCount;
       targetOpacity.current = hoverOpacity !== null ? hoverOpacity : 0.3;
+      targetAnimationScale.current = 1;
     } else {
       targetParticleCount.current = baseParticleCount;
       targetOpacity.current = 1;
+      targetAnimationScale.current = 1;
     }
     
     // Smooth interpolations (rapid but smooth)
@@ -141,10 +157,17 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
     currentScale.current += scaleDiff * 0.014; // Scale transition
     
     const particleCountDiff = targetParticleCount.current - currentParticleCount.current;
-    currentParticleCount.current += particleCountDiff * 0.02; // Much slower, more gradual particle count transition
+    // Use slower interpolation for animation mode (better easing), fast reset when needed
+    const isResetting = currentParticleCount.current > baseParticleCount && !animationActive;
+    const interpolationSpeed = (animationActive && animationParticleCount) ? 0.009 : // Slower for smoother buildup
+                              isResetting ? 0.12 : 0.02; // Fast reset from high particle count
+    currentParticleCount.current += particleCountDiff * interpolationSpeed;
     
     const opacityDiff = targetOpacity.current - currentOpacity.current;
     currentOpacity.current += opacityDiff * 0.1; // Fast opacity transition
+    
+    const animationScaleDiff = targetAnimationScale.current - currentAnimationScale.current;
+    currentAnimationScale.current += animationScaleDiff * 0.9; // Fast animation scale transition
 
     if (mode === 'mist') {
       ctx.globalCompositeOperation = 'source-over';
@@ -154,10 +177,19 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Apply global opacity
+    // Apply global opacity and animation scale
     ctx.save();
     ctx.globalAlpha = currentOpacity.current;
-    ctx.scale(currentScale.current, currentScale.current);
+    
+    // Combine hover scale with animation scale - animation scale shrinks to center
+    const combinedScale = currentScale.current * currentAnimationScale.current;
+    
+    // Transform from center (like PNG shrink) instead of top-left
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    ctx.translate(centerX, centerY);
+    ctx.scale(combinedScale, combinedScale);
+    ctx.translate(-centerX, -centerY);
     
     // Draw particles up to current particle count
     const activeParticleCount = Math.floor(currentParticleCount.current);
@@ -205,7 +237,7 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [isVisible, parentRef, mode, particleCount, monochrome, baseHue, scaleOnHover]);
+  }, [isVisible, parentRef, mode, particleCount, monochrome, baseHue, scaleOnHover, animationActive, animationParticleCount, animationScale]);
 
   if (!isVisible) return null;
 
