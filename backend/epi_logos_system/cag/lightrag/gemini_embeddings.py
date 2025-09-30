@@ -4,11 +4,11 @@ Gemini Embedding Function for LightRAG Integration
 
 import os
 import json
-from typing import List, Union
+from typing import List, Union, Optional
 import google.generativeai as genai
 
 
-def gemini_embed_batch(texts: List[str], model_name: str = "gemini-embedding-001") -> List[List[float]]:
+def gemini_embed_batch(texts: List[str], model_name: str = "gemini-embedding-001", task_type: Optional[str] = None) -> List[List[float]]:
     """
     Generate embeddings for batch of texts using Gemini
     """
@@ -33,7 +33,7 @@ def gemini_embed_batch(texts: List[str], model_name: str = "gemini-embedding-001
                 result = genai.embed_content(
                     model=model_name,
                     content=text,
-                    task_type="semantic_similarity"
+                    task_type=(task_type or "semantic_similarity")
                 )
                 vec = result['embedding']
                 # Resize to target_dim (truncate/pad) to match index and downstream configs
@@ -63,11 +63,11 @@ def gemini_embed_batch(texts: List[str], model_name: str = "gemini-embedding-001
         return [[0.0] * 768 for _ in texts]
 
 
-def gemini_embed_single(text: str, model_name: str = "gemini-embedding-001") -> List[float]:
+def gemini_embed_single(text: str, model_name: str = "gemini-embedding-001", task_type: Optional[str] = None) -> List[float]:
     """
     Generate embedding for single text using Gemini
     """
-    result = gemini_embed_batch([text], model_name)
+    result = gemini_embed_batch([text], model_name, task_type)
     return result[0] if result else [0.0] * 768
 
 

@@ -321,8 +321,8 @@ class NodeService:
             k = k_default
         k = min(k, k_cap)
 
-        # Compute embedding for query text
-        embedding = get_text_embedding(query_text)
+        # Compute embedding for query text (query task type)
+        embedding = get_text_embedding(query_text, purpose="query")
 
         # Single canonical index; no env flexibility to keep ops simple
         index_names = ["bimba_embeddings_idx"]
@@ -376,9 +376,57 @@ class NodeService:
                     }
                 )
 
-        # Sort by similarity descending and truncate to k
-        results.sort(key=lambda x: x.get("similarity", 0.0), reverse=True)
-        return results[:k]
+        # Hybrid: BM25 full-text + vector union and rerank
+        bm25_list: list[dict] = []
+        try:
+            ft_q = (
+                "CALL db.index.fulltext.queryNodes('bimba_node_fulltext', $q) "
+                "YIELD node, score RETURN node, score LIMIT $limit"
+            )
+            bm_recs, _fs, _fk = self._repo.neo4j_client.execute_query(
+                ft_q, {"q": query_text, "limit": max(k * 5, 50)}
+            )
+            for r in bm_recs:
+                n_obj = r.get("node")
+                n = dict(n_obj) if isinstance(n_obj, dict) else (vars(n_obj) if hasattr(n_obj, "__dict__") else {})
+                coord = n.get("bimbaCoordinate")
+                if not coord:
+                    continue
+                bm25_list.append({"coordinate": coord, "bm25": float(r.get("score") or 0.0)})
+        except Exception:
+            bm25_list = []
+
+        def norm_map(items: list[dict], key: str, id_key: str) -> dict[str, float]:
+            if not items:
+                return {}
+            vals = [float(it.get(key) or 0.0) for it in items]
+            vmin, vmax = min(vals), max(vals)
+            denom = (vmax - vmin) or 1.0
+            return {str(it.get(id_key)): (float(it.get(key) or 0.0) - vmin) / denom for it in items}
+
+        vec_norm = norm_map(results, "similarity", "coordinate")
+        bm_norm = norm_map(bm25_list, "bm25", "coordinate")
+
+        # Weighted union
+        alpha = 0.6  # vector weight
+        union_coords = set(vec_norm.keys()) | set(bm_norm.keys())
+        reranked = []
+        for c in union_coords:
+            score = alpha * vec_norm.get(c, 0.0) + (1 - alpha) * bm_norm.get(c, 0.0)
+            reranked.append((c, score))
+        reranked.sort(key=lambda t: t[1], reverse=True)
+
+        # Build final items
+        node_map = {d.get("coordinate"): d for d in results}
+        out: list[dict] = []
+        for coord, score in reranked[:k]:
+            d = node_map.get(coord)
+            if not d:
+                d = {"coordinate": coord, "name": coord, "similarity": score}
+            else:
+                d = {**d, "similarity": score}
+            out.append(d)
+        return out
 
     def _fetch_node_props_and_labels(self, coordinate: str) -> tuple[dict, list[str]]:
         query = """
@@ -394,7 +442,7 @@ class NodeService:
         return props, labels
 
     def _serialize_properties_for_embedding(self, props: dict, labels: list[str]) -> tuple[str, str]:
-        # Exclude keys we shouldn't embed
+        # Include nested structures; exclude only known metadata/embedding keys.
         exclude = {
             "embeddings",
             "embedding_updated_at",
@@ -404,23 +452,35 @@ class NodeService:
             "created_at",
             "updated_at",
         }
+        def flatten(value, prefix: str, out: list[str]):
+            if value is None:
+                return
+            if isinstance(value, (str, int, float, bool)):
+                out.append(f"{prefix}: {value}")
+                return
+            if isinstance(value, dict):
+                for k in sorted(value.keys()):
+                    if k in exclude:
+                        continue
+                    flatten(value[k], f"{prefix}.{k}" if prefix else k, out)
+                return
+            if isinstance(value, list):
+                for i, item in enumerate(value):
+                    flatten(item, f"{prefix}[{i}]", out)
+                return
+            out.append(f"{prefix}: {str(value)}")
+
         lines: list[str] = []
         if labels:
             lines.append("labels: " + ",".join(sorted(labels)))
+        priority_fields = ["name", "symbol", "coreNature", "operationalEssence", "function", "architecturalFunction"]
+        for pf in priority_fields:
+            if pf in props and pf not in exclude:
+                flatten(props.get(pf), pf, lines)
         for key in sorted(props.keys()):
-            if key in exclude:
+            if key in exclude or key in priority_fields:
                 continue
-            val = props.get(key)
-            if val is None:
-                continue
-            # Only serialize simple scalars and string arrays
-            if isinstance(val, (str, int, float, bool)):
-                lines.append(f"{key}: {val}")
-            elif isinstance(val, list) and all(isinstance(x, (str, int, float, bool)) for x in val):
-                lines.append(f"{key}: {','.join(map(str, val))}")
-            else:
-                # Skip complex nested structures for now
-                continue
+            flatten(props.get(key), key, lines)
         text = "\n".join(lines)
         h = hashlib.sha256(text.encode("utf-8")).hexdigest()
         return text, h
@@ -431,7 +491,7 @@ class NodeService:
             return {"success": False, "coordinate": coordinate, "error": "Coordinate not found"}
 
         text, content_hash = self._serialize_properties_for_embedding(props, labels)
-        vec = get_text_embedding(text)
+        vec = get_text_embedding(text, purpose="document")
         model = os.getenv("EMBEDDINGS_MODEL", "local-deterministic")
         dim = len(vec)
 
@@ -485,7 +545,7 @@ class NodeService:
                 if not force and prev_hash and prev_hash == content_hash:
                     skipped += 1
                     continue
-                vec = get_text_embedding(text)
+                vec = get_text_embedding(text, purpose="document")
                 model = os.getenv("EMBEDDINGS_MODEL", "local-deterministic")
                 dim = len(vec)
                 uq = """

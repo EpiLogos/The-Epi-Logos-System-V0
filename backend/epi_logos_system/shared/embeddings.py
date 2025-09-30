@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import os
 import hashlib
-from typing import List
+from typing import List, Optional
 
 
 def _local_deterministic_embedding(text: str, dim: int = 384) -> List[float]:
@@ -35,7 +35,7 @@ def _local_deterministic_embedding(text: str, dim: int = 384) -> List[float]:
     return [v / norm for v in vals]
 
 
-def get_text_embedding(text: str) -> List[float]:
+def get_text_embedding(text: str, purpose: Optional[str] = None) -> List[float]:
     """Get an embedding vector for the given text.
 
     Provider selection via environment:
@@ -54,7 +54,17 @@ def get_text_embedding(text: str) -> List[float]:
             # Reuse existing Gemini embedding integration
             from backend.epi_logos_system.cag.lightrag.gemini_embeddings import gemini_embed_single
             model = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
-            vec = gemini_embed_single(text, model_name=model)
+            # Map purpose to provider-specific task type
+            task_type = None
+            if purpose:
+                p = purpose.lower()
+                if p in ("doc", "document", "corpus", "node"):
+                    task_type = "retrieval_document"
+                elif p in ("query", "search"):
+                    task_type = "retrieval_query"
+                else:
+                    task_type = "semantic_similarity"
+            vec = gemini_embed_single(text, model_name=model, task_type=task_type)
             # Ensure dimensionality matches configured dim when possible
             if isinstance(vec, list) and vec and isinstance(vec[0], (int, float)):
                 if len(vec) != dim:
