@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 import CircularGlassOverlay from './CircularGlassOverlay';
@@ -61,12 +62,28 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
             phaseClass,
           )}
         >
-          <img src={image} alt={`${label} Dashboard Circle`} className="w-full h-full object-contain dashboard-waves" />
+          <Image
+            src={image}
+            alt={`${label} Dashboard Circle`}
+            fill
+            sizes="157px"
+            className="object-contain dashboard-waves"
+            priority={false}
+          />
         </div>
 
         {/* Non-rotating centered inner image layered above circle, below glass by default */}
         {!innerAboveGlass && innerImage ? (
-          <img src={innerImage} alt={`${label} Inner`} className="dashboard-inner-badge" />
+          <div className="dashboard-inner-badge">
+            <Image
+              src={innerImage}
+              alt={`${label} Inner`}
+              fill
+              sizes="88px"
+              className="object-contain"
+              priority={false}
+            />
+          </div>
         ) : null}
 
         {/* Counter-rotating glass overlay - rotates opposite to PNG */}
@@ -87,7 +104,16 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
 
         {/* Same inner image but layered above glass when requested */}
         {innerAboveGlass && innerImage ? (
-          <img src={innerImage} alt={`${label} Inner`} className="dashboard-inner-badge z-20" />
+          <div className="dashboard-inner-badge z-20">
+            <Image
+              src={innerImage}
+              alt={`${label} Inner`}
+              fill
+              sizes="88px"
+              className="object-contain"
+              priority={false}
+            />
+          </div>
         ) : null}
       </div>
       <span
@@ -104,4 +130,4 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
   );
 };
 
-export default DashboardCircle;
+export default React.memo(DashboardCircle);

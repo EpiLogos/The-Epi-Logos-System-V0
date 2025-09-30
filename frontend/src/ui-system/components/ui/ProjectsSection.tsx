@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { cn } from '../../utils/cn';
-import { ProjectCarousel } from './ProjectCarousel';
+import { SubsystemCarousel } from './SubsystemCarousel';
 
 interface ProjectsSectionProps {
   className?: string;
@@ -46,7 +46,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ className }) =
             </div>
           </div>
 
-          <ProjectCarousel className="w-full" variant="projects" showArrows={true} showDots={true} />
+          <SubsystemCarousel className="w-full" showArrows={true} showDots={true} />
         </div>
       </div>
     </section>
@@ -54,4 +54,3 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ className }) =
 };
 
 export default ProjectsSection;
-

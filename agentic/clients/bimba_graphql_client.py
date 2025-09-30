@@ -250,3 +250,86 @@ class BimbaGraphQLClient(BackendHttpClient):
                 "edges": [],
                 "error": error_msg or "GraphQL query failed",
             }
+
+    async def semantic_coordinate_discovery(self, query_text: str, max_results: int = 5) -> Dict[str, Any]:
+        """Discover coordinates matching natural language descriptions via GraphQL."""
+        query = """
+        query SemanticCoordinateDiscovery($queryText: String!, $maxResults: Int) {
+          semanticCoordinateDiscovery(queryText: $queryText, maxResults: $maxResults) {
+            coordinate
+            name
+            similarity
+            semanticContext
+            namespace
+            clusterId
+            clusterTheme
+          }
+        }
+        """
+        variables = {"queryText": query_text, "maxResults": max_results}
+        resp = await self.post("/graphql", json_data={"query": query, "variables": variables})
+        if "data" in resp and resp["data"] is not None:
+            return {"success": True, "results": resp["data"].get("semanticCoordinateDiscovery", [])}
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {"success": False, "results": [], "error": err_msg or "GraphQL query failed"}
+
+    async def regenerate_node_embedding(self, coordinate: str) -> Dict[str, Any]:
+        mutation = """
+        mutation Regen($coordinate: String!) {
+          regenerateNodeEmbedding(coordinate: $coordinate) {
+            success
+            coordinate
+            dimension
+            updatedAt
+            model
+            hash
+            error
+          }
+        }
+        """
+        resp = await self.post("/graphql", json_data={"query": mutation, "variables": {"coordinate": coordinate}})
+        if "data" in resp and resp["data"]:
+            return resp["data"]["regenerateNodeEmbedding"]
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {"success": False, "coordinate": coordinate, "error": err_msg or "GraphQL error"}
+
+    async def regenerate_all_embeddings(self, batch_size: int = 500, force: bool = False) -> Dict[str, Any]:
+        mutation = """
+        mutation RegenAll($batchSize: Int, $force: Boolean) {
+          regenerateAllEmbeddings(batchSize: $batchSize, force: $force) {
+            success
+            total
+            updated
+            skipped
+            error
+          }
+        }
+        """
+        resp = await self.post("/graphql", json_data={"query": mutation, "variables": {"batchSize": batch_size, "force": force}})
+        if "data" in resp and resp["data"]:
+            return resp["data"]["regenerateAllEmbeddings"]
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {"success": False, "total": 0, "updated": 0, "skipped": 0, "error": err_msg or "GraphQL error"}
+
+    async def create_bimba_node(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a Bimba node via GraphQL mutation (admin-only)."""
+        mutation = """
+        mutation CreateNode($input: CreateBimbaNodeInput!) {
+          createBimbaNode(input: $input) {
+            success
+            node {
+              coordinate name subsystem description operationalEssence coreNature function architecturalFunction symbol uuid createdAt updatedAt
+            }
+            errors { field message code }
+          }
+        }
+        """
+        resp = await self.post("/graphql", json_data={"query": mutation, "variables": {"input": input_data}})
+        if "data" in resp and resp["data"]:
+            return resp["data"].get("createBimbaNode", {"success": False, "errors": [{"message": "No payload"}]})
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}

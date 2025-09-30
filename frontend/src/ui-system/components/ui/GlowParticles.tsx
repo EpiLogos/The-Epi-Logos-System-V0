@@ -18,7 +18,8 @@ interface GlowParticlesProps {
   fadeState?: 'hidden' | 'visible' | 'modal-hiding' | 'quick-fade-out';
   animationParticleCount?: number;
   animationActive?: boolean;
-  animationScale?: number;
+  scaleState?: 'normal' | 'shrinking' | 'expanding';
+  countState?: 'normal' | 'building' | 'resetting';
 }
 
 export const GlowParticles: React.FC<GlowParticlesProps> = ({
@@ -37,7 +38,8 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
   fadeState = 'visible',
   animationParticleCount = null,
   animationActive = false,
-  animationScale = 1
+  scaleState = 'normal',
+  countState = 'normal'
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameId = useRef<number | undefined>(undefined);
@@ -141,7 +143,12 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
       // Animation mode takes priority
       targetParticleCount.current = animationParticleCount;
       targetOpacity.current = 1;
-      targetAnimationScale.current = animationScale;
+      // Scale state determines target scale: shrinking=0.01, expanding=1, normal=1
+      if (scaleState === 'shrinking') {
+        targetAnimationScale.current = 0.01;
+      } else {
+        targetAnimationScale.current = 1;
+      }
     } else if (scaleOnHover) {
       targetParticleCount.current = hoverParticleCount || maxParticleCount;
       targetOpacity.current = hoverOpacity !== null ? hoverOpacity : 0.3;
@@ -157,17 +164,41 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
     currentScale.current += scaleDiff * 0.014; // Scale transition
     
     const particleCountDiff = targetParticleCount.current - currentParticleCount.current;
-    // Use slower interpolation for animation mode (better easing), fast reset when needed
+    // CSS timing: 2000ms transitions, use frame-rate adjusted interpolation
+    // At 60fps, 2000ms = 120 frames, so 1/120 ≈ 0.008 for linear, but use easing
     const isResetting = currentParticleCount.current > baseParticleCount && !animationActive;
-    const interpolationSpeed = (animationActive && animationParticleCount) ? 0.009 : // Slower for smoother buildup
-                              isResetting ? 0.12 : 0.02; // Fast reset from high particle count
-    currentParticleCount.current += particleCountDiff * interpolationSpeed;
+    const isShrinking = scaleState === 'shrinking';
+    const isExpanding = scaleState === 'expanding';
+    
+    let particleSpeed;
+    if (isShrinking || (animationActive && animationParticleCount)) {
+      // Building up - slower, smooth buildup (CSS: 2000ms cubic-bezier(0.25, 0.1, 0.25, 1))
+      particleSpeed = 0.015; // Slower for smooth buildup
+    } else if (isExpanding || isResetting) {
+      // Resetting - faster, smooth return (CSS: 2000ms cubic-bezier(0.19, 1, 0.22, 1))  
+      particleSpeed = 0.025; // Faster for smooth return
+    } else {
+      particleSpeed = 0.02; // Default
+    }
+    
+    currentParticleCount.current += particleCountDiff * particleSpeed;
     
     const opacityDiff = targetOpacity.current - currentOpacity.current;
     currentOpacity.current += opacityDiff * 0.1; // Fast opacity transition
     
     const animationScaleDiff = targetAnimationScale.current - currentAnimationScale.current;
-    currentAnimationScale.current += animationScaleDiff * 0.9; // Fast animation scale transition
+    // CSS timing: 2000ms transition, match easing to state
+    let scaleSpeed;
+    if (isShrinking) {
+      // CSS: cubic-bezier(0.19, 1, 0.22, 1) - ease-out for shrinking
+      scaleSpeed = 0.03;
+    } else if (isExpanding) {
+      // CSS: cubic-bezier(0.25, 0.1, 0.25, 1) - ease-in-out for expanding
+      scaleSpeed = 0.025;
+    } else {
+      scaleSpeed = 0.02; // Default
+    }
+    currentAnimationScale.current += animationScaleDiff * scaleSpeed;
 
     if (mode === 'mist') {
       ctx.globalCompositeOperation = 'source-over';
@@ -177,7 +208,7 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
-    // Apply global opacity and animation scale
+    // Apply global opacity and combined scaling (hover + animation scale)
     ctx.save();
     ctx.globalAlpha = currentOpacity.current;
     
@@ -191,7 +222,7 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
     ctx.scale(combinedScale, combinedScale);
     ctx.translate(-centerX, -centerY);
     
-    // Draw particles up to current particle count
+    // Draw particles using current interpolated count
     const activeParticleCount = Math.floor(currentParticleCount.current);
     for (let i = 0; i < activeParticleCount * 9; i += 9) {
       updateParticle(i, canvas);
@@ -237,7 +268,7 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
         cancelAnimationFrame(animationFrameId.current);
       }
     };
-  }, [isVisible, parentRef, mode, particleCount, monochrome, baseHue, scaleOnHover, animationActive, animationParticleCount, animationScale]);
+  }, [isVisible, parentRef, mode, particleCount, monochrome, baseHue, scaleOnHover, animationActive, animationParticleCount, scaleState, countState]);
 
   if (!isVisible) return null;
 
@@ -245,18 +276,26 @@ export const GlowParticles: React.FC<GlowParticlesProps> = ({
     <div 
       className={cn(
         "absolute inset-0 pointer-events-none z-10",
-        // FIXED: Use particle-specific Tailwind v4 utilities with proper timing
+        // Particle fade utilities
         fadeState === 'visible' && 'particle-fade-visible',
         fadeState === 'hidden' && 'particle-fade-hidden', 
         fadeState === 'modal-hiding' && 'particle-fade-modal-hiding',
-        fadeState === 'quick-fade-out' && 'particle-fade-out-quick'
+        fadeState === 'quick-fade-out' && 'particle-fade-out-quick',
+        // Particle count utilities
+        countState === 'normal' && 'particle-count-normal',
+        countState === 'building' && 'particle-count-building',
+        countState === 'resetting' && 'particle-count-resetting'
       )}
     >
       <canvas
         ref={canvasRef}
         className={cn(
           "particles-canvas w-full h-full",
-          scaleOnHover && "particles-expanded-blur"
+          scaleOnHover && "particles-expanded-blur",
+          // CSS-based scaling animation
+          scaleState === 'normal' && 'particle-scale-normal',
+          scaleState === 'shrinking' && 'particle-scale-shrinking', 
+          scaleState === 'expanding' && 'particle-scale-expanding'
         )}
       />
     </div>

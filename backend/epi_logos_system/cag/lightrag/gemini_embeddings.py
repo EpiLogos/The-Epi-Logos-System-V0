@@ -8,7 +8,7 @@ from typing import List, Union
 import google.generativeai as genai
 
 
-def gemini_embed_batch(texts: List[str], model_name: str = "models/text-embedding-004") -> List[List[float]]:
+def gemini_embed_batch(texts: List[str], model_name: str = "gemini-embedding-001") -> List[List[float]]:
     """
     Generate embeddings for batch of texts using Gemini
     """
@@ -22,6 +22,12 @@ def gemini_embed_batch(texts: List[str], model_name: str = "models/text-embeddin
         
         # Generate embeddings
         embeddings = []
+        # Resolve target dimension from env (default 1536)
+        try:
+            target_dim = int(os.getenv("EMBEDDINGS_DIM", "1536"))
+        except Exception:
+            target_dim = 1536
+
         for text in texts:
             try:
                 result = genai.embed_content(
@@ -29,11 +35,25 @@ def gemini_embed_batch(texts: List[str], model_name: str = "models/text-embeddin
                     content=text,
                     task_type="semantic_similarity"
                 )
-                embeddings.append(result['embedding'])
+                vec = result['embedding']
+                # Resize to target_dim (truncate/pad) to match index and downstream configs
+                if len(vec) != target_dim:
+                    if len(vec) > target_dim:
+                        vec = vec[:target_dim]
+                    else:
+                        vec = vec + [0.0] * (target_dim - len(vec))
+                # Normalize to unit length for non-3072 dims per Gemini guidance
+                try:
+                    import math
+                    norm = math.sqrt(sum(v*v for v in vec)) or 1.0
+                    vec = [v / norm for v in vec]
+                except Exception:
+                    pass
+                embeddings.append(vec)
             except Exception as e:
                 print(f"Embedding error for text: {e}")
                 # Return zero vector as fallback
-                embeddings.append([0.0] * 768)  # Default embedding dimension
+                embeddings.append([0.0] * target_dim)
         
         return embeddings
         
@@ -43,7 +63,7 @@ def gemini_embed_batch(texts: List[str], model_name: str = "models/text-embeddin
         return [[0.0] * 768 for _ in texts]
 
 
-def gemini_embed_single(text: str, model_name: str = "models/text-embedding-004") -> List[float]:
+def gemini_embed_single(text: str, model_name: str = "gemini-embedding-001") -> List[float]:
     """
     Generate embedding for single text using Gemini
     """
@@ -73,7 +93,13 @@ async def gemini_embedding_func_raw(texts: Union[str, List[str]]) -> Union[List[
 # Create proper EmbeddingFunc object for LightRAG
 from lightrag.base import EmbeddingFunc
 
+from os import getenv
+try:
+    _dim = int(getenv("EMBEDDINGS_DIM", "1536"))
+except Exception:
+    _dim = 1536
+
 gemini_embedding_func = EmbeddingFunc(
-    embedding_dim=768,
+    embedding_dim=_dim,
     func=gemini_embedding_func_raw
 )

@@ -237,34 +237,14 @@ from fastapi import Request
 
 @app.get("/api/v1/orchestrator/capabilities")
 async def get_orchestrator_capabilities(request: Request):
-    """Get orchestrator capabilities including tools from Pydantic AI agent"""
-    from .agents.orchestrator.orchestrator_agent import get_agent_info, create_orchestrator_agent
+    """Get orchestrator capabilities by dynamically inspecting registered tools."""
+    from .agents.orchestrator.orchestrator_agent import get_agent_info, orchestrator_agent
+    from pydantic_ai.toolsets.function import FunctionToolset
 
-    # Get agent info
     agent_info = get_agent_info()
 
-    # Return the actual tool names defined in setup_agent_tools
-    tools = [
-        # Bimba (coordinate) namespace
-        "resolve_coordinate",
-        "get_coordinate_relationships",
-        "get_path_between_coordinates",
-        # Gnostic namespace
-        "search_gnostic_space", 
-        "ingest_wisdom",
-        "get_gnostic_workspace_info",
-        # Session/context
-        "get_session_context",
-        "check_context_window_status",
-        # Episodic namespace
-        "remember_episode", 
-        "search_memory_patterns",
-        "form_memory_community",
-        "retrieve_session_continuity",
-        "access_agent_ruminations"
-    ]
-
-    # Conditionally include admin write tools
+    # Determine admin status via backend /api/auth/me
+    is_admin = False
     try:
         auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
         token = auth_header.split(" ", 1)[1].strip() if auth_header and auth_header.lower().startswith("bearer ") else None
@@ -273,19 +253,30 @@ async def get_orchestrator_capabilities(request: Request):
             client = BackendHttpClient(default_headers={"Authorization": f"Bearer {token}"})
             await client.connect()
             me = await client.get("/api/auth/me")
-            if isinstance(me, dict) and me.get("success") and me.get("data", {}).get("user", {}).get("isAdmin"):
-                tools.append("create_bimba_node")
+            is_admin = bool(isinstance(me, dict) and me.get("success") and me.get("data", {}).get("user", {}).get("isAdmin"))
             await client.close()
     except Exception:
-        # If check fails, do not expose admin tools
-        pass
+        is_admin = False
 
-    return {
-        "success": True,
-        "tools": tools,
-        "agent_info": agent_info,
-        "tools_count": len(tools)
-    }
+    # Collect tool names dynamically from function toolsets
+    tools_set = set()
+    try:
+        agent = orchestrator_agent  # Global default agent
+        for toolset in getattr(agent, 'toolsets', []):
+            if isinstance(toolset, FunctionToolset):
+                tools_set.update(toolset.tools.keys())
+    except Exception:
+        # Fallback: no tools discovered
+        tools_set = set()
+
+    # Admin-only tools: hide unless admin
+    admin_only = {"create_bimba_node", "regenerate_node_embedding", "regenerate_all_embeddings"}
+    if not is_admin:
+        tools_set = {t for t in tools_set if t not in admin_only}
+
+    tools = sorted(tools_set)
+
+    return {"success": True, "tools": tools, "agent_info": agent_info, "tools_count": len(tools)}
 
 @app.get("/api/v1/orchestrator/models")
 async def get_available_models():

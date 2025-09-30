@@ -121,3 +121,48 @@ def resolve_create_bimba_node(_: Any, info: Any, input: dict) -> dict:
                 "code": "INVALID_INPUT",
             }],
         }
+
+
+@query.field("semanticCoordinateDiscovery")
+def resolve_semantic_coordinate_discovery(_: Any, info: Any, queryText: str, maxResults: Optional[int] = 5) -> list[dict]:
+    """Semantic-to-coordinate discovery using vector similarity search.
+
+    - Accepts natural language text and optional maxResults (default 5, capped at 20)
+    - Returns ranked BimbaCoordinateMatch objects
+    """
+    service = info.context["service"]
+    try:
+        return service.semantic_coordinate_discovery(queryText, maxResults)
+    except Exception:
+        # On error, return empty list to avoid leaking internals via GraphQL errors
+        return []
+
+
+@mutation.field("regenerateNodeEmbedding")
+def resolve_regenerate_node_embedding(_: Any, info: Any, coordinate: str) -> dict:
+    """Regenerate embeddings for a single node (admin required)."""
+    user = info.context.get("current_user") if info and info.context else None
+    if not user or not getattr(user, "isAdmin", False):
+        return {
+            "success": False,
+            "coordinate": coordinate,
+            "error": "Admin privileges required",
+        }
+    service = info.context["service"]
+    return service.regenerate_node_embedding(coordinate)
+
+
+@mutation.field("regenerateAllEmbeddings")
+def resolve_regenerate_all_embeddings(_: Any, info: Any, batchSize: Optional[int] = 500, force: Optional[bool] = False) -> dict:
+    """Regenerate embeddings for all Bimba nodes in batches (admin required)."""
+    user = info.context.get("current_user") if info and info.context else None
+    if not user or not getattr(user, "isAdmin", False):
+        return {
+            "success": False,
+            "total": 0,
+            "updated": 0,
+            "skipped": 0,
+            "error": "Admin privileges required",
+        }
+    service = info.context["service"]
+    return service.regenerate_all_embeddings(batch_size=batchSize or 500, force=bool(force))

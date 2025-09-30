@@ -193,6 +193,34 @@ class HttpBimbaClient:
                 "error": f"HTTP request failed: {str(e)}",
             }
 
+    async def semantic_coordinate_discovery(self, query_text: str, max_results: int = 5) -> Dict[str, Any]:
+        """Discover Bimba coordinates matching a natural language query via GraphQL."""
+        try:
+            result = await self.client.semantic_coordinate_discovery(query_text, max_results)
+            if result.get("success"):
+                return result
+            else:
+                return {"success": False, "results": [], "error": result.get("error", "Unknown error")}
+        except Exception as e:
+            logger.error(f"Exception in semantic_coordinate_discovery: {e}")
+            return {"success": False, "results": [], "error": f"HTTP request failed: {str(e)}"}
+
+    async def regenerate_node_embedding(self, coordinate: str) -> Dict[str, Any]:
+        """Regenerate embeddings for a node via GraphQL mutation."""
+        try:
+            return await self.client.regenerate_node_embedding(coordinate)
+        except Exception as e:
+            logger.error(f"Embedding regeneration failed for {coordinate}: {e}")
+            return {"success": False, "coordinate": coordinate, "error": str(e)}
+
+    async def regenerate_all_embeddings(self, batch_size: int = 500) -> Dict[str, Any]:
+        """Regenerate embeddings for all nodes via GraphQL mutation (admin)."""
+        try:
+            return await self.client.regenerate_all_embeddings(batch_size)
+        except Exception as e:
+            logger.error(f"Bulk embedding regeneration failed: {e}")
+            return {"success": False, "total": 0, "updated": 0, "skipped": 0, "error": str(e)}
+
     async def get_path_between_coordinates(
         self,
         start_coordinate: str,

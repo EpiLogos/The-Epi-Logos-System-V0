@@ -52,7 +52,7 @@ class LightRAGService:
             "url": os.getenv("QDRANT_URL", "http://localhost:6333"),
             "api_key": os.getenv("QDRANT_API_KEY", "ep11ep11"),
             "collection_name": self.qdrant_collection,
-            "vector_size": 768  # Gemini text-embedding-004 dimension
+            "vector_size": int(os.getenv("EMBEDDINGS_DIM", "1536"))
         }
         
         # Set environment variables for LightRAG storage backends

@@ -67,6 +67,25 @@ async def init_neo4j():
                     logger.info(f"Created index: {index.split('FOR')[1].split('ON')[0].strip()}")
                 except Exception as e:
                     logger.warning(f"Index creation failed (may already exist): {e}")
+
+            # Optional: Create Neo4j vector index for Bimba embeddings if requested
+            try:
+                dim = int(os.getenv("BIMBA_VECTOR_DIM", "768"))
+                index_names = os.getenv("BIMBA_VECTOR_INDEX_NAMES", "bimba_embeddings_idx")
+                for idx in [n.strip() for n in index_names.split(',') if n.strip()]:
+                    # Single embeddings property, replacing legacy
+                    prop = os.getenv("BIMBA_VECTOR_PROPERTY", "embeddings")
+                    vector_index_cypher = (
+                        f"CREATE VECTOR INDEX {idx} IF NOT EXISTS FOR (n:BimbaNode) ON (n.{prop}) "
+                        f"OPTIONS {{ indexConfig: {{ 'vector.dimensions': {dim}, 'vector.similarity_function': 'cosine' }} }}"
+                    )
+                    try:
+                        client.execute_query(vector_index_cypher)
+                        logger.info(f"Created vector index: {idx} on property {prop} (dim={dim})")
+                    except Exception as ve:
+                        logger.warning(f"Vector index creation failed (may already exist): {ve}")
+            except Exception as e:
+                logger.warning(f"Vector index setup skipped due to error: {e}")
             
             logger.info("Neo4j initialization completed")
             return True
@@ -156,12 +175,16 @@ async def init_qdrant():
                 logger.warning("Qdrant connection failed - skipping initialization")
                 return False
             
-            # Create standard collections
+            # Create standard collections (use EMBEDDINGS_DIM where relevant; default 1536)
+            try:
+                emb_dim = int(os.getenv("EMBEDDINGS_DIM", "1536"))
+            except Exception:
+                emb_dim = 1536
             collections_config = [
-                {"name": "wisdom_synthesis", "size": 384, "distance": "Cosine"},
-                {"name": "lightrag_vectors", "size": 384, "distance": "Cosine"},
-                {"name": "bimba_embeddings", "size": 384, "distance": "Cosine"},
-                {"name": "user_content", "size": 384, "distance": "Cosine"}
+                {"name": "wisdom_synthesis", "size": emb_dim, "distance": "Cosine"},
+                {"name": "lightrag_vectors", "size": emb_dim, "distance": "Cosine"},
+                {"name": "bimba_embeddings", "size": emb_dim, "distance": "Cosine"},
+                {"name": "user_content", "size": emb_dim, "distance": "Cosine"}
             ]
             
             for config in collections_config:

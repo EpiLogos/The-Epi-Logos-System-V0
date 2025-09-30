@@ -1245,6 +1245,18 @@ html, body {
   padding: 0 10px;
 }
 
+/* ================= SUBSYSTEM CAROUSEL (PARAMASIVA BLUE) ================= */
+@utility subsystem-carousel-item {
+  flex-shrink: 0;
+  padding: 0; /* no interspacing between cards */
+}
+
+@utility subsystem-card {
+  /* Light blue interior with darker blue stroke */
+  background-color: #eaf3ff; /* light blue */
+  border: 1px solid #89aeda; /* darker blue stroke */
+}
+
 /* PARAMASIVA TO QUATERNAL TRANSITION - Following original grid-coordinates transition */
 
 /* COMPLETE TRANSITION: Matches original CSS timing exactly */

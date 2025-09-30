@@ -54,12 +54,15 @@
     "type-check": "npm run type-check --workspaces --if-present",
     "fix": "npm run format && npm run lint:fix",
     "lint:fix": "npm run lint:frontend -- --fix",
-    "ci": "npm run check && npm run test && npm run build"
+    "ci": "npm run check && npm run test && npm run build",
+    "optimize:images": "node scripts/optimize-images.mjs",
+    "restore:images": "node scripts/restore-images.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0",
     "@types/node": "^22.10.7",
-    "pre-commit": "^1.2.2"
+    "pre-commit": "^1.2.2",
+    "sharp": "^0.33.3"
   },
   "engines": {
     "node": ">=20.0.0",

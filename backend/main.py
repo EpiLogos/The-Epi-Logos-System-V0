@@ -237,7 +237,21 @@ async def graphql_endpoint(
         token = None
         if auth_header and auth_header.lower().startswith("bearer "):
             token = auth_header.split(" ", 1)[1].strip()
-        if token:
+        # 1) Dev MCP admin bypass: header X-MCP-Admin-Secret must match env and request from localhost
+        try:
+            mcp_secret = os.getenv("MCP_ADMIN_SECRET")
+            header_secret = request.headers.get("x-mcp-admin-secret")
+            client_host = getattr(request.client, "host", None)
+            if mcp_secret and header_secret and header_secret == mcp_secret and client_host in {"127.0.0.1", "::1", "localhost"}:
+                class _DevAdmin:
+                    isAdmin = True
+                    id = "mcp-dev-admin"
+                    email = "mcp@local"
+                current_user = _DevAdmin()
+        except Exception:
+            pass
+        # 2) Normal JWT path if no MCP bypass happened
+        if not current_user and token:
             payload = await jwt_service.verify_access_token(token)
             if payload and payload.get("sub"):
                 current_user = await user_service.get_user_by_id(payload["sub"])  # type: ignore
@@ -299,6 +313,8 @@ class BimbaNode(BaseModel):
     updatedAt: Optional[str] = None
 
 
+
+
 # API endpoints
 @app.get("/api/v1/nodes/{coordinate}", response_model=Optional[BimbaNodeBasic])
 async def get_node_by_coordinate(coordinate: str, neo4j_client: Neo4jClient = Depends(get_neo4j_client)):
@@ -331,6 +347,9 @@ async def get_node_by_coordinate(coordinate: str, neo4j_client: Neo4jClient = De
         # Log the error but don't expose internal details
         logger.error(f"Error in get_node_by_coordinate for '{coordinate}': {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# Removed REST embedding regeneration in favor of GraphQL-only mutation
 
 @app.get("/")
 async def root():

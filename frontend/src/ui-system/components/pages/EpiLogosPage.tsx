@@ -80,7 +80,8 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
   // Enhanced particle animation state
   const [particleAnimationActive, setParticleAnimationActive] = useState(false);
   const [particleAnimationCount, setParticleAnimationCount] = useState(100);
-  const [particleAnimationScale, setParticleAnimationScale] = useState(1);
+  const [particleScaleState, setParticleScaleState] = useState<'normal' | 'shrinking' | 'expanding'>('normal');
+  const [particleCountState, setParticleCountState] = useState<'normal' | 'building' | 'resetting'>('normal');
 
   // PNG fade state - Same two-step pattern as particles
   const [pngFadeState, setPngFadeState] = useState<'hidden' | 'visible'>('hidden');
@@ -163,38 +164,34 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
     // Start enhanced PNG animation with particle scaling and white fade
     epiLogosActions.transitionToDashboard();
     
-    // Start particle animation immediately (100 -> 1000 particles over full animation)
+    // Start particle animation - JavaScript interpolation with CSS timing patterns
     setParticleAnimationActive(true);
+    setParticleScaleState('shrinking'); // Tells JS to target 0.01 scale
     
-    // Animate particle count and scale over the full PNG animation duration
+    // Gradual particle count buildup from 100 to 1000 over PNG animation duration
     const startTime = Date.now();
     const startCount = 100;
     const endCount = 1000;
-    const startScale = 1;
-    const endScale = 0.02; // Shrink to 2% size for more dramatic effect
-    const duration = 2000; // 200ms expand + 1800ms shrink
+    const duration = 2000; // Match PNG animation duration
     
-    const animateParticles = () => {
+    const animateParticleCount = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
-      // Smooth easing function for dramatic particle scaling
-      const easeProgress = 1 - Math.pow(1 - progress, 2); // ease-out quadratic for more dramatic effect
+      // CSS cubic-bezier(0.25, 0.1, 0.25, 1) easing for smooth buildup
+      const easeProgress = progress < 0.5 
+        ? 2 * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2; // ease-in-out approximation
+      
       const currentCount = Math.floor(startCount + (endCount - startCount) * easeProgress);
-      
-      // Scale animation: particles shrink toward center as PNG shrinks
-      const scaleEaseProgress = Math.pow(progress, 1.5); // ease-in for shrinking effect
-      const currentScale = startScale + (endScale - startScale) * scaleEaseProgress;
-      
       setParticleAnimationCount(currentCount);
-      setParticleAnimationScale(currentScale);
       
       if (progress < 1) {
-        requestAnimationFrame(animateParticles);
+        requestAnimationFrame(animateParticleCount);
       }
     };
     
-    requestAnimationFrame(animateParticles);
+    requestAnimationFrame(animateParticleCount);
     
     // CORRECT TIMING: White fade starts at 1400ms (200ms expand + 1200ms into shrink) 
     // More gentle, slower fade timing
@@ -214,36 +211,37 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
       // Gentle fade down after modal content is ready with longer timing
       setTimeout(() => {
         setWhiteFadeVisible(false);
-        // Gradual reset particles after fade completes - no jarring jump
+        // Reset particles after fade completes - JavaScript interpolation with CSS timing
         setTimeout(() => {
-          // Start gradual return animation
+          setParticleScaleState('expanding'); // Tells JS to target 1.0 scale
+          
+          // Gradual particle count return from 1000 to 100 
           const resetStartTime = Date.now();
           const resetDuration = 2000; // 2 seconds for smooth return
           const fromCount = particleAnimationCount;
-          const fromScale = particleAnimationScale;
           
-          const resetAnimation = () => {
+          const resetParticleCount = () => {
             const elapsed = Date.now() - resetStartTime;
             const progress = Math.min(elapsed / resetDuration, 1);
             
-            // Gentle ease-out for return animation
-            const easeProgress = 1 - Math.pow(1 - progress, 3);
-            
+            // CSS cubic-bezier(0.19, 1, 0.22, 1) easing for smooth return
+            const easeProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
             const currentCount = Math.floor(fromCount + (100 - fromCount) * easeProgress);
-            const currentScale = fromScale + (1 - fromScale) * easeProgress;
             
             setParticleAnimationCount(currentCount);
-            setParticleAnimationScale(currentScale);
             
             if (progress < 1) {
-              requestAnimationFrame(resetAnimation);
+              requestAnimationFrame(resetParticleCount);
             } else {
-              // Finally turn off animation mode
-              setParticleAnimationActive(false);
+              // Final cleanup after animations complete
+              setTimeout(() => {
+                setParticleAnimationActive(false);
+                setParticleScaleState('normal');
+              }, 500); // Brief delay for final transitions
             }
           };
           
-          requestAnimationFrame(resetAnimation);
+          requestAnimationFrame(resetParticleCount);
         }, 1200); // Wait longer for white fade to complete gently
       }, 600); // Wait longer for framer motion + content settling
     }, 2000); // When PNG shrink completes and modal shows
@@ -451,7 +449,8 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                       fadeState={particlesFadeState}
                       animationParticleCount={particleAnimationCount}
                       animationActive={particleAnimationActive}
-                      animationScale={particleAnimationScale}
+                      scaleState={particleScaleState}
+                      countState={particleCountState}
                     />
                   )}
 

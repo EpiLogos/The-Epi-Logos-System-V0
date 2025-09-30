@@ -67,23 +67,28 @@ class Neo4jClient:
         """Check if this is a local Neo4j connection."""
         return self.uri and ('localhost' in self.uri or '127.0.0.1' in self.uri)
 
-    def execute_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> tuple:
+    def execute_query(self, query: str, parameters: Optional[Dict[str, Any]] = None, *, timeout_ms: Optional[int] = None) -> tuple:
         """Execute a Cypher query with compatibility for both local and cloud instances."""
         try:
             # For local connections, use session-based approach to avoid routing issues
             if self._is_local_connection():
                 with self.driver.session(database=self.database) as session:
-                    result = session.run(query, parameters or {})
+                    # Neo4j Python driver supports transaction config with timeout in milliseconds
+                    tx_config = {"timeout": timeout_ms} if timeout_ms else None
+                    result = session.run(query, parameters or {}, timeout=timeout_ms) if timeout_ms else session.run(query, parameters or {})
                     records = list(result)
                     summary = result.consume()
                     keys = result.keys()
                     return records, summary, keys
             else:
                 # For cloud connections, use the recommended driver.execute_query method
+                kwargs: Dict[str, Any] = {"database_": self.database}
+                if timeout_ms:
+                    kwargs["timeout_"] = timeout_ms / 1000.0
                 records, summary, keys = self.driver.execute_query(
                     query,
                     parameters or {},
-                    database_=self.database
+                    **kwargs
                 )
                 return records, summary, keys
         except Exception as e:

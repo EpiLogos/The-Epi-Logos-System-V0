@@ -14,6 +14,8 @@ replacing the single-client STDIO transport limitation.
 
 import asyncio
 import logging
+import os
+from dotenv import load_dotenv
 from typing import cast, Iterable
 
 from fastapi import FastAPI, Request
@@ -48,6 +50,11 @@ class BimbaPratibimbaMCPServerSSE:
     
     def __init__(self):
         """Initialize MCP server with coordinate resolution capability."""
+        # Load .env for local development so MCP inherits shared secrets automatically
+        try:
+            load_dotenv()
+        except Exception:
+            pass
         self.bimba_client = None
         
         # Initialize MCP server
@@ -67,9 +74,22 @@ class BimbaPratibimbaMCPServerSSE:
     async def initialize(self):
         """Initialize coordinate resolution client."""
         try:
-            self.bimba_client = BimbaGraphQLClient()
+            # Attach admin Authorization header if provided via environment
+            token = os.getenv("MCP_BACKEND_BEARER") or os.getenv("BACKEND_ADMIN_TOKEN")
+            default_headers = {}
+            if token:
+                default_headers["Authorization"] = f"Bearer {token}"
+            mcp_admin_secret = os.getenv("MCP_ADMIN_SECRET")
+            if mcp_admin_secret:
+                default_headers["X-MCP-Admin-Secret"] = mcp_admin_secret
+            default_headers = default_headers or None
+            self.bimba_client = BimbaGraphQLClient(default_headers=default_headers)
             logger.info("Initialized Bimba-Pratibimba MCP server with SSE transport")
             logger.info("BimbaGraphQLClient initialized successfully")
+            if token:
+                logger.info("MCP will forward admin Authorization header for GraphQL mutations")
+            if mcp_admin_secret:
+                logger.info("MCP will forward X-MCP-Admin-Secret for local admin bypass (dev-only)")
         except Exception as e:
             logger.error(f"Failed to initialize BimbaGraphQLClient: {e}")
             raise
@@ -109,13 +129,13 @@ The tool returns comprehensive node information including name, subsystem, conte
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "coordinate": {
+                            "bimbaCoordinate": {
                                 "type": "string",
                                 "description": "Epi-Logos Bimba coordinate. Formats: '#' (system root), '#N' (subsystem), '#N-N-N' (hyphen-linked), '#N.N' (dot-linked, typically after #4). Examples: '#', '#0', '#1', '#1-2', '#3-4-5', '#4.2', '#2-3-5-4.2'",
                                 "pattern": r"^#(\d+([-\.]\d+)*)?$"
                             }
                         },
-                        "required": ["coordinate"]
+                        "required": ["bimbaCoordinate"]
                     }
                 ),
                 Tool(
@@ -127,13 +147,35 @@ The tool returns comprehensive node information including name, subsystem, conte
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "coordinate": {
+                            "bimbaCoordinate": {
                                 "type": "string",
                                 "description": "Bimba coordinate to inspect for relationships.",
                                 "pattern": r"^#(\d+([-\.]\d+)*)?$"
                             }
                         },
-                        "required": ["coordinate"]
+                        "required": ["bimbaCoordinate"]
+                    }
+                )
+                ,
+                Tool(
+                    name="create_bimba_node",
+                    description=(
+                        "Create a Bimba graph node (admin only). Includes optional semantic fields."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {"type": "string", "description": "Bimba coordinate (#N[-|.]N...)"},
+                            "name": {"type": "string"},
+                            "subsystem": {"type": "integer"},
+                            "description": {"type": "string"},
+                            "operationalEssence": {"type": "string"},
+                            "coreNature": {"type": "string"},
+                            "function": {"type": "string"},
+                            "architecturalFunction": {"type": "string"},
+                            "symbol": {"type": "string"}
+                        },
+                        "required": ["bimbaCoordinate", "name", "subsystem"]
                     }
                 )
                 ,
@@ -168,6 +210,54 @@ The tool returns comprehensive node information including name, subsystem, conte
                         "required": ["startCoordinate", "endCoordinate"]
                     }
                 )
+                ,
+                Tool(
+                    name="semantic_coordinate_discovery",
+                    description=(
+                        "Discover Bimba coordinates that semantically match a natural language description. "
+                        "Returns ranked matches with similarity scores and semantic context."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "query_text": {"type": "string", "description": "Natural language query text"},
+                            "max_results": {"type": "integer", "description": "Maximum results", "default": 5}
+                        },
+                        "required": ["query_text"]
+                    }
+                )
+                ,
+                Tool(
+                    name="regenerate_node_embedding",
+                    description=(
+                        "Regenerate the embeddings vector for a Bimba node and persist it to the graph."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {
+                                "type": "string",
+                                "description": "Bimba coordinate to regenerate embedding for",
+                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                            }
+                        },
+                        "required": ["bimbaCoordinate"]
+                    }
+                )
+                ,
+                Tool(
+                    name="regenerate_all_embeddings",
+                    description=(
+                        "Regenerate embeddings for all Bimba nodes (admin-only)."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "batch_size": {"type": "integer", "description": "Batch size", "default": 500},
+                            "force": {"type": "boolean", "description": "Bypass hash and force rewrite", "default": False}
+                        }
+                    }
+                )
             ]
         
         @self.server.call_tool()
@@ -180,6 +270,14 @@ The tool returns comprehensive node information including name, subsystem, conte
                     return await self._handle_get_node_relationships(arguments)
                 elif name == "get_path_between_coordinates":
                     return await self._handle_get_path_between_coordinates(arguments)
+                elif name == "create_bimba_node":
+                    return await self._handle_create_bimba_node(arguments)
+                elif name == "semantic_coordinate_discovery":
+                    return await self._handle_semantic_coordinate_discovery(arguments)
+                elif name == "regenerate_node_embedding":
+                    return await self._handle_regenerate_node_embedding(arguments)
+                elif name == "regenerate_all_embeddings":
+                    return await self._handle_regenerate_all_embeddings(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -216,11 +314,11 @@ The tool returns comprehensive node information including name, subsystem, conte
     async def _handle_resolve_coordinate(self, arguments: dict) -> list[TextContent]:
         """Handle coordinate resolution tool call."""
         try:
-            coordinate = arguments.get("coordinate")
+            coordinate = arguments.get("bimbaCoordinate")
             if not coordinate:
                 return [TextContent(
                     type="text",
-                    text="Error: coordinate parameter is required"
+                    text="Error: bimbaCoordinate parameter is required"
                 )]
             
             # Note: No local validation - let GraphQL backend handle coordinate format validation
@@ -285,9 +383,9 @@ The tool returns comprehensive node information including name, subsystem, conte
     async def _handle_get_node_relationships(self, arguments: dict) -> list[TextContent]:
         """Handle relationship discovery for a coordinate."""
         try:
-            coordinate = arguments.get("coordinate")
+            coordinate = arguments.get("bimbaCoordinate")
             if not coordinate:
-                return [TextContent(type="text", text="Error: coordinate parameter is required")]
+                return [TextContent(type="text", text="Error: bimbaCoordinate parameter is required")]
 
             if not self.bimba_client:
                 return [TextContent(type="text", text="Error: Relationship service not initialized")]
@@ -388,6 +486,109 @@ The tool returns comprehensive node information including name, subsystem, conte
         except Exception as e:
             logger.error(f"Error in get_path_between_coordinates: {e}")
             return [TextContent(type="text", text=f"Error finding path: {str(e)}")]
+
+    async def _handle_semantic_coordinate_discovery(self, arguments: dict) -> list[TextContent]:
+        """Handle semantic coordinate discovery via GraphQL."""
+        try:
+            query_text = arguments.get("query_text")
+            max_results = int(arguments.get("max_results", 5))
+            if not query_text:
+                return [TextContent(type="text", text="Error: query_text is required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Semantic discovery service not initialized")]
+
+            result = await self.bimba_client.semantic_coordinate_discovery(query_text, max_results)
+            if result.get("success"):
+                lines: list[str] = [f"Results ({len(result.get('results', []))}):"]
+                for i, r in enumerate(result.get("results", []), start=1):
+                    coord = r.get("coordinate")
+                    name = r.get("name")
+                    score = r.get("similarity")
+                    ctx = r.get("semanticContext")
+                    ns = r.get("namespace")
+                    header = f"{i}. {coord} ({name}) — score={score:.4f}"
+                    if ns:
+                        header += f" [{ns}]"
+                    lines.append(header)
+                    if ctx:
+                        lines.append(f"    context: {ctx}")
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                return [TextContent(type="text", text=f"Semantic discovery failed: {result.get('error', 'Unknown error')}")]
+        except Exception as e:
+            logger.error(f"Error in semantic_coordinate_discovery: {e}")
+            return [TextContent(type="text", text=f"Error during semantic discovery: {str(e)}")]
+
+    async def _handle_regenerate_node_embedding(self, arguments: dict) -> list[TextContent]:
+        """Handle node embedding regeneration via Backend REST."""
+        try:
+            coord = arguments.get("bimbaCoordinate")
+            if not coord:
+                return [TextContent(type="text", text="Error: bimbaCoordinate is required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Embedding tool not initialized")]
+
+            # Use GraphQL mutation via client
+            resp = await self.bimba_client.regenerate_node_embedding(coord)
+            if resp.get("success"):
+                dim = resp.get("dimension")
+                return [TextContent(type="text", text=f"Embedding regenerated for {coord} (dim={dim})")]
+            else:
+                return [TextContent(type="text", text=f"Embedding regeneration failed: {resp.get('error', 'Unknown error')}")]
+        except Exception as e:
+            logger.error(f"Error in regenerate_node_embedding: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    async def _handle_create_bimba_node(self, arguments: dict) -> list[TextContent]:
+        """Handle node creation via GraphQL (admin)."""
+        try:
+            required = ["bimbaCoordinate", "name", "subsystem"]
+            missing = [k for k in required if not arguments.get(k)]
+            if missing:
+                return [TextContent(type="text", text=f"Error: missing required fields: {', '.join(missing)}")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Node creation client not initialized")]
+
+            payload = {
+                k: v for k, v in arguments.items() if k in (
+                    "bimbaCoordinate", "name", "subsystem", "description",
+                    "operationalEssence", "coreNature", "function", "architecturalFunction", "symbol"
+                ) and v is not None
+            }
+            if "bimbaCoordinate" in payload:
+                payload["coordinate"] = payload.pop("bimbaCoordinate")
+            resp = await self.bimba_client.create_bimba_node(payload)
+            if resp.get("success"):
+                node = resp.get("node") or {}
+                return [TextContent(type="text", text=f"Node created: {node.get('coordinate')} ({node.get('name')})")]
+            # errors path
+            errs = resp.get("errors") or []
+            if errs:
+                code = errs[0].get("code")
+                msg = errs[0].get("message")
+                return [TextContent(type="text", text=f"Creation failed [{code}]: {msg}")]
+            return [TextContent(type="text", text=f"Creation failed: {resp}")]
+        except Exception as e:
+            logger.error(f"Error in create_bimba_node: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    async def _handle_regenerate_all_embeddings(self, arguments: dict) -> list[TextContent]:
+        try:
+            batch_size = int(arguments.get("batch_size", 500))
+            force = bool(arguments.get("force", False))
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Embedding tool not initialized")]
+            resp = await self.bimba_client.regenerate_all_embeddings(batch_size, force)
+            if resp.get("success"):
+                return [TextContent(type="text", text=f"Bulk regeneration complete: total={resp.get('total')} updated={resp.get('updated')} skipped={resp.get('skipped')} (force={force})")]
+            else:
+                return [TextContent(type="text", text=f"Bulk regeneration failed: {resp.get('error', 'Unknown error')}")]
+        except Exception as e:
+            logger.error(f"Error in regenerate_all_embeddings: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
     
     def _get_schema_resource(self) -> str:
         """Get coordinate schema resource."""

@@ -4,6 +4,12 @@ from typing import Optional
 # Import from shared database package
 from shared.database import Neo4jClient
 import os
+import math
+from typing import List, Dict, Any
+
+from backend.epi_logos_system.shared.embeddings import get_text_embedding
+import hashlib
+from datetime import datetime, timezone
 
 class BimbaNode(BaseModel):
     coordinate: str
@@ -297,6 +303,230 @@ class NodeService:
         # Ensure we never write to a `coordinate` property in Neo4j; only bimbaCoordinate
         # Validation handled in repository; here we simply pass through.
         return self._repo.create_bimba_node(input_data)
+
+    def semantic_coordinate_discovery(self, query_text: str, max_results: Optional[int] = 5) -> list[dict]:
+        """Perform semantic-to-coordinate discovery via Neo4j vector index.
+
+        Guardrails:
+        - Read-only: no implicit mutations
+        - Identity anchored strictly by bimbaCoordinate
+        - Timeout enforced via driver (15s default)
+        - Result cap at 20
+        """
+        # Enforce defaults and caps
+        k_default = 5
+        k_cap = 20
+        k = k_default if max_results is None else int(max_results)
+        if k < 1:
+            k = k_default
+        k = min(k, k_cap)
+
+        # Compute embedding for query text
+        embedding = get_text_embedding(query_text)
+
+        # Single canonical index; no env flexibility to keep ops simple
+        index_names = ["bimba_embeddings_idx"]
+        timeout_ms = 15_000
+
+        results: list[dict] = []
+        seen_coords: set[str] = set()
+
+        for idx_name in index_names:
+            # Build Cypher with literal index name (Neo4j requires literal in CALL)
+            cypher = (
+                f"CALL db.index.vector.queryNodes('{idx_name}', $k, $q) "
+                "YIELD node, score RETURN node, score LIMIT $k"
+            )
+            try:
+                recs, _sum, _keys = self._repo.neo4j_client.execute_query(
+                    cypher, {"k": k, "q": embedding}, timeout_ms=timeout_ms
+                )
+            except Exception:
+                # Skip this index if query fails (e.g., index missing)
+                recs = []
+
+            for r in recs:
+                n_obj = r.get("node")
+                if n_obj is None:
+                    n = {}
+                elif isinstance(n_obj, dict):
+                    n = n_obj
+                elif hasattr(n_obj, "items"):
+                    n = dict(n_obj)  # Neo4j-like map
+                elif hasattr(n_obj, "__dict__"):
+                    n = vars(n_obj)
+                else:
+                    n = {}
+                coord = n.get("bimbaCoordinate")
+                if not coord or coord in seen_coords:
+                    continue
+                seen_coords.add(coord)
+                name = n.get("name") or coord
+                score = float(r.get("score") or 0.0)
+                # Map to GraphQL type fields
+                results.append(
+                    {
+                        "coordinate": coord,
+                        "name": name,
+                        "similarity": score,
+                        "semanticContext": n.get("description") or n.get("coreNature") or n.get("operationalEssence"),
+                        "namespace": "Bimba",
+                        "clusterId": _cluster_id_from_coordinate(coord),
+                        "clusterTheme": _cluster_theme_from_coordinate(coord),
+                    }
+                )
+
+        # Sort by similarity descending and truncate to k
+        results.sort(key=lambda x: x.get("similarity", 0.0), reverse=True)
+        return results[:k]
+
+    def _fetch_node_props_and_labels(self, coordinate: str) -> tuple[dict, list[str]]:
+        query = """
+        MATCH (n:BimbaNode { bimbaCoordinate: $c })
+        RETURN properties(n) AS props, labels(n) AS labels
+        """
+        records, _s, _k = self._repo.neo4j_client.execute_query(query, {"c": coordinate})
+        if not records:
+            return {}, []
+        rec = records[0]
+        props = dict(rec.get("props") or {})
+        labels = list(rec.get("labels") or [])
+        return props, labels
+
+    def _serialize_properties_for_embedding(self, props: dict, labels: list[str]) -> tuple[str, str]:
+        # Exclude keys we shouldn't embed
+        exclude = {
+            "embeddings",
+            "embedding_updated_at",
+            "embedding_model",
+            "embedding_dim",
+            "embedding_hash",
+            "created_at",
+            "updated_at",
+        }
+        lines: list[str] = []
+        if labels:
+            lines.append("labels: " + ",".join(sorted(labels)))
+        for key in sorted(props.keys()):
+            if key in exclude:
+                continue
+            val = props.get(key)
+            if val is None:
+                continue
+            # Only serialize simple scalars and string arrays
+            if isinstance(val, (str, int, float, bool)):
+                lines.append(f"{key}: {val}")
+            elif isinstance(val, list) and all(isinstance(x, (str, int, float, bool)) for x in val):
+                lines.append(f"{key}: {','.join(map(str, val))}")
+            else:
+                # Skip complex nested structures for now
+                continue
+        text = "\n".join(lines)
+        h = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        return text, h
+
+    def regenerate_node_embedding(self, coordinate: str) -> dict:
+        props, labels = self._fetch_node_props_and_labels(coordinate)
+        if not props:
+            return {"success": False, "coordinate": coordinate, "error": "Coordinate not found"}
+
+        text, content_hash = self._serialize_properties_for_embedding(props, labels)
+        vec = get_text_embedding(text)
+        model = os.getenv("EMBEDDINGS_MODEL", "local-deterministic")
+        dim = len(vec)
+
+        query = """
+        MATCH (n:BimbaNode { bimbaCoordinate: $c })
+        SET n.embeddings = $v,
+            n.embedding_updated_at = datetime(),
+            n.embedding_model = $m,
+            n.embedding_dim = $d,
+            n.embedding_hash = $h
+        RETURN toString(n.embedding_updated_at) AS updatedAt
+        """
+        recs, _s, _k = self._repo.neo4j_client.execute_query(
+            query, {"c": coordinate, "v": vec, "m": model, "d": dim, "h": content_hash}
+        )
+        updated_at = None
+        if recs:
+            updated_at = recs[0].get("updatedAt")
+        return {
+            "success": True,
+            "coordinate": coordinate,
+            "dimension": dim,
+            "updatedAt": updated_at,
+            "model": model,
+            "hash": content_hash,
+        }
+
+    def regenerate_all_embeddings(self, batch_size: int = 500, force: bool = False) -> dict:
+        # Iterate batches using SKIP/LIMIT
+        total = 0
+        updated = 0
+        skipped = 0
+        skip = 0
+        while True:
+            q = """
+            MATCH (n:BimbaNode)
+            RETURN n.bimbaCoordinate AS coord, properties(n) AS props, labels(n) AS labels
+            ORDER BY n.bimbaCoordinate
+            SKIP $skip LIMIT $limit
+            """
+            recs, _s, _k = self._repo.neo4j_client.execute_query(q, {"skip": skip, "limit": batch_size})
+            if not recs:
+                break
+            for r in recs:
+                total += 1
+                coord = r.get("coord")
+                props = dict(r.get("props") or {})
+                labels = list(r.get("labels") or [])
+                text, content_hash = self._serialize_properties_for_embedding(props, labels)
+                prev_hash = props.get("embedding_hash")
+                if not force and prev_hash and prev_hash == content_hash:
+                    skipped += 1
+                    continue
+                vec = get_text_embedding(text)
+                model = os.getenv("EMBEDDINGS_MODEL", "local-deterministic")
+                dim = len(vec)
+                uq = """
+                MATCH (n:BimbaNode { bimbaCoordinate: $c })
+                SET n.embeddings = $v,
+                    n.embedding_updated_at = datetime(),
+                    n.embedding_model = $m,
+                    n.embedding_dim = $d,
+                    n.embedding_hash = $h
+                RETURN 1
+                """
+                self._repo.neo4j_client.execute_query(uq, {"c": coord, "v": vec, "m": model, "d": dim, "h": content_hash})
+                updated += 1
+            skip += batch_size
+        return {"success": True, "total": total, "updated": updated, "skipped": skipped}
+
+
+def _cluster_id_from_coordinate(coordinate: str) -> str:
+    """Derive a simple cluster id from the leading subsystem of a coordinate."""
+    try:
+        # Coordinate starts with '#', then digits; separators '-' or '.'
+        core = coordinate.lstrip('#')
+        first = core.replace('.', '-').split('-', 1)[0]
+        return f"subsys-{first}"
+    except Exception:
+        return "subsys-unknown"
+
+
+def _cluster_theme_from_coordinate(coordinate: str) -> str:
+    """Provide a human-friendly cluster theme based on subsystem mapping."""
+    mapping = {
+        "0": "Anuttara",
+        "1": "Paramasiva",
+        "2": "Parashakti",
+        "3": "Mahamaya",
+        "4": "Nara",
+        "5": "Epii",
+    }
+    core = coordinate.lstrip('#')
+    first = core.replace('.', '-').split('-', 1)[0]
+    return mapping.get(first, None) or "Bimba"
 
 # FastAPI dependency provider
 def get_node_service() -> NodeService:

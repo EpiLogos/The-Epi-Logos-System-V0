@@ -65,7 +65,7 @@ class GraphitiService:
         embedder = GeminiEmbedder(
             config=GeminiEmbedderConfig(
                 api_key=gemini_api_key,
-                embedding_model="embedding-001"
+                embedding_model="gemini-embedding-001"
             )
         )
         
