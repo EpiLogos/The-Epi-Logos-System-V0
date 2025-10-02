@@ -203,16 +203,7 @@ The tool returns comprehensive node information including name, subsystem, conte
                 ,
                 Tool(
                     name="update_bimba_node",
-                    description=(
-                        "Update an existing Bimba graph node with flexible schema-based properties (admin only). "
-                        "Supports partial updates - only provided fields are updated. "
-                        "Core Identity: name, primaryDesignation, coreNature, architecturalFunction. "
-                        "Structure: internalStructure. "
-                        "Principles: keyPrinciples, resonances, practicalApplications (arrays). "
-                        "Operational: operationalEssence, accessLevel, consciousnessStructure, operationalSymbolics. "
-                        "Relational: relatedCoordinates (array). "
-                        "Legacy: description, function, symbol."
-                    ),
+                    description="Update an existing Bimba graph node with flexible schema-based properties (admin only). Supports partial updates - only provided fields are updated. FLEXIBLE PROPERTIES: This tool accepts ANY camelCase property names beyond the documented fields. The backend validates naming conventions (camelCase) and Neo4j compatibility (no nested objects), but you can add arbitrary coordinate-specific fields like 'f_cycle_orchestration', 'spandaMode', etc. Common fields: Core Identity: name, primaryDesignation, coreNature, architecturalFunction. Structure: internalStructure. Principles: keyPrinciples, resonances, practicalApplications (arrays). Operational: operationalEssence, accessLevel, consciousnessStructure, operationalSymbolics. Relational: relatedCoordinates (array). Legacy: description, function, symbol. Custom properties are fully supported - just use camelCase names.",
                     inputSchema={
                         "type": "object",
                         "properties": {
@@ -234,7 +225,8 @@ The tool returns comprehensive node information including name, subsystem, conte
                             "function": {"type": "string"},
                             "symbol": {"type": "string"}
                         },
-                        "required": ["bimbaCoordinate"]
+                        "required": ["bimbaCoordinate"],
+                        "additionalProperties": True
                     }
                 )
                 ,
@@ -726,7 +718,11 @@ The tool returns comprehensive node information including name, subsystem, conte
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
     async def _handle_update_bimba_node(self, arguments: dict) -> list[TextContent]:
-        """Handle node update via GraphQL (admin)."""
+        """Handle node update via GraphQL (admin).
+
+        Accepts ALL properties from arguments (flexible schema support).
+        Transforms custom properties to key-value array format for GraphQL.
+        """
         try:
             coord = arguments.get("bimbaCoordinate")
             if not coord:
@@ -735,18 +731,24 @@ The tool returns comprehensive node information including name, subsystem, conte
             if not self.bimba_client:
                 return [TextContent(type="text", text="Error: Node update client not initialized")]
 
-            # Build payload with flexible schema properties
-            allowed_fields = {
-                "bimbaCoordinate", "name", "primaryDesignation", "coreNature", "architecturalFunction",
+            # Known typed fields in GraphQL schema
+            known_fields = {
+                "name", "primaryDesignation", "coreNature", "architecturalFunction",
                 "internalStructure", "keyPrinciples", "resonances", "practicalApplications",
                 "operationalEssence", "accessLevel", "consciousnessStructure", "operationalSymbolics",
                 "relatedCoordinates", "description", "function", "symbol"
             }
-            payload = {k: v for k, v in arguments.items() if k in allowed_fields and v is not None}
 
-            # Map bimbaCoordinate to coordinate for API consistency
-            if "bimbaCoordinate" in payload:
-                payload["coordinate"] = payload.pop("bimbaCoordinate")
+            # Split into known fields and custom properties
+            typed_props = {k: v for k, v in arguments.items() if k in known_fields and v is not None}
+            custom_props = {k: v for k, v in arguments.items() if k not in known_fields and k != "bimbaCoordinate" and v is not None}
+
+            # Build payload with typed fields
+            payload = {"coordinate": coord, **typed_props}
+
+            # Transform custom properties to key-value array: {foo: "bar"} → [{key: "foo", value: "bar"}]
+            if custom_props:
+                payload["properties"] = [{"key": k, "value": str(v)} for k, v in custom_props.items()]
 
             resp = await self.bimba_client.update_bimba_node(payload)
             if resp.get("success"):

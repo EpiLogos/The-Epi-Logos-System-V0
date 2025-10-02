@@ -125,6 +125,17 @@ input UpdateBimbaNodeInput {
     description: String
     function: String
     symbol: String
+
+    # Flexible properties for arbitrary coordinate-specific fields
+    # Uses key-value array format (same pattern as relationship properties)
+    # Example: [{key: "f_cycle_orchestration", value: "Sequential flow..."}, {key: "spandaMode", value: "oscillatory"}]
+    properties: [PropertyInput!]
+}
+
+"""Input type for flexible key-value properties"""
+input PropertyInput {
+    key: String!
+    value: String!
 }
 
 """Extended Bimba node type with all flexible schema properties"""
@@ -175,9 +186,44 @@ type UpdateBimbaNodePayload {
     errors: [MutationError!]
 }
 
+"""Flexible key-value property for relationships"""
+input RelationshipPropertyInput {
+    key: String!
+    value: String!
+}
+
+"""Input for creating/updating a relationship between Bimba nodes"""
+input CreateBimbaRelationshipInput {
+    fromCoordinate: String!
+    toCoordinate: String!
+    relationshipType: String!
+    properties: [RelationshipPropertyInput!]
+    bidirectional: Boolean
+}
+
+"""A created/updated relationship with its properties"""
+type BimbaRelationship {
+    type: String!
+    fromCoordinate: String!
+    toCoordinate: String!
+    properties: [RelationshipProperty!]!
+    createdAt: String
+    updatedAt: String
+}
+
+"""Payload for relationship creation/update"""
+type CreateBimbaRelationshipPayload {
+    success: Boolean!
+    relationship: BimbaRelationship
+    reverseRelationship: BimbaRelationship
+    wasUpdate: Boolean!
+    errors: [MutationError!]
+}
+
 type Mutation {
     createBimbaNode(input: CreateBimbaNodeInput!): CreateBimbaNodePayload
     updateBimbaNode(input: UpdateBimbaNodeInput!): UpdateBimbaNodePayload
+    createBimbaRelationship(input: CreateBimbaRelationshipInput!): CreateBimbaRelationshipPayload
     regenerateNodeEmbedding(coordinate: String!): RegenerateEmbeddingPayload!
     regenerateAllEmbeddings(batchSize: Int = 500, force: Boolean = false): RegenerateAllEmbeddingsPayload!
 }

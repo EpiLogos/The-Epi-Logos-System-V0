@@ -174,6 +174,121 @@ class NodeRepository:
             updatedAt=str(n.get("updated_at")) if n.get("updated_at") else None,
         )
 
+    def create_or_update_bimba_relationship(
+        self,
+        from_coordinate: str,
+        to_coordinate: str,
+        relationship_type: str,
+        properties: list[dict[str, str]],
+        bidirectional: bool = False
+    ) -> dict:
+        """Create or update relationship between existing Bimba nodes using MERGE.
+
+        Pre-validates both nodes exist, then uses MERGE for idempotent create/update.
+        Returns relationship data and wasUpdate flag.
+
+        Args:
+            from_coordinate: Source node coordinate
+            to_coordinate: Target node coordinate
+            relationship_type: Relationship type (UPPERCASE_UNDERSCORES)
+            properties: List of {"key": "...", "value": "..."} dicts
+            bidirectional: Create reverse relationship too
+
+        Returns:
+            Dict with 'forward', 'reverse' (if bidirectional), and 'wasUpdate' keys
+
+        Raises:
+            ValueError: If either coordinate doesn't exist or relationship type invalid
+        """
+        # Step 1: Validate both nodes exist (prevents MERGE from creating nodes)
+        from_node = self.neo4j_client.get_bimba_node(from_coordinate)
+        to_node = self.neo4j_client.get_bimba_node(to_coordinate)
+
+        if not from_node:
+            raise ValueError(f"Source coordinate not found: {from_coordinate}")
+        if not to_node:
+            raise ValueError(f"Target coordinate not found: {to_coordinate}")
+
+        # Step 2: Validate relationship type format
+        import re
+        if not re.match(r'^[A-Z_][A-Z0-9_]*$', relationship_type):
+            raise ValueError(
+                f"Invalid relationship type: {relationship_type}. "
+                "Use UPPERCASE_WITH_UNDERSCORES (e.g., CONTAINS, RESONATES_WITH)"
+            )
+
+        # Step 3: Convert property array to dict
+        props_dict = {prop["key"]: prop["value"] for prop in properties} if properties else {}
+
+        # Step 4: Check if relationship exists (for wasUpdate flag)
+        check_query = f"""
+        MATCH (from:BimbaNode {{ bimbaCoordinate: $from_coord }})
+              -[r:{relationship_type}]->
+              (to:BimbaNode {{ bimbaCoordinate: $to_coord }})
+        RETURN r
+        """
+
+        existing_records, _, _ = self.neo4j_client.execute_query(check_query, {
+            "from_coord": from_coordinate,
+            "to_coord": to_coordinate
+        })
+        was_update = len(existing_records) > 0
+
+        # Step 5: MERGE relationship (safe because nodes pre-validated)
+        merge_query = f"""
+        MATCH (from:BimbaNode {{ bimbaCoordinate: $from_coord }})
+        MATCH (to:BimbaNode {{ bimbaCoordinate: $to_coord }})
+        MERGE (from)-[r:{relationship_type}]->(to)
+        ON CREATE SET
+            r.createdAt = datetime(),
+            r.fromCoordinate = $from_coord,
+            r.toCoordinate = $to_coord
+        ON MATCH SET
+            r.updatedAt = datetime()
+        SET r += $properties
+        RETURN r, type(r) as relType
+        """
+
+        params = {
+            "from_coord": from_coordinate,
+            "to_coord": to_coordinate,
+            "properties": props_dict
+        }
+
+        records, _, _ = self.neo4j_client.execute_query(merge_query, params)
+
+        if not records:
+            raise RuntimeError("Failed to create/update relationship")
+
+        forward_rel = dict(records[0]["r"])
+        result = {
+            "forward": forward_rel,
+            "reverse": None,
+            "wasUpdate": was_update
+        }
+
+        # Step 6: Optional bidirectional (same MERGE pattern)
+        if bidirectional:
+            reverse_query = f"""
+            MATCH (from:BimbaNode {{ bimbaCoordinate: $from_coord }})
+            MATCH (to:BimbaNode {{ bimbaCoordinate: $to_coord }})
+            MERGE (to)-[r:{relationship_type}]->(from)
+            ON CREATE SET
+                r.createdAt = datetime(),
+                r.fromCoordinate = $to_coord,
+                r.toCoordinate = $from_coord,
+                r.bidirectionalPair = true
+            ON MATCH SET
+                r.updatedAt = datetime()
+            SET r += $properties
+            RETURN r
+            """
+
+            rev_records, _, _ = self.neo4j_client.execute_query(reverse_query, params)
+            result["reverse"] = dict(rev_records[0]["r"]) if rev_records else None
+
+        return result
+
     def update_bimba_node(self, coordinate: str, update_data: dict) -> dict | None:
         """Update an existing Bimba node with flexible schema-based properties.
 
@@ -379,6 +494,47 @@ class NodeService:
         # Ensure we never write to a `coordinate` property in Neo4j; only bimbaCoordinate
         # Validation handled in repository; here we simply pass through.
         return self._repo.create_bimba_node(input_data)
+
+    def create_bimba_relationship(
+        self,
+        from_coordinate: str,
+        to_coordinate: str,
+        relationship_type: str,
+        properties: list[dict[str, str]],
+        bidirectional: bool = False
+    ) -> dict:
+        """Create or update relationship between Bimba nodes with property validation.
+
+        Performs business-layer validation and delegates to repository for MERGE operation.
+
+        Args:
+            from_coordinate: Source coordinate
+            to_coordinate: Target coordinate
+            relationship_type: Relationship type (validated format)
+            properties: List of {"key": "...", "value": "..."} dicts
+            bidirectional: Create reverse relationship
+
+        Returns:
+            Dict with relationship data and wasUpdate flag
+        """
+        # Validate property keys follow camelCase convention
+        if properties:
+            for prop in properties:
+                key = prop.get("key", "")
+                if key and not self._is_valid_property_name(key):
+                    raise ValueError(
+                        f"Invalid property key '{key}': must use camelCase "
+                        "(e.g., harmonicFrequency, not HarmonicFrequency)"
+                    )
+
+        # Delegate to repository for MERGE operation
+        return self._repo.create_or_update_bimba_relationship(
+            from_coordinate=from_coordinate,
+            to_coordinate=to_coordinate,
+            relationship_type=relationship_type,
+            properties=properties,
+            bidirectional=bidirectional
+        )
 
     def update_bimba_node(self, coordinate: str, update_data: dict) -> dict | None:
         """Update an existing Bimba node with flexible schema-based properties.

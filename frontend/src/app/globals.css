@@ -744,7 +744,7 @@ html, body {
   background-color: #090a09;
   border: 2px solid transparent;
   border-radius: 0px;
-  overflow: hidden;
+  overflow: hidden; /* respect content panel boundaries */
   display: flex;
   align-items: center;
   justify-content: center;

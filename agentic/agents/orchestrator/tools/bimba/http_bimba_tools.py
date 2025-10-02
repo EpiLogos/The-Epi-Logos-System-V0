@@ -361,11 +361,39 @@ class HttpBimbaClient:
             logger.error(f"Create node failed: {e}")
             return {"success": False, "errors": [{"field": None, "message": str(e), "code": "HTTP_ERROR"}]}
 
+    async def create_bimba_relationship(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create or update a Bimba relationship via Backend GraphQL mutation (admin-only).
+
+        Expects: fromCoordinate, toCoordinate, relationshipType (required)
+        Optional: properties (list of {key, value}), bidirectional (bool)
+        """
+        try:
+            result = await self.client.create_bimba_relationship(input_data)
+            if result.get("success"):
+                rel = result.get("relationship", {})
+                was_update = result.get("wasUpdate", False)
+                action = "Updated" if was_update else "Created"
+                logger.info(
+                    f"{action} relationship: {rel.get('fromCoordinate')} "
+                    f"-[{rel.get('type')}]-> {rel.get('toCoordinate')}"
+                )
+            else:
+                errors = result.get("errors", [])
+                err_msg = "; ".join([e.get("message", "Unknown") for e in errors])
+                logger.warning(f"Relationship creation failed: {err_msg}")
+            return result
+        except Exception as e:
+            logger.error(f"Create relationship failed: {e}")
+            return {"success": False, "errors": [{"field": None, "message": str(e), "code": "HTTP_ERROR"}]}
+
     async def update_bimba_node(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update a Bimba node via Backend GraphQL mutation (admin-only).
 
         Expects coordinate (required) and any flexible schema properties to update.
-        Supports: Core Identity, Structure, Principles, Operational, Relational properties.
+        FLEXIBLE PROPERTIES: Accepts arbitrary camelCase property names.
+        Common fields: Core Identity, Structure, Principles, Operational, Relational properties.
+        Custom fields: Any coordinate-specific properties (e.g., f_cycle_orchestration, spandaMode).
+        Backend validates: camelCase naming, no nested objects (Neo4j compatibility).
         """
         try:
             result = await self.client.update_bimba_node(input_data)

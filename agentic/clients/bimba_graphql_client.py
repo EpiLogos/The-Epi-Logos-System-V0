@@ -394,6 +394,40 @@ class BimbaGraphQLClient(BackendHttpClient):
         err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
         return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}
 
+    async def create_bimba_relationship(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create or update a Bimba relationship via GraphQL mutation (admin-only)."""
+        mutation = """
+        mutation CreateRel($input: CreateBimbaRelationshipInput!) {
+          createBimbaRelationship(input: $input) {
+            success
+            relationship {
+              type
+              fromCoordinate
+              toCoordinate
+              properties { key value }
+              createdAt
+              updatedAt
+            }
+            reverseRelationship {
+              type
+              fromCoordinate
+              toCoordinate
+              properties { key value }
+              createdAt
+              updatedAt
+            }
+            wasUpdate
+            errors { field message code }
+          }
+        }
+        """
+        resp = await self.post("/graphql", json_data={"query": mutation, "variables": {"input": input_data}})
+        if "data" in resp and resp["data"]:
+            return resp["data"].get("createBimbaRelationship", {"success": False, "errors": [{"message": "No payload"}]})
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}
+
     async def update_bimba_node(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Update a Bimba node via GraphQL mutation (admin-only)."""
         mutation = """

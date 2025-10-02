@@ -12,6 +12,8 @@ interface DashboardCircleProps {
   image: string;
   innerImage?: string;
   innerAboveGlass?: boolean;
+  showGlassOverlay?: boolean;
+  size?: number; // outer circle size in px
   route: EpiLogosBusinessState | null;
   enabled: boolean;
   rotationPhase: 0 | 60 | 120 | 180 | 240 | 300;
@@ -24,6 +26,8 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
   image,
   innerImage,
   innerAboveGlass = false,
+  showGlassOverlay = true,
+  size = 157,
   route,
   enabled,
   rotationPhase,
@@ -49,11 +53,11 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
       disabled={!enabled}
     >
       {/* Container for both rotating PNG and static glass overlay */}
-      <div className="relative w-[157px] h-[157px]">
+      <div className="relative" style={{ width: size, height: size }}>
         {/* Rotating PNG container */}
         <div
           className={cn(
-            'dashboard-circle-wrapper relative z-0 w-[157px] h-[157px] rounded-full overflow-hidden',
+            'dashboard-circle-wrapper relative z-0 rounded-full overflow-hidden',
             'dashboard-compositor',
             'dashboard-circle-base',
             'dashboard-rotate',
@@ -62,12 +66,13 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
             !enabled && 'dashboard-circle-disabled',
             phaseClass,
           )}
+          style={{ width: size, height: size }}
         >
           <Image
             src={image}
             alt={`${label} Dashboard Circle`}
             fill
-            sizes="157px"
+            sizes={`${size}px`}
             className="object-contain dashboard-waves"
             priority={false}
           />
@@ -80,7 +85,7 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
               src={innerImage}
               alt={`${label} Inner`}
               fill
-              sizes="88px"
+              sizes={`${Math.round(size * 0.56)}px`}
               className="object-contain"
               priority={false}
             />
@@ -89,19 +94,21 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
 
         {/* Counter-rotating glass overlay - rotates opposite to PNG */}
         {/* Scale wrapper to grow glass on hover without interfering with its rotation transform */}
-        <div className="absolute inset-0 z-10 pointer-events-none dashboard-glass-scale">
-          <CircularGlassOverlay
-            size={157} // 1.4x of 112px → ~157px
-            backgroundOpacity={0.15}
-            brightness={enabled ? 60 : 40}
-            opacity={enabled ? 0.85 : 0.95}
-            blur={8}
-            saturation={enabled ? 1.2 : 0.8}
-            enableRotation={true}
-            rotationPhase={rotationPhase}
-            className="dashboard-glass-compositor"
-          />
-        </div>
+        {showGlassOverlay && (
+          <div className="absolute inset-0 z-10 pointer-events-none dashboard-glass-scale">
+            <CircularGlassOverlay
+              size={size}
+              backgroundOpacity={0.15}
+              brightness={enabled ? 60 : 40}
+              opacity={enabled ? 0.85 : 0.95}
+              blur={8}
+              saturation={enabled ? 1.2 : 0.8}
+              enableRotation={true}
+              rotationPhase={rotationPhase}
+              className="dashboard-glass-compositor"
+            />
+          </div>
+        )}
 
         {/* Same inner image but layered above glass when requested */}
         {innerAboveGlass && innerImage ? (
@@ -119,7 +126,7 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
       </div>
       <span
         className={cn(
-          'relative z-10 mt-3 text-sm font-mono tracking-wide',
+          'relative z-20 mt-3 text-sm font-mono tracking-wide',
           enabled
             ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]'
             : 'text-ui-coord-text',

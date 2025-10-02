@@ -207,6 +207,125 @@ def resolve_regenerate_all_embeddings(_: Any, info: Any, batchSize: Optional[int
     return service.regenerate_all_embeddings(batch_size=batchSize or 500, force=bool(force))
 
 
+@mutation.field("createBimbaRelationship")
+def resolve_create_bimba_relationship(_: Any, info: Any, input: dict) -> dict:
+    """Create or update a relationship between Bimba nodes (admin required).
+
+    Returns payload with success flag, relationship data (when successful), wasUpdate flag, and errors array.
+    """
+    user = info.context.get("current_user") if info and info.context else None
+    if not user or not getattr(user, "isAdmin", False):
+        return {
+            "success": False,
+            "relationship": None,
+            "reverseRelationship": None,
+            "wasUpdate": False,
+            "errors": [{
+                "field": None,
+                "message": "Admin privileges required",
+                "code": "UNAUTHORIZED_ADMIN",
+            }],
+        }
+
+    from_coord = input.get("fromCoordinate")
+    to_coord = input.get("toCoordinate")
+    rel_type = input.get("relationshipType")
+
+    if not from_coord or not to_coord or not rel_type:
+        return {
+            "success": False,
+            "relationship": None,
+            "reverseRelationship": None,
+            "wasUpdate": False,
+            "errors": [{
+                "field": None,
+                "message": "fromCoordinate, toCoordinate, and relationshipType are required",
+                "code": "MISSING_REQUIRED_FIELDS",
+            }],
+        }
+
+    service = info.context["service"]
+    try:
+        properties = input.get("properties", [])
+        bidirectional = input.get("bidirectional", False)
+
+        result = service.create_bimba_relationship(
+            from_coordinate=from_coord,
+            to_coordinate=to_coord,
+            relationship_type=rel_type,
+            properties=properties,
+            bidirectional=bidirectional
+        )
+
+        # Map forward relationship to GraphQL schema
+        forward_rel = result.get("forward", {})
+        relationship_response = {
+            "type": rel_type,
+            "fromCoordinate": forward_rel.get("fromCoordinate"),
+            "toCoordinate": forward_rel.get("toCoordinate"),
+            "properties": [
+                {"key": k, "value": str(v)}
+                for k, v in forward_rel.items()
+                if k not in ["fromCoordinate", "toCoordinate", "createdAt", "updatedAt", "bidirectionalPair"]
+            ],
+            "createdAt": str(forward_rel.get("createdAt")) if forward_rel.get("createdAt") else None,
+            "updatedAt": str(forward_rel.get("updatedAt")) if forward_rel.get("updatedAt") else None,
+        }
+
+        # Map reverse relationship if exists
+        reverse_response = None
+        if result.get("reverse"):
+            rev_rel = result["reverse"]
+            reverse_response = {
+                "type": rel_type,
+                "fromCoordinate": rev_rel.get("fromCoordinate"),
+                "toCoordinate": rev_rel.get("toCoordinate"),
+                "properties": [
+                    {"key": k, "value": str(v)}
+                    for k, v in rev_rel.items()
+                    if k not in ["fromCoordinate", "toCoordinate", "createdAt", "updatedAt", "bidirectionalPair"]
+                ],
+                "createdAt": str(rev_rel.get("createdAt")) if rev_rel.get("createdAt") else None,
+                "updatedAt": str(rev_rel.get("updatedAt")) if rev_rel.get("updatedAt") else None,
+            }
+
+        return {
+            "success": True,
+            "relationship": relationship_response,
+            "reverseRelationship": reverse_response,
+            "wasUpdate": result.get("wasUpdate", False),
+            "errors": []
+        }
+
+    except ValueError as ve:
+        # Handle coordinate not found or validation errors
+        error_code = "COORDINATE_NOT_FOUND" if "not found" in str(ve) else "VALIDATION_ERROR"
+        return {
+            "success": False,
+            "relationship": None,
+            "reverseRelationship": None,
+            "wasUpdate": False,
+            "errors": [{
+                "field": None,
+                "message": str(ve),
+                "code": error_code,
+            }],
+        }
+    except Exception:
+        # Do not leak internals
+        return {
+            "success": False,
+            "relationship": None,
+            "reverseRelationship": None,
+            "wasUpdate": False,
+            "errors": [{
+                "field": None,
+                "message": "Relationship creation failed",
+                "code": "RELATIONSHIP_ERROR",
+            }],
+        }
+
+
 @mutation.field("updateBimbaNode")
 def resolve_update_bimba_node(_: Any, info: Any, input: dict) -> dict:
     """Update an existing Bimba node with flexible schema-based properties (admin required).
@@ -240,7 +359,15 @@ def resolve_update_bimba_node(_: Any, info: Any, input: dict) -> dict:
     service = info.context["service"]
     try:
         # Remove coordinate from update_data to prevent immutability issues
-        update_data = {k: v for k, v in input.items() if k != "coordinate"}
+        update_data = {k: v for k, v in input.items() if k not in ["coordinate", "properties"]}
+
+        # Convert key-value array to dict and merge into update_data
+        properties_array = input.get("properties")
+        if properties_array and isinstance(properties_array, list):
+            # Transform [{key: "foo", value: "bar"}] → {foo: "bar"}
+            for prop in properties_array:
+                if isinstance(prop, dict) and "key" in prop and "value" in prop:
+                    update_data[prop["key"]] = prop["value"]
 
         updated_node = service.update_bimba_node(coordinate, update_data)
 

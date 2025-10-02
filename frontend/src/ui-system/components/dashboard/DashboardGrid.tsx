@@ -65,13 +65,12 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ onNavigate }) => {
   const circles = useMemo(() => dashboardCircles, []);
 
   return (
-    <div className="dashboard-grid flex items-center justify-center min-h-[400px] pt-12">
+    <div className="dashboard-grid flex items-center justify-center">
       <div
         ref={containerRef}
         className={[
           'grid grid-cols-3 grid-rows-2 gap-x-12 gap-y-24 w-full max-w-3xl',
           paused ? 'dashboard-animations-paused' : '',
-          'content-visibility-auto',
         ].join(' ')}
       >
         {circles.map((circle) => (

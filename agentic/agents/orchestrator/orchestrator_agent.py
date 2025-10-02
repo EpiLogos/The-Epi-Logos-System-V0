@@ -259,6 +259,72 @@ if PYDANTIC_AI_AVAILABLE:
                 return {"success": False, "errors": [{"field": None, "message": str(e), "code": "TOOL_ERROR"}]}
 
         @agent.tool
+        async def create_bimba_relationship(
+            ctx: RunContext[OrchestratorDeps],
+            from_coordinate: str,
+            to_coordinate: str,
+            relationship_type: str,
+            properties: Optional[List[Dict[str, str]]] = None,
+            bidirectional: bool = False,
+        ) -> Dict[str, Any]:
+            """Create or update a relationship between two Bimba coordinates (admin only).
+
+            Uses MERGE pattern for idempotent create/update. Pre-validates both coordinates exist
+            to prevent accidental node creation. Returns wasUpdate=true if relationship already existed.
+
+            Relationship Type Examples:
+            - Hierarchical: CONTAINS, PARENT_OF, SUBSUMES
+            - Resonance: RESONATES_WITH, HARMONIZES_WITH
+            - Temporal: PRECEDES, FOLLOWS, TEMPORAL_SEQUENCE
+            - Semantic: TRANSFORMS_INTO, DERIVES_FROM, RELATES_TO
+            - Custom: Any UPPERCASE_WITH_UNDERSCORES type
+
+            Property Examples (relationship-specific, open schema):
+            - Hierarchical: [{"key": "hierarchyLevel", "value": "1"}, {"key": "containmentType", "value": "structural"}]
+            - Resonance: [{"key": "resonancePattern", "value": "3-fold harmonic"}, {"key": "harmonicFrequency", "value": "432"}]
+            - Temporal: [{"key": "sequenceOrder", "value": "1"}, {"key": "temporalContext", "value": "Nara phase"}]
+            - Semantic: [{"key": "transformationType", "value": "vibrational-to-symbolic"}, {"key": "confidence", "value": "0.85"}]
+            - Custom: Any camelCase property relevant to your relationship type
+
+            Args:
+                from_coordinate: Source Bimba coordinate
+                to_coordinate: Target Bimba coordinate
+                relationship_type: Relationship type (UPPERCASE_UNDERSCORES)
+                properties: List of {"key": "...", "value": "..."} dicts (open schema)
+                bidirectional: Create reverse relationship with same properties
+
+            Available only to admin users. Enforces trilaminar boundaries by calling Backend GraphQL.
+            """
+            try:
+                # Check admin privileges from session context
+                is_admin = False
+                if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
+                    user = ctx.deps.context_package.get("user") or {}
+                    is_admin = bool(user.get("isAdmin", False))
+                if not is_admin:
+                    return {
+                        "success": False,
+                        "errors": [{"field": None, "message": "Admin privileges required", "code": "UNAUTHORIZED_ADMIN"}],
+                    }
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "errors": [{"field": None, "message": "Bimba client not available", "code": "CLIENT_UNAVAILABLE"}]}
+
+                payload = {
+                    "fromCoordinate": from_coordinate,
+                    "toCoordinate": to_coordinate,
+                    "relationshipType": relationship_type,
+                    "properties": properties or [],
+                    "bidirectional": bidirectional,
+                }
+
+                result = await ctx.deps.bimba_client.create_bimba_relationship(payload)  # type: ignore[attr-defined]
+                return result
+            except Exception as e:
+                logger.error(f"Error creating Bimba relationship: {e}")
+                return {"success": False, "errors": [{"field": None, "message": str(e), "code": "TOOL_ERROR"}]}
+
+        @agent.tool
         async def resolve_coordinate(
             ctx: RunContext[OrchestratorDeps],
             coordinate: str,

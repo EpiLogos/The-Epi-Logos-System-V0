@@ -64,7 +64,7 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
           key="dashboard"
           ref={dashboardContainerRef}
           className={cn(
-            'content-transition-container no-opacity-filter-transition modal-content-panel relative mb-[5px]'
+            'modal-content-panel relative w-full h-full flex items-center justify-center'
           )}
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
