@@ -180,6 +180,85 @@ if PYDANTIC_AI_AVAILABLE:
                 return {"success": False, "errors": [{"field": None, "message": str(e), "code": "TOOL_ERROR"}]}
 
         @agent.tool
+        async def update_bimba_node(
+            ctx: RunContext[OrchestratorDeps],
+            coordinate: str,
+            name: Optional[str] = None,
+            primaryDesignation: Optional[str] = None,
+            coreNature: Optional[str] = None,
+            architecturalFunction: Optional[str] = None,
+            internalStructure: Optional[str] = None,
+            keyPrinciples: Optional[List[str]] = None,
+            resonances: Optional[List[str]] = None,
+            practicalApplications: Optional[List[str]] = None,
+            operationalEssence: Optional[str] = None,
+            accessLevel: Optional[str] = None,
+            consciousnessStructure: Optional[str] = None,
+            operationalSymbolics: Optional[str] = None,
+            relatedCoordinates: Optional[List[str]] = None,
+            description: Optional[str] = None,
+            function: Optional[str] = None,
+            symbol: Optional[str] = None,
+        ) -> Dict[str, Any]:
+            """Update an existing Bimba node with flexible schema-based properties (admin only).
+
+            Supports partial updates - only provided fields are updated, others remain unchanged.
+            Enforces coordinate immutability and Neo4j compatibility (no nested objects).
+
+            Core Identity Properties: name, primaryDesignation, coreNature, architecturalFunction
+            Consolidated Structure: internalStructure
+            Principle Arrays: keyPrinciples, resonances, practicalApplications
+            Operational Properties: operationalEssence, accessLevel, consciousnessStructure, operationalSymbolics
+            Relational Properties: relatedCoordinates
+            Legacy Fields: description, function, symbol
+
+            Available only to admin users. Enforces trilaminar boundaries by calling Backend GraphQL.
+            """
+            try:
+                # Check admin privileges from session context
+                is_admin = False
+                if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
+                    user = ctx.deps.context_package.get("user") or {}
+                    is_admin = bool(user.get("isAdmin", False))
+                if not is_admin:
+                    return {
+                        "success": False,
+                        "errors": [{"field": None, "message": "Admin privileges required", "code": "UNAUTHORIZED_ADMIN"}],
+                    }
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "errors": [{"field": None, "message": "Bimba client not available", "code": "CLIENT_UNAVAILABLE"}]}
+
+                # Build payload with all provided properties
+                payload = {
+                    "coordinate": coordinate,
+                    "name": name,
+                    "primaryDesignation": primaryDesignation,
+                    "coreNature": coreNature,
+                    "architecturalFunction": architecturalFunction,
+                    "internalStructure": internalStructure,
+                    "keyPrinciples": keyPrinciples,
+                    "resonances": resonances,
+                    "practicalApplications": practicalApplications,
+                    "operationalEssence": operationalEssence,
+                    "accessLevel": accessLevel,
+                    "consciousnessStructure": consciousnessStructure,
+                    "operationalSymbolics": operationalSymbolics,
+                    "relatedCoordinates": relatedCoordinates,
+                    "description": description,
+                    "function": function,
+                    "symbol": symbol,
+                }
+                # Remove None values for partial update support
+                payload = {k: v for k, v in payload.items() if v is not None}
+
+                result = await ctx.deps.bimba_client.update_bimba_node(payload)  # type: ignore[attr-defined]
+                return result
+            except Exception as e:
+                logger.error(f"Error updating Bimba node: {e}")
+                return {"success": False, "errors": [{"field": None, "message": str(e), "code": "TOOL_ERROR"}]}
+
+        @agent.tool
         async def resolve_coordinate(
             ctx: RunContext[OrchestratorDeps],
             coordinate: str,
@@ -223,6 +302,52 @@ if PYDANTIC_AI_AVAILABLE:
             except Exception as e:
                 logger.error(f"Error resolving coordinate {coordinate}: {e}")
                 return CoordinateResult(coordinate=coordinate, error=str(e))
+
+        @agent.tool
+        async def inspect_coordinate_detailed(
+            ctx: RunContext[OrchestratorDeps],
+            coordinate: str,
+        ) -> Dict[str, Any]:
+            """Deep inspection of a Bimba coordinate with complete property set (COMPREHENSIVE).
+
+            Returns all flexible schema properties including:
+            - Core Identity: primaryDesignation, coreNature, architecturalFunction
+            - Consolidated Structure: internalStructure
+            - Principle Arrays: keyPrinciples, resonances, practicalApplications
+            - Operational: operationalEssence, accessLevel, consciousnessStructure, operationalSymbolics
+            - Relational: relatedCoordinates, lastUpdated
+
+            Use this for comprehensive analysis and detailed inspection, NOT for quick lookups.
+            For conversational context and navigation, use resolve_coordinate instead (lean/fast).
+
+            Performance note: Fetches array fields which can be large. Use judiciously.
+
+            Args:
+                coordinate: The coordinate to inspect in full detail (e.g., #2, #2.3, #2-3-1)
+            """
+            try:
+                logger.info(f"🔍 Deep inspection of coordinate: {coordinate}")
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "error": "Bimba client not available", "node": None}
+
+                # Use extended query via HTTP client wrapper
+                from agentic.agents.orchestrator.tools.bimba.http_bimba_tools import HttpBimbaClient
+                http_client = HttpBimbaClient(ctx.deps.bimba_client)
+
+                result = await http_client.get_node_by_coordinate_extended(coordinate)
+
+                if result.get("success"):
+                    logger.info(f"Successfully retrieved extended data for {coordinate}")
+                    return result
+                else:
+                    error = result.get("error", "Unknown error")
+                    logger.warning(f"Extended inspection failed for {coordinate}: {error}")
+                    return result
+
+            except Exception as e:
+                logger.error(f"Error in detailed coordinate inspection {coordinate}: {e}")
+                return {"success": False, "error": str(e), "node": None, "coordinate": coordinate}
 
         @agent.tool
         async def search_gnostic_space(

@@ -1137,6 +1137,11 @@ html, body {
   transform-origin: center;
 }
 
+/* Hint compositor to keep transforms on GPU */
+@utility dashboard-compositor {
+  will-change: transform, opacity;
+}
+
 @utility dashboard-circle-hover {
   &:hover {
     @apply scale-110 opacity-90;
@@ -1175,8 +1180,14 @@ html, body {
 .dashboard-glass-phase-300 { animation-delay: -50s; }
 
 /* Match epi-png gentle waves (brightness + size pulsing) */
+/* Replace brightness filter wave (repaints) with opacity-based shimmer */
+@keyframes opacity-wave {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; }
+}
+
 @utility dashboard-gentle-waves {
-  animation: brightness-wave 8s ease-in-out infinite, size-wave 4s ease-in-out infinite;
+  animation: opacity-wave 8s ease-in-out infinite, size-wave 4s ease-in-out infinite;
 }
 
 /* Rotation only — apply to wrapper to avoid transform conflicts with waves */
@@ -1191,7 +1202,7 @@ html, body {
 
 /* Brightness + size waves — apply to inner img to avoid transform overrides */
 @utility dashboard-waves {
-  animation: brightness-wave 8s ease-in-out infinite, size-wave 4s ease-in-out infinite;
+  animation: opacity-wave 8s ease-in-out infinite, size-wave 4s ease-in-out infinite;
 }
 
 /* Centered inner badge inside zen circle (e.g., account avatar) */
@@ -1223,6 +1234,35 @@ html, body {
 @utility dashboard-glass-scale {
   transition: transform 300ms ease;
   transform-origin: center;
+}
+
+/* Glass overlay compositor hint */
+@utility dashboard-glass-compositor {
+  will-change: transform, opacity;
+}
+
+/* Pause all dashboard animations when container is paused */
+.dashboard-animations-paused .dashboard-rotate,
+.dashboard-animations-paused .dashboard-rotate-reverse,
+.dashboard-animations-paused .dashboard-waves,
+.dashboard-animations-paused .dashboard-gentle-waves {
+  animation-play-state: paused !important;
+}
+
+/* Respect user motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-rotate,
+  .dashboard-rotate-reverse,
+  .dashboard-waves,
+  .dashboard-gentle-waves {
+    animation: none !important;
+  }
+}
+
+/* Content-visibility helper */
+@utility content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 400px 400px; /* prevents layout jumps when offscreen */
 }
 
 /* ================= PROJECTS CAROUSEL VARIANT UTILITIES ================= */

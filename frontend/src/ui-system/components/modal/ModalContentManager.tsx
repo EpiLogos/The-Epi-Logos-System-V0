@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { cn } from '../../utils/cn';
@@ -39,10 +39,10 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
   const dashboardContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Prevent duplicate businessState updates (e.g., mount effects or StrictMode)
-  const safeOnStateChange = (next: EpiLogosBusinessState) => {
+  const safeOnStateChange = useCallback((next: EpiLogosBusinessState) => {
     if (next === businessState) return;
     onStateChange(next);
-  };
+  }, [businessState, onStateChange]);
 
   // PNG Image State
   if (businessState === 'png-displayed') {

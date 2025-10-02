@@ -158,6 +158,28 @@ The tool returns comprehensive node information including name, subsystem, conte
                 )
                 ,
                 Tool(
+                    name="get_node_by_coordinate_extended",
+                    description=(
+                        "Deep inspection of a Bimba coordinate with COMPREHENSIVE property set. "
+                        "Returns all flexible schema properties including principle arrays, internal structure, "
+                        "operational details, and relational coordinates. Use this for detailed analysis, NOT quick lookups. "
+                        "For conversational context, use resolve_coordinate instead (lean/fast). "
+                        "Performance note: Fetches array fields which can be large."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {
+                                "type": "string",
+                                "description": "Bimba coordinate for detailed inspection",
+                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                            }
+                        },
+                        "required": ["bimbaCoordinate"]
+                    }
+                )
+                ,
+                Tool(
                     name="create_bimba_node",
                     description=(
                         "Create a Bimba graph node (admin only). Includes optional semantic fields."
@@ -176,6 +198,43 @@ The tool returns comprehensive node information including name, subsystem, conte
                             "symbol": {"type": "string"}
                         },
                         "required": ["bimbaCoordinate", "name", "subsystem"]
+                    }
+                )
+                ,
+                Tool(
+                    name="update_bimba_node",
+                    description=(
+                        "Update an existing Bimba graph node with flexible schema-based properties (admin only). "
+                        "Supports partial updates - only provided fields are updated. "
+                        "Core Identity: name, primaryDesignation, coreNature, architecturalFunction. "
+                        "Structure: internalStructure. "
+                        "Principles: keyPrinciples, resonances, practicalApplications (arrays). "
+                        "Operational: operationalEssence, accessLevel, consciousnessStructure, operationalSymbolics. "
+                        "Relational: relatedCoordinates (array). "
+                        "Legacy: description, function, symbol."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {"type": "string", "description": "Target coordinate (required)"},
+                            "name": {"type": "string"},
+                            "primaryDesignation": {"type": "string"},
+                            "coreNature": {"type": "string"},
+                            "architecturalFunction": {"type": "string"},
+                            "internalStructure": {"type": "string"},
+                            "keyPrinciples": {"type": "array", "items": {"type": "string"}},
+                            "resonances": {"type": "array", "items": {"type": "string"}},
+                            "practicalApplications": {"type": "array", "items": {"type": "string"}},
+                            "operationalEssence": {"type": "string"},
+                            "accessLevel": {"type": "string"},
+                            "consciousnessStructure": {"type": "string"},
+                            "operationalSymbolics": {"type": "string"},
+                            "relatedCoordinates": {"type": "array", "items": {"type": "string"}},
+                            "description": {"type": "string"},
+                            "function": {"type": "string"},
+                            "symbol": {"type": "string"}
+                        },
+                        "required": ["bimbaCoordinate"]
                     }
                 )
                 ,
@@ -268,10 +327,14 @@ The tool returns comprehensive node information including name, subsystem, conte
                     return await self._handle_resolve_coordinate(arguments)
                 elif name == "get_node_relationships":
                     return await self._handle_get_node_relationships(arguments)
+                elif name == "get_node_by_coordinate_extended":
+                    return await self._handle_get_node_by_coordinate_extended(arguments)
                 elif name == "get_path_between_coordinates":
                     return await self._handle_get_path_between_coordinates(arguments)
                 elif name == "create_bimba_node":
                     return await self._handle_create_bimba_node(arguments)
+                elif name == "update_bimba_node":
+                    return await self._handle_update_bimba_node(arguments)
                 elif name == "semantic_coordinate_discovery":
                     return await self._handle_semantic_coordinate_discovery(arguments)
                 elif name == "regenerate_node_embedding":
@@ -380,6 +443,93 @@ The tool returns comprehensive node information including name, subsystem, conte
             )]
     
     # Note: Removed coordinate validation - GraphQL backend handles all format validation
+    async def _handle_get_node_by_coordinate_extended(self, arguments: dict) -> list[TextContent]:
+        """Handle extended node inspection via GraphQL (comprehensive property set)."""
+        try:
+            coordinate = arguments.get("bimbaCoordinate")
+            if not coordinate:
+                return [TextContent(type="text", text="Error: bimbaCoordinate parameter is required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Extended node service not initialized")]
+
+            result = await self.bimba_client.get_node_by_coordinate_extended(coordinate)
+
+            if result.get("success"):
+                node = result.get("node") or {}
+
+                # Format comprehensive response
+                lines: list[str] = []
+                lines.append(f"=== COMPREHENSIVE NODE INSPECTION: {coordinate} ===\n")
+
+                # Core Identity
+                lines.append("## Core Identity")
+                lines.append(f"Name: {node.get('name')}")
+                lines.append(f"Subsystem: {node.get('subsystem')}")
+                if node.get("primaryDesignation"):
+                    lines.append(f"Primary Designation: {node.get('primaryDesignation')}")
+                if node.get("coreNature"):
+                    lines.append(f"Core Nature: {node.get('coreNature')}")
+                if node.get("architecturalFunction"):
+                    lines.append(f"Architectural Function: {node.get('architecturalFunction')}")
+
+                # Structure
+                if node.get("internalStructure"):
+                    lines.append(f"\n## Internal Structure")
+                    lines.append(node.get("internalStructure"))
+
+                # Principle Arrays
+                if node.get("keyPrinciples"):
+                    lines.append(f"\n## Key Principles")
+                    for i, principle in enumerate(node.get("keyPrinciples", []), 1):
+                        lines.append(f"  {i}. {principle}")
+
+                if node.get("resonances"):
+                    lines.append(f"\n## Resonances")
+                    for i, resonance in enumerate(node.get("resonances", []), 1):
+                        lines.append(f"  {i}. {resonance}")
+
+                if node.get("practicalApplications"):
+                    lines.append(f"\n## Practical Applications")
+                    for i, app in enumerate(node.get("practicalApplications", []), 1):
+                        lines.append(f"  {i}. {app}")
+
+                # Operational
+                if node.get("operationalEssence") or node.get("accessLevel") or node.get("consciousnessStructure") or node.get("operationalSymbolics"):
+                    lines.append(f"\n## Operational Details")
+                    if node.get("operationalEssence"):
+                        lines.append(f"Operational Essence: {node.get('operationalEssence')}")
+                    if node.get("accessLevel"):
+                        lines.append(f"Access Level: {node.get('accessLevel')}")
+                    if node.get("consciousnessStructure"):
+                        lines.append(f"Consciousness Structure: {node.get('consciousnessStructure')}")
+                    if node.get("operationalSymbolics"):
+                        lines.append(f"Operational Symbolics: {node.get('operationalSymbolics')}")
+
+                # Relational
+                if node.get("relatedCoordinates"):
+                    lines.append(f"\n## Related Coordinates")
+                    for coord in node.get("relatedCoordinates", []):
+                        lines.append(f"  - {coord}")
+
+                # Metadata
+                lines.append(f"\n## Metadata")
+                if node.get("lastUpdated"):
+                    lines.append(f"Last Updated: {node.get('lastUpdated')}")
+                if node.get("createdAt"):
+                    lines.append(f"Created: {node.get('createdAt')}")
+                if node.get("uuid"):
+                    lines.append(f"UUID: {node.get('uuid')}")
+
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                error = result.get("error", "Unknown error")
+                return [TextContent(type="text", text=f"Extended inspection failed: {error}")]
+
+        except Exception as e:
+            logger.error(f"Error in get_node_by_coordinate_extended: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
     async def _handle_get_node_relationships(self, arguments: dict) -> list[TextContent]:
         """Handle relationship discovery for a coordinate."""
         try:
@@ -573,6 +723,45 @@ The tool returns comprehensive node information including name, subsystem, conte
             return [TextContent(type="text", text=f"Creation failed: {resp}")]
         except Exception as e:
             logger.error(f"Error in create_bimba_node: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    async def _handle_update_bimba_node(self, arguments: dict) -> list[TextContent]:
+        """Handle node update via GraphQL (admin)."""
+        try:
+            coord = arguments.get("bimbaCoordinate")
+            if not coord:
+                return [TextContent(type="text", text="Error: bimbaCoordinate is required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Node update client not initialized")]
+
+            # Build payload with flexible schema properties
+            allowed_fields = {
+                "bimbaCoordinate", "name", "primaryDesignation", "coreNature", "architecturalFunction",
+                "internalStructure", "keyPrinciples", "resonances", "practicalApplications",
+                "operationalEssence", "accessLevel", "consciousnessStructure", "operationalSymbolics",
+                "relatedCoordinates", "description", "function", "symbol"
+            }
+            payload = {k: v for k, v in arguments.items() if k in allowed_fields and v is not None}
+
+            # Map bimbaCoordinate to coordinate for API consistency
+            if "bimbaCoordinate" in payload:
+                payload["coordinate"] = payload.pop("bimbaCoordinate")
+
+            resp = await self.bimba_client.update_bimba_node(payload)
+            if resp.get("success"):
+                node = resp.get("node") or {}
+                return [TextContent(type="text", text=f"Node updated: {node.get('coordinate')} ({node.get('name')})")]
+
+            # Handle errors
+            errs = resp.get("errors") or []
+            if errs:
+                code = errs[0].get("code")
+                msg = errs[0].get("message")
+                return [TextContent(type="text", text=f"Update failed [{code}]: {msg}")]
+            return [TextContent(type="text", text=f"Update failed: {resp}")]
+        except Exception as e:
+            logger.error(f"Error in update_bimba_node: {e}")
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
     async def _handle_regenerate_all_embeddings(self, arguments: dict) -> list[TextContent]:

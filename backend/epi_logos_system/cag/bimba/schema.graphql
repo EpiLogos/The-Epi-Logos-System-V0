@@ -61,6 +61,7 @@ type SubsystemCoordinatesResponse {
 
 type Query {
     getNodeByCoordinate(coordinate: String!): BimbaNode
+    getNodeByCoordinateExtended(coordinate: String!): BimbaNodeExtended
     getNodeWithRelationships(coordinate: String!): NodeWithEdges
     searchCoordinates(query: String!, subsystem: Int, limit: Int): SearchResponse
     getSubsystemCoordinates(subsystem: Int!, limit: Int): SubsystemCoordinatesResponse
@@ -93,8 +94,90 @@ type CreateBimbaNodePayload {
     errors: [MutationError!]
 }
 
+"""Input for updating an existing Bimba node with flexible schema-based properties"""
+input UpdateBimbaNodeInput {
+    coordinate: String!
+
+    # Core Identity Properties
+    name: String
+    primaryDesignation: String
+    coreNature: String
+    architecturalFunction: String
+
+    # Consolidated Structure Properties
+    internalStructure: String
+
+    # Principle Arrays
+    keyPrinciples: [String!]
+    resonances: [String!]
+    practicalApplications: [String!]
+
+    # Operational Properties
+    operationalEssence: String
+    accessLevel: String
+    consciousnessStructure: String
+    operationalSymbolics: String
+
+    # Relational Properties
+    relatedCoordinates: [String!]
+
+    # Legacy/Optional Fields
+    description: String
+    function: String
+    symbol: String
+}
+
+"""Extended Bimba node type with all flexible schema properties"""
+type BimbaNodeExtended {
+    # Standard properties
+    coordinate: String!
+    name: String!
+    subsystem: String
+
+    # Core Identity Properties
+    primaryDesignation: String
+    coreNature: String
+    architecturalFunction: String
+
+    # Consolidated Structure Properties
+    internalStructure: String
+
+    # Principle Arrays
+    keyPrinciples: [String!]
+    resonances: [String!]
+    practicalApplications: [String!]
+
+    # Operational Properties
+    operationalEssence: String
+    accessLevel: String
+    consciousnessStructure: String
+    operationalSymbolics: String
+
+    # Relational Properties
+    relatedCoordinates: [String!]
+    lastUpdated: String
+
+    # Legacy/Optional Fields
+    description: String
+    function: String
+    symbol: String
+    uuid: String
+
+    # Metadata
+    createdAt: String
+    updatedAt: String
+}
+
+"""Payload for updateBimbaNode mutation"""
+type UpdateBimbaNodePayload {
+    success: Boolean!
+    node: BimbaNodeExtended
+    errors: [MutationError!]
+}
+
 type Mutation {
     createBimbaNode(input: CreateBimbaNodeInput!): CreateBimbaNodePayload
+    updateBimbaNode(input: UpdateBimbaNodeInput!): UpdateBimbaNodePayload
     regenerateNodeEmbedding(coordinate: String!): RegenerateEmbeddingPayload!
     regenerateAllEmbeddings(batchSize: Int = 500, force: Boolean = false): RegenerateAllEmbeddingsPayload!
 }

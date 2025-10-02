@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useAuth } from '@/auth';
 import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
@@ -13,6 +13,7 @@ interface DashboardModalContentProps {
 
 export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ onStateChange }) => {
   const { user, signOut } = useAuth();
+  const handleNavigate = useCallback((s: EpiLogosBusinessState) => onStateChange(s), [onStateChange]);
 
   return (
     <div className="dashboard-modal-container pt-6 pb-0 px-4 max-w-4xl mx-auto relative">
@@ -27,7 +28,7 @@ export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ on
 
       {/* Grid */}
       <div className="relative z-10">
-        <DashboardGrid onNavigate={onStateChange} />
+        <DashboardGrid onNavigate={handleNavigate} />
       </div>
 
       {/* Footer */}

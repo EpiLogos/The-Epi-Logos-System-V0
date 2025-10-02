@@ -54,6 +54,7 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
         <div
           className={cn(
             'dashboard-circle-wrapper relative z-0 w-[157px] h-[157px] rounded-full overflow-hidden',
+            'dashboard-compositor',
             'dashboard-circle-base',
             'dashboard-rotate',
             enabled && 'dashboard-badge-hover-link',
@@ -98,7 +99,7 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
             saturation={enabled ? 1.2 : 0.8}
             enableRotation={true}
             rotationPhase={rotationPhase}
-            className=""
+            className="dashboard-glass-compositor"
           />
         </div>
 

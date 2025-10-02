@@ -181,3 +181,20 @@ References:
 - agentic/agents/orchestrator/tools/bimba/http_bimba_tools.py(MODIFY)
 
 Update the story to reflect the implementation plan completion and mark it as "Ready for Implementation". Update the Dev Agent Record section to reflect the comprehensive implementation plan creation including all acceptance criteria coverage, orchestrator and MCP integration details, and proper architectural alignment with the existing CAG infrastructure. Add references to the specific files that will be created and modified as part of this implementation, with particular emphasis on the semantic search functionality, vector embedding integration, cross-namespace search capabilities, and semantic clustering features. Update the Testing Standards section to reference the specific test files that will be created including backend unit tests, orchestrator integration tests, and MCP server tests. Ensure all acceptance criteria remain exactly as specified while adding implementation guidance for full system integration with the trilaminar architecture.
+
+---
+
+Implementation Update (Sept 2025)
+
+- Status: IMPLEMENTED
+- Embeddings: Gemini `gemini-embedding-001`, EMBEDDINGS_DIM=1536, vectors normalized (non‑3072)
+- Property Serialization: Includes nested dicts/arrays; excludes only embedding/metadata keys; promotes `name`, `symbol`, `coreNature`, `operationalEssence`, `function`, `architecturalFunction`
+- Neo4j Vector Index: `bimba_embeddings_idx` on `BimbaNode.embeddings` (cosine, 1536)
+- Hybrid Retrieval: BM25 full‑text + vector union + weighted rerank (alpha=0.6)
+- Admin Ops: Single and bulk regeneration; bulk supports `force` to bypass hash skip; deterministic ORDER BY batching
+- MCP/Orchestrator: Tools wired; `bimbaCoordinate` param; admin enabled via `.env` secret; capabilities dynamic
+
+Gotchas & Operational Notes
+- Ensure numeric envs (e.g., `EMBEDDINGS_DIM`, `BIMBA_VECTOR_DIM`) are pure integers with no inline comments
+- MCP timeouts on large bulk jobs → use per‑node script or smaller forced batches
+- Correct model code is `gemini-embedding-001` (not `embedding-001`)

@@ -152,6 +152,44 @@ class HttpBimbaClient:
                 "error": f"HTTP request failed: {str(e)}"
             }
 
+    async def get_node_by_coordinate_extended(self, coordinate: str) -> Dict[str, Any]:
+        """
+        Get comprehensive node data with all flexible schema properties.
+
+        Args:
+            coordinate: The Bimba coordinate to inspect in detail
+
+        Returns:
+            Dict containing complete node data with extended properties or error
+        """
+        try:
+            result = await self.client.get_node_by_coordinate_extended(coordinate)
+
+            if result.get("success"):
+                logger.info(f"Retrieved extended node data for: {coordinate}")
+                return {
+                    "success": True,
+                    "coordinate": coordinate,
+                    "node": result.get("node"),
+                }
+            else:
+                error_msg = result.get("error", "Unknown error")
+                logger.warning(f"Failed to get extended node data for {coordinate}: {error_msg}")
+                return {
+                    "success": False,
+                    "coordinate": coordinate,
+                    "node": None,
+                    "error": error_msg,
+                }
+        except Exception as e:
+            logger.error(f"Exception getting extended node data for {coordinate}: {e}")
+            return {
+                "success": False,
+                "coordinate": coordinate,
+                "node": None,
+                "error": f"HTTP request failed: {str(e)}",
+            }
+
     async def get_node_relationships(self, coordinate: str) -> Dict[str, Any]:
         """
         Get all direct relationship connections for a Bimba coordinate.
@@ -321,6 +359,25 @@ class HttpBimbaClient:
             return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}
         except Exception as e:
             logger.error(f"Create node failed: {e}")
+            return {"success": False, "errors": [{"field": None, "message": str(e), "code": "HTTP_ERROR"}]}
+
+    async def update_bimba_node(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update a Bimba node via Backend GraphQL mutation (admin-only).
+
+        Expects coordinate (required) and any flexible schema properties to update.
+        Supports: Core Identity, Structure, Principles, Operational, Relational properties.
+        """
+        try:
+            result = await self.client.update_bimba_node(input_data)
+            if result.get("success"):
+                logger.info(f"Successfully updated node: {input_data.get('coordinate')}")
+            else:
+                errors = result.get("errors", [])
+                err_msg = "; ".join([e.get("message", "Unknown") for e in errors])
+                logger.warning(f"Update failed for {input_data.get('coordinate')}: {err_msg}")
+            return result
+        except Exception as e:
+            logger.error(f"Update node failed for {input_data.get('coordinate')}: {e}")
             return {"success": False, "errors": [{"field": None, "message": str(e), "code": "HTTP_ERROR"}]}
 
 

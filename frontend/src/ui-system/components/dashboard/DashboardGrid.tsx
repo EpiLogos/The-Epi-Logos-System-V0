@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 import { DashboardCircle } from './DashboardCircle';
 
@@ -45,10 +45,36 @@ const dashboardCircles: Array<{
 ];
 
 export const DashboardGrid: React.FC<DashboardGridProps> = ({ onNavigate }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setPaused(!entry.isIntersecting);
+      },
+      { root: null, threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const circles = useMemo(() => dashboardCircles, []);
+
   return (
     <div className="dashboard-grid flex items-center justify-center min-h-[400px] pt-12">
-      <div className="grid grid-cols-3 grid-rows-2 gap-x-12 gap-y-24 w-full max-w-3xl">
-        {dashboardCircles.map((circle) => (
+      <div
+        ref={containerRef}
+        className={[
+          'grid grid-cols-3 grid-rows-2 gap-x-12 gap-y-24 w-full max-w-3xl',
+          paused ? 'dashboard-animations-paused' : '',
+          'content-visibility-auto',
+        ].join(' ')}
+      >
+        {circles.map((circle) => (
           <DashboardCircle key={circle.id} {...circle} onNavigate={onNavigate} />
         ))}
       </div>
@@ -56,4 +82,4 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({ onNavigate }) => {
   );
 };
 
-export default DashboardGrid;
+export default React.memo(DashboardGrid);

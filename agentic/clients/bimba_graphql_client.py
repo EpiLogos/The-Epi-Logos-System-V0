@@ -16,7 +16,7 @@ class BimbaGraphQLClient(BackendHttpClient):
     """GraphQL client for Bimba coordinate operations"""
     
     async def resolve_coordinate(self, coordinate: str) -> Dict[str, Any]:
-        """Resolve a Bimba coordinate to get its content and context"""
+        """Resolve a Bimba coordinate to get its content and context (LEAN query)"""
         query = """
         query ResolveCoordinate($coordinate: String!) {
             getNodeByCoordinate(coordinate: $coordinate) {
@@ -84,6 +84,66 @@ class BimbaGraphQLClient(BackendHttpClient):
                 "content": None,
                 "context": None,
                 "related_coordinates": [],
+                "error": error_msg or "GraphQL query failed"
+            }
+
+    async def get_node_by_coordinate_extended(self, coordinate: str) -> Dict[str, Any]:
+        """Get comprehensive node data with all flexible schema properties (COMPREHENSIVE query)"""
+        query = """
+        query GetNodeExtended($coordinate: String!) {
+            getNodeByCoordinateExtended(coordinate: $coordinate) {
+                coordinate
+                name
+                subsystem
+                primaryDesignation
+                coreNature
+                architecturalFunction
+                internalStructure
+                keyPrinciples
+                resonances
+                practicalApplications
+                operationalEssence
+                accessLevel
+                consciousnessStructure
+                operationalSymbolics
+                relatedCoordinates
+                lastUpdated
+                description
+                function
+                symbol
+                uuid
+                createdAt
+                updatedAt
+            }
+        }
+        """
+
+        variables = {"coordinate": coordinate}
+        request_data = {"query": query, "variables": variables}
+
+        logger.info(f"Getting extended node data for: {coordinate}")
+        response = await self.post("/graphql", json_data=request_data)
+
+        if "data" in response and response["data"]:
+            node_data = response["data"]["getNodeByCoordinateExtended"]
+            if node_data:
+                return {
+                    "success": True,
+                    "node": node_data,
+                    "error": None
+                }
+            else:
+                return {
+                    "success": False,
+                    "node": None,
+                    "error": "Coordinate not found"
+                }
+        else:
+            errors = response.get("errors", [])
+            error_msg = "; ".join([err.get("message", "Unknown error") for err in errors])
+            return {
+                "success": False,
+                "node": None,
                 "error": error_msg or "GraphQL query failed"
             }
     
@@ -330,6 +390,33 @@ class BimbaGraphQLClient(BackendHttpClient):
         resp = await self.post("/graphql", json_data={"query": mutation, "variables": {"input": input_data}})
         if "data" in resp and resp["data"]:
             return resp["data"].get("createBimbaNode", {"success": False, "errors": [{"message": "No payload"}]})
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}
+
+    async def update_bimba_node(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Update a Bimba node via GraphQL mutation (admin-only)."""
+        mutation = """
+        mutation UpdateNode($input: UpdateBimbaNodeInput!) {
+          updateBimbaNode(input: $input) {
+            success
+            node {
+              coordinate name subsystem
+              primaryDesignation coreNature architecturalFunction
+              internalStructure
+              keyPrinciples resonances practicalApplications
+              operationalEssence accessLevel consciousnessStructure operationalSymbolics
+              relatedCoordinates lastUpdated
+              description function symbol uuid
+              createdAt updatedAt
+            }
+            errors { field message code }
+          }
+        }
+        """
+        resp = await self.post("/graphql", json_data={"query": mutation, "variables": {"input": input_data}})
+        if "data" in resp and resp["data"]:
+            return resp["data"].get("updateBimbaNode", {"success": False, "errors": [{"message": "No payload"}]})
         errors = resp.get("errors", []) if isinstance(resp, dict) else []
         err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
         return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}

@@ -335,4 +335,4 @@ const CircularGlassOverlay: React.FC<CircularGlassOverlayProps> = ({
   );
 };
 
-export default CircularGlassOverlay;
+export default React.memo(CircularGlassOverlay);

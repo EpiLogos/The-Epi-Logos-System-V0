@@ -23,7 +23,7 @@
 ### 02.03.1 Semantic-to-Coordinate Resolution
 - **Purpose**: Natural language → coordinate discovery for inverse CAG flow
 - **Classification**: Critical GraphRAG Foundation
-- **Status**: Ready for Implementation
+- **Status**: Completed
 - **Integration Layer**: L2 semantic search foundation
 - **Subsystem Alignment**: Bimba coordinate #0-#5 awareness
 
@@ -47,10 +47,8 @@
 - **Maintained**: Existing healthy statuses for completed graph operations
 
 ### Story Progress Tracking
-All new stories initialized with:
-- **Status**: 'todo'
-- **Completion**: 0%
-- **Last Updated**: 2025-09-15T00:00:00Z
+- 02.03.1: Completed (Hybrid + Gemini 1536)
+- 02.03.2: In progress
 
 ## Future Sprint Story Additions
 
@@ -129,8 +127,8 @@ New health indicators track:
 
 ### Enhanced Success Metrics
 - ✅ **Graph Navigation**: Completed (Stories 02.02, 02.03)
-- 🔲 **Semantic Search**: Pending (Story 02.03.1)
-- 🔲 **Hybrid Retrieval**: Pending (Story 02.03.2)
+- ✅ **Semantic Search**: Completed (Story 02.03.1)
+- 🔲 **Hybrid Retrieval**: In progress (Story 02.03.2)
 - 🔲 **Graph Modification**: Pending (Story 02.06)
 
 ### Dashboard Accuracy

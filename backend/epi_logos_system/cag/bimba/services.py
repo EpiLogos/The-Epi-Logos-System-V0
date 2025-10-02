@@ -174,6 +174,68 @@ class NodeRepository:
             updatedAt=str(n.get("updated_at")) if n.get("updated_at") else None,
         )
 
+    def update_bimba_node(self, coordinate: str, update_data: dict) -> dict | None:
+        """Update an existing Bimba node with flexible schema-based properties.
+
+        Enforces:
+        - Coordinate existence validation
+        - Immutable bimbaCoordinate protection
+        - Neo4j compatibility (no nested objects)
+        - Partial updates (only provided properties are updated)
+        - Automatic lastUpdated timestamp
+
+        Returns the updated node's complete property set, or None if coordinate doesn't exist.
+        """
+        # Validate coordinate exists
+        existing = self.neo4j_client.get_bimba_node(coordinate)
+        if not existing:
+            return None
+
+        # Remove None values and immutable fields
+        properties = {k: v for k, v in update_data.items() if v is not None}
+
+        # Protect immutable coordinate identity
+        properties.pop("coordinate", None)
+        properties.pop("bimbaCoordinate", None)
+
+        # Reject fragmented position properties
+        fragmented_keys = [k for k in properties.keys() if k.startswith("position_")]
+        if fragmented_keys:
+            raise ValueError(f"Fragmented position properties not allowed: {fragmented_keys}")
+
+        # Validate Neo4j compatibility (no nested objects)
+        for key, value in properties.items():
+            if isinstance(value, dict):
+                raise ValueError(f"Nested objects not allowed for Neo4j compatibility: {key}")
+            # Arrays must be lists of primitives
+            if isinstance(value, list):
+                for item in value:
+                    if isinstance(item, (dict, list)):
+                        raise ValueError(f"Nested structures in arrays not allowed: {key}")
+
+        if not properties:
+            # No valid updates provided
+            return existing
+
+        # Build Cypher update query with += for partial updates
+        query = """
+        MATCH (n:BimbaNode { bimbaCoordinate: $coordinate })
+        SET n += $properties,
+            n.lastUpdated = datetime(),
+            n.updated_at = datetime()
+        RETURN n
+        """
+
+        params = {"coordinate": coordinate, "properties": properties}
+        records, _summary, _keys = self.neo4j_client.execute_query(query, params)
+
+        if not records:
+            return None
+
+        # Return complete updated node as dict
+        n = dict(records[0]["n"]) if records[0].get("n") is not None else {}
+        return n
+
 # The service that uses the repository
 class NodeService:
     def __init__(self, repo: NodeRepository):
@@ -181,6 +243,20 @@ class NodeService:
 
     def get_node(self, coordinate: str) -> BimbaNode | None:
         return self._repo.find_by_coordinate(coordinate=coordinate)
+
+    def get_node_extended(self, coordinate: str) -> dict | None:
+        """Get complete node with all flexible schema properties.
+
+        Returns the raw Neo4j node data as a dict with all properties,
+        including extended schema fields like keyPrinciples, internalStructure, etc.
+        This is for comprehensive inspection, not quick lookups.
+        """
+        node_data = self._repo.neo4j_client.get_bimba_node(coordinate)
+        if not node_data:
+            return None
+
+        # Return complete property set (Neo4j already fetched everything)
+        return dict(node_data)
 
     def get_node_relationships(self, coordinate: str) -> dict | None:
         """Return a node bundled with its immediate relationship edges.
@@ -303,6 +379,34 @@ class NodeService:
         # Ensure we never write to a `coordinate` property in Neo4j; only bimbaCoordinate
         # Validation handled in repository; here we simply pass through.
         return self._repo.create_bimba_node(input_data)
+
+    def update_bimba_node(self, coordinate: str, update_data: dict) -> dict | None:
+        """Update an existing Bimba node with flexible schema-based properties.
+
+        Performs business-layer validation and delegates to repository for persistence.
+        Returns the complete updated node, or None if coordinate doesn't exist.
+        """
+        # Validate property naming conventions (camelCase with scope)
+        for key in update_data.keys():
+            if key and not self._is_valid_property_name(key):
+                raise ValueError(f"Invalid property name '{key}': must use camelCase with scope indicators")
+
+        # Delegate to repository for data access
+        return self._repo.update_bimba_node(coordinate, update_data)
+
+    def _is_valid_property_name(self, name: str) -> bool:
+        """Validate property names follow camelCase conventions.
+
+        Allows: camelCase, arrays, subsystem patterns like 'spandaDevelopmentalStages'
+        """
+        if not name:
+            return False
+        # Basic camelCase check: starts with lowercase, no spaces, no special chars except underscores
+        if name[0].isupper():
+            return False
+        if " " in name or any(c in name for c in ["!", "@", "#", "$", "%", "^", "&", "*", "(", ")", "+", "=", "{", "}", "[", "]", "|", "\\", ":", ";", '"', "'", "<", ">", ",", "?", "/"]):
+            return False
+        return True
 
     def semantic_coordinate_discovery(self, query_text: str, max_results: Optional[int] = 5) -> list[dict]:
         """Perform semantic-to-coordinate discovery via Neo4j vector index.
