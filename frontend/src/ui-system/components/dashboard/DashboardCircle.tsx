@@ -46,7 +46,7 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
       type="button"
       aria-label={label}
       className={cn(
-        'dashboard-circle-container relative isolate flex flex-col items-center justify-center w-36 min-h-36 mx-auto outline-none',
+        'dashboard-circle-container group relative isolate flex flex-col items-center justify-center w-36 min-h-36 mx-auto outline-none',
         enabled ? 'cursor-pointer' : 'cursor-default',
       )}
       onClick={handleClick}
@@ -80,7 +80,7 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
 
         {/* Non-rotating centered inner image layered above circle, below glass by default */}
         {!innerAboveGlass && innerImage ? (
-          <div className="dashboard-inner-badge">
+          <div className="dashboard-inner-badge z-[15]">
             <Image
               src={innerImage}
               alt={`${label} Inner`}
@@ -126,7 +126,9 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
       </div>
       <span
         className={cn(
-          'relative z-20 mt-3 text-sm font-mono tracking-wide',
+          'relative z-20 mt-3 text-sm font-mono tracking-wide transition-opacity duration-200',
+          // PERFORMANCE: Hide labels by default, show only on hover
+          'opacity-0 group-hover:opacity-100',
           enabled
             ? 'text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]'
             : 'text-ui-coord-text',

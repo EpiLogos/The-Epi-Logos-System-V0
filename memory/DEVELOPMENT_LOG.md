@@ -67,6 +67,42 @@ Mid-sprint scope expansion from 7 to 11 stories to incorporate critical GraphRAG
 **Admin Tools**: MCP integration with `X-MCP-Admin-Secret` authentication
 **Impact**: Enables dynamic embedding regeneration and quality improvements
 
+### Ad-Hoc Implementations ⚡
+
+#### Bimba Relationship Creation Tool (2025-10-02)
+**Context**: Realized need for relationship creation capability during coordinate development
+**Challenge**: Initial full-stack implementation broke MCP server validation
+**Root Cause**: Nested object schema with `required` arrays inside `items` incompatible with MCP validators
+**Solution**: Simplified MCP interface to string array `["key:value"]` format with handler-level parsing
+**Result**: MCP-compatible tool preserving full GraphQL backend capability
+
+**Technical Innovation**:
+```python
+# ✅ MCP-compatible schema (simplified input)
+"properties": {
+    "type": "array",
+    "items": {"type": "string"},  # NOT nested objects
+    "description": "'key:value' strings"
+}
+
+# Handler transforms to GraphQL (complex backend)
+for prop_str in arguments.get("properties", []):
+    if ":" in prop_str:
+        key, value = prop_str.split(":", 1)
+        property_list.append({"key": key.strip(), "value": value.strip()})
+```
+
+**Key Features**:
+- MERGE pattern with pre-validation (idempotent create/update)
+- Open property schema (relationship-specific semantics)
+- Bidirectional support (symmetric relationships)
+- Admin-only with multi-layer authorization
+- `wasUpdate` flag (operation type indication)
+
+**Architectural Learning**: MCP protocol boundaries require input simplification, but backend complexity can be preserved through handler-level transformation. Protocol compatibility ≠ capability limitation.
+
+**Tracking**: [ad-hoc-bimba-relationship-creation-tool.md](sprint_tracking/sprint-3/sprint-3-tracking/ad-hoc-bimba-relationship-creation-tool.md)
+
 ### Phenomenological Validation 🔬
 
 **Deep Contemplative Test** demonstrated system functioning as genuine meaning-disclosure tool:

@@ -30,6 +30,8 @@ export const HexDashboardGridPerItem: React.FC<HexDashboardGridPerItemProps> = (
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [box, setBox] = useState<{ size: number }>(() => ({ size: 560 }));
 
+  // PERFORMANCE FIX: Remove ResizeObserver - container is CSS-controlled fixed size
+  // Container: w-[min(92vw,700px)] aspect-square - no dynamic resizing needed
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -38,10 +40,8 @@ export const HexDashboardGridPerItem: React.FC<HexDashboardGridPerItemProps> = (
       const s = Math.max(360, Math.floor(Math.min(rect.width, rect.height)));
       setBox({ size: s });
     };
+    // Measure once on mount only
     measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
   }, []);
 
   const CIRCLE_SIZE = 157; // matches DashboardCircle default

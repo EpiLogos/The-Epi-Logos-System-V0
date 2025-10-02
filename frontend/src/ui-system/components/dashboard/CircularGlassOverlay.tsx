@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useId } from 'react';
+import React, { useEffect, useRef, useState, useId, useMemo } from 'react';
 
 export interface CircularGlassOverlayProps {
   size?: number;
@@ -94,7 +94,8 @@ const CircularGlassOverlay: React.FC<CircularGlassOverlayProps> = ({
 
   const isDarkMode = useDarkMode();
 
-  const generateCircularDisplacementMap = () => {
+  // PERFORMANCE FIX: Cache SVG generation - only regenerate when visual params actually change
+  const cachedDisplacementMapDataUri = useMemo(() => {
     const actualSize = size;
     const borderRadius = actualSize / 2; // Perfect circle
     const edgeSize = Math.min(actualSize, actualSize) * (borderWidth * 0.5);
@@ -119,14 +120,14 @@ const CircularGlassOverlay: React.FC<CircularGlassOverlayProps> = ({
     `;
 
     return `data:image/svg+xml,${encodeURIComponent(svgContent)}`;
-  };
+  }, [size, borderWidth, brightness, opacity, blur, mixBlendMode, redGradId, blueGradId]);
 
-  const updateDisplacementMap = () => {
-    feImageRef.current?.setAttribute('href', generateCircularDisplacementMap());
-  };
-
+  // PERFORMANCE FIX: Update SVG filter attributes only when cached URI or filter params change
   useEffect(() => {
-    updateDisplacementMap();
+    // Update SVG href from cached URI
+    feImageRef.current?.setAttribute('href', cachedDisplacementMapDataUri);
+
+    // Update displacement channel attributes
     [
       { ref: redChannelRef, offset: redOffset },
       { ref: greenChannelRef, offset: greenOffset },
@@ -141,34 +142,17 @@ const CircularGlassOverlay: React.FC<CircularGlassOverlayProps> = ({
 
     gaussianBlurRef.current?.setAttribute('stdDeviation', displace.toString());
   }, [
-    size,
-    borderWidth,
-    brightness,
-    opacity,
-    blur,
+    cachedDisplacementMapDataUri,
     displace,
     distortionScale,
     redOffset,
     greenOffset,
     blueOffset,
     xChannel,
-    yChannel,
-    mixBlendMode
+    yChannel
   ]);
 
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    const resizeObserver = new ResizeObserver(() => {
-      setTimeout(updateDisplacementMap, 0);
-    });
-
-    resizeObserver.observe(containerRef.current);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, []);
+  // REMOVED: ResizeObserver - size is static (157px per circle), no resize needed
 
   const supportsSVGFilters = () => {
     const isWebkit = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);

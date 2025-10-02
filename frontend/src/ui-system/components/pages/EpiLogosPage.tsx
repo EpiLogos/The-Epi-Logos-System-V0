@@ -79,7 +79,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
   
   // Enhanced particle animation state
   const [particleAnimationActive, setParticleAnimationActive] = useState(false);
-  const [particleAnimationCount, setParticleAnimationCount] = useState(100);
+  const [particleAnimationCount, setParticleAnimationCount] = useState(33); // GENTLER: reduced from 100 to 33
   const [particleScaleState, setParticleScaleState] = useState<'normal' | 'shrinking' | 'expanding'>('normal');
   const [particleCountState, setParticleCountState] = useState<'normal' | 'building' | 'resetting'>('normal');
 
@@ -167,30 +167,28 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
     // Start particle animation - JavaScript interpolation with CSS timing patterns
     setParticleAnimationActive(true);
     setParticleScaleState('shrinking'); // Tells JS to target 0.01 scale
-    
-    // Gradual particle count buildup from 100 to 1000 over PNG animation duration
+
+    // GENTLER buildup: 33 to 1000 over PNG animation duration
     const startTime = Date.now();
-    const startCount = 100;
+    const startCount = 33;
     const endCount = 1000;
-    const duration = 2000; // Match PNG animation duration
-    
+    const duration = 2500; // Slightly longer for gentler feel (was 2000ms)
+
     const animateParticleCount = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      
-      // CSS cubic-bezier(0.25, 0.1, 0.25, 1) easing for smooth buildup
-      const easeProgress = progress < 0.5 
-        ? 2 * progress * progress 
-        : 1 - Math.pow(-2 * progress + 2, 2) / 2; // ease-in-out approximation
-      
+
+      // Gentler easing: ease-out cubic for smoother buildup
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+
       const currentCount = Math.floor(startCount + (endCount - startCount) * easeProgress);
       setParticleAnimationCount(currentCount);
-      
+
       if (progress < 1) {
         requestAnimationFrame(animateParticleCount);
       }
     };
-    
+
     requestAnimationFrame(animateParticleCount);
     
     // CORRECT TIMING: White fade starts at 1400ms (200ms expand + 1200ms into shrink) 
@@ -214,22 +212,22 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
         // Reset particles after fade completes - JavaScript interpolation with CSS timing
         setTimeout(() => {
           setParticleScaleState('expanding'); // Tells JS to target 1.0 scale
-          
-          // Gradual particle count return from 1000 to 100 
+
+          // GENTLER return: 1000 → 33 particles (was 100) with longer, smoother animation
           const resetStartTime = Date.now();
-          const resetDuration = 2000; // 2 seconds for smooth return
+          const resetDuration = 3000; // 3 seconds for gentler, more relaxed return (was 2000ms)
           const fromCount = particleAnimationCount;
-          
+
           const resetParticleCount = () => {
             const elapsed = Date.now() - resetStartTime;
             const progress = Math.min(elapsed / resetDuration, 1);
-            
-            // CSS cubic-bezier(0.19, 1, 0.22, 1) easing for smooth return
-            const easeProgress = 1 - Math.pow(1 - progress, 3); // ease-out cubic
-            const currentCount = Math.floor(fromCount + (100 - fromCount) * easeProgress);
-            
+
+            // Gentler easing: ease-out quartic for very smooth, gentle return
+            const easeProgress = 1 - Math.pow(1 - progress, 4);
+            const currentCount = Math.floor(fromCount + (33 - fromCount) * easeProgress);
+
             setParticleAnimationCount(currentCount);
-            
+
             if (progress < 1) {
               requestAnimationFrame(resetParticleCount);
             } else {
@@ -240,7 +238,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
               }, 500); // Brief delay for final transitions
             }
           };
-          
+
           requestAnimationFrame(resetParticleCount);
         }, 1200); // Wait longer for white fade to complete gently
       }, 600); // Wait longer for framer motion + content settling
@@ -432,10 +430,12 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                   )}
                 >
                   {/* Particles Background - INSIDE the modal panel */}
-                  {particlesVisible && (
+                  {/* DISABLED: Particle animation removed for performance optimization.
+                      Keeping code for potential future reintegration if performance budget allows. */}
+                  {/* {particlesVisible && (
                     <GlowParticles
                       isVisible={particlesVisible}
-                      particleCount={100}
+                      particleCount={33}
                       baseHue={180}
                       monochrome={true}
                       mode="default"
@@ -451,7 +451,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                       scaleState={particleScaleState}
                       countState={particleCountState}
                     />
-                  )}
+                  )} */}
 
                   {/* White Fade Overlay for Dashboard Transition - Inside Modal */}
                   <div 

@@ -1191,13 +1191,15 @@ html, body {
 }
 
 /* Rotation only — apply to wrapper to avoid transform conflicts with waves */
+/* PERFORMANCE: Start paused, play only on hover */
 @utility dashboard-rotate {
-  animation: dashboardCircleRotate 12s linear infinite;
+  animation: dashboardCircleRotate 12s linear infinite paused;
 }
 
 /* Reverse rotation for glass overlay - much slower, opposite direction */
+/* PERFORMANCE: Start paused, play only on hover */
 @utility dashboard-rotate-reverse {
-  animation: dashboardCircleRotateReverse 60s linear infinite;
+  animation: dashboardCircleRotateReverse 60s linear infinite paused;
 }
 
 /* Brightness + size waves — apply to inner img to avoid transform overrides */
@@ -1239,6 +1241,12 @@ html, body {
 /* Glass overlay compositor hint */
 @utility dashboard-glass-compositor {
   will-change: transform, opacity;
+}
+
+/* HOVER ACTIVATION: Play rotations only when button container is hovered */
+.dashboard-circle-container:hover .dashboard-rotate,
+.dashboard-circle-container:hover .dashboard-rotate-reverse {
+  animation-play-state: running !important;
 }
 
 /* Pause all dashboard animations when container is paused */

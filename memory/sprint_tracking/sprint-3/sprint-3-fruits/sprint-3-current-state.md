@@ -1173,7 +1173,51 @@ The sprint's GraphRAG foundation establishes critical capabilities for:
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-09-30
+## Ad-Hoc Implementations
+
+### Bimba Relationship Creation Tool ✅
+**Status**: COMPLETE | **Date**: 2025-10-02
+**Type**: Ad-hoc feature (not tied to specific story)
+**Tracking**: `/memory/sprint_tracking/sprint-3/sprint-3-tracking/ad-hoc-bimba-relationship-creation-tool.md`
+
+**What We Built**:
+- MCP-compatible relationship creation/update tool
+- MERGE pattern with pre-validation for idempotent operations
+- Open property schema using string array format
+- Bidirectional relationship support
+
+**Technical Achievement**:
+- **Initial Attempt**: Full-stack implementation broke MCP server (nested object schema validation)
+- **Root Cause**: Nested `required` arrays inside `items` incompatible with MCP validators
+- **Solution**: Simplified to string array `["key:value"]` format with handler-level parsing
+- **Result**: MCP compatible tool preserving full GraphQL backend capability
+
+**MCP Schema Innovation**:
+```python
+# ✅ MCP-compatible simple schema
+"properties": {
+    "type": "array",
+    "items": {"type": "string"},  # NOT nested objects
+    "description": "'key:value' strings"
+}
+
+# Handler parses to GraphQL format
+property_list = []
+for prop_str in arguments.get("properties", []):
+    if ":" in prop_str:
+        key, value = prop_str.split(":", 1)
+        property_list.append({"key": key.strip(), "value": value.strip()})
+```
+
+**Files Modified**:
+- Plan: `memory/active_sprint/sprint-3/feature-5-relationship-creation/relationship-creation-tool-plan.md`
+- MCP Server: `agentic/mcp_servers/bimba_pratibimba_server.py`
+
+**Key Learning**: MCP schema restrictions require input simplification at protocol boundary, but full complexity can be preserved in backend layers.
+
+---
+
+**Document Version**: 1.1
+**Last Updated**: 2025-10-02
 **Next Review**: Upon 02.03.2 completion or 02.06 initiation
 **Purpose**: Comprehensive current state for README update and stakeholder communication
