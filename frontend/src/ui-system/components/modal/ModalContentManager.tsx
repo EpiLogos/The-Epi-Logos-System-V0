@@ -69,19 +69,19 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
           initial={{ opacity: 0, filter: 'blur(4px)' }}
           animate={{ opacity: 1, filter: 'blur(0px)' }}
           exit={{ opacity: 0, filter: 'blur(4px)' }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
+          transition={{ duration: 0.6, ease: 'easeOut', delay: 0.3 }}
         >
           {/* Subtle Splash Cursor Effect - Full modal coverage */}
           <div className="absolute inset-0 pointer-events-none z-0" style={{ opacity: 0.3, filter: 'grayscale(100%)' }}>
             <SplashCursor
               SIM_RESOLUTION={64}
-              DYE_RESOLUTION={720}
-              DENSITY_DISSIPATION={8.0}
-              VELOCITY_DISSIPATION={3.0}
+              DYE_RESOLUTION={512}
+              DENSITY_DISSIPATION={12.0}
+              VELOCITY_DISSIPATION={5.0}
               PRESSURE={0.25}
-              PRESSURE_ITERATIONS={15}
+              PRESSURE_ITERATIONS={12}
               CURL={2}
-              SPLAT_RADIUS={0.25}
+              SPLAT_RADIUS={0.18}
               SPLAT_FORCE={3000}
               SHADING={false}
               COLOR_UPDATE_SPEED={5}

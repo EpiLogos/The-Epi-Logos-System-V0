@@ -430,9 +430,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                   )}
                 >
                   {/* Particles Background - INSIDE the modal panel */}
-                  {/* DISABLED: Particle animation removed for performance optimization.
-                      Keeping code for potential future reintegration if performance budget allows. */}
-                  {/* {particlesVisible && (
+                  {particlesVisible && (
                     <GlowParticles
                       isVisible={particlesVisible}
                       particleCount={33}
@@ -451,7 +449,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                       scaleState={particleScaleState}
                       countState={particleCountState}
                     />
-                  )} */}
+                  )}
 
                   {/* White Fade Overlay for Dashboard Transition - Inside Modal */}
                   <div 
