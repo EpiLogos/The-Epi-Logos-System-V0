@@ -4,7 +4,7 @@ import React, { useCallback } from 'react';
 import { useAuth } from '@/auth';
 import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
-import { DashboardGrid } from './DashboardGrid';
+import { HexDashboardGridPerItem } from './HexDashboardGridPerItem';
 
 
 interface DashboardModalContentProps {
@@ -15,7 +15,7 @@ export const DashboardModalContent: React.FC<DashboardModalContentProps> = ({ on
   const { user, signOut } = useAuth();
   const handleNavigate = useCallback((s: EpiLogosBusinessState) => onStateChange(s), [onStateChange]);
 
-  return <DashboardGrid onNavigate={handleNavigate} />;
+  return <HexDashboardGridPerItem onNavigate={handleNavigate} />;
 };
 
 export default DashboardModalContent;

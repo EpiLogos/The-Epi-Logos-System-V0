@@ -235,7 +235,9 @@ async def create_bimba_relationship(
 
 ## MCP Server Implementation
 
-### Tool Definition
+### Tool Definition (CORRECTED - MCP Compatible)
+
+**IMPORTANT**: Previous implementation used nested object schema with `required` arrays inside `items`, which broke MCP validation. This corrected version uses simple string array format.
 
 ```python
 Tool(
@@ -243,28 +245,38 @@ Tool(
     description=(
         "Create or update relationship between Bimba coordinates (admin only). "
         "Uses MERGE for idempotent operations. Pre-validates coordinates. "
-        "Properties are open - define what makes sense for your relationship type."
+        "Properties format: array of 'key:value' strings (e.g., ['hierarchyLevel:1', 'resonancePattern:harmonic']). "
+        "Open schema - define properties that make sense for your relationship type."
     ),
     inputSchema={
         "type": "object",
         "properties": {
-            "fromCoordinate": {"type": "string"},
-            "toCoordinate": {"type": "string"},
-            "relationshipType": {"type": "string"},
+            "fromCoordinate": {
+                "type": "string",
+                "pattern": r"^#(\d+([-\.]\d+)*)?$",
+                "description": "Source Bimba coordinate"
+            },
+            "toCoordinate": {
+                "type": "string",
+                "pattern": r"^#(\d+([-\.]\d+)*)?$",
+                "description": "Target Bimba coordinate"
+            },
+            "relationshipType": {
+                "type": "string",
+                "description": "Relationship type in UPPERCASE_UNDERSCORES format (e.g., CONTAINS, RESONATES_WITH)"
+            },
             "properties": {
                 "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "key": {"type": "string"},
-                        "value": {"type": "string"}
-                    },
-                    "required": ["key", "value"]
-                }
+                "items": {"type": "string"},  # ✅ Simple string array, not nested objects
+                "description": "Properties as 'key:value' strings (e.g., ['hierarchyLevel:1', 'resonancePattern:3-fold harmonic'])"
             },
-            "bidirectional": {"type": "boolean", "default": False}
+            "bidirectional": {
+                "type": "boolean",
+                "description": "Create reverse relationship as well"
+            }
         },
-        "required": ["fromCoordinate", "toCoordinate", "relationshipType"]
+        "required": ["fromCoordinate", "toCoordinate", "relationshipType"],
+        "additionalProperties": False
     }
 )
 ```
@@ -273,11 +285,25 @@ Tool(
 
 **Method**: `_handle_create_bimba_relationship()`
 
+**String Parsing Logic**:
+```python
+# Parse "key:value" strings into GraphQL format
+property_list = []
+for prop_str in arguments.get("properties", []):
+    if ":" in prop_str:
+        key, value = prop_str.split(":", 1)
+        property_list.append({"key": key.strip(), "value": value.strip()})
+```
+
 **Response Format**:
 ```
-Relationship created: #1 -[CONTAINS]-> #1-2
+Created relationship: #1 -[CONTAINS]-> #1-2
 Properties: hierarchyLevel=1, parentChild=true
-(Updated existing relationship)
+
+(or)
+
+Updated relationship: #1 -[CONTAINS]-> #1-2
+Properties: hierarchyLevel=2
 ```
 
 ---
@@ -305,26 +331,24 @@ Properties: hierarchyLevel=1, parentChild=true
 
 ### Test Cases
 
-#### 1. Basic Relationship Creation
+#### 1. Basic Relationship Creation (MCP Format)
 ```json
 {
   "fromCoordinate": "#1",
   "toCoordinate": "#1-2",
   "relationshipType": "CONTAINS",
-  "properties": [
-    {"key": "hierarchyLevel", "value": "1"}
-  ]
+  "properties": ["hierarchyLevel:1"]
 }
 ```
 
-#### 2. Idempotent Update
+#### 2. Idempotent Update (MCP Format)
 ```json
 // First call - creates relationship
 {
   "fromCoordinate": "#1",
   "toCoordinate": "#1-2",
   "relationshipType": "CONTAINS",
-  "properties": [{"key": "version", "value": "1"}]
+  "properties": ["version:1"]
 }
 
 // Second call - updates relationship
@@ -332,20 +356,20 @@ Properties: hierarchyLevel=1, parentChild=true
   "fromCoordinate": "#1",
   "toCoordinate": "#1-2",
   "relationshipType": "CONTAINS",
-  "properties": [{"key": "version", "value": "2"}]
+  "properties": ["version:2"]
 }
 // wasUpdate: true
 ```
 
-#### 3. Bidirectional Relationship
+#### 3. Bidirectional Relationship (MCP Format)
 ```json
 {
   "fromCoordinate": "#1-2",
   "toCoordinate": "#2-3",
   "relationshipType": "RESONATES_WITH",
   "properties": [
-    {"key": "resonancePattern", "value": "3-fold harmonic"},
-    {"key": "harmonicFrequency", "value": "432"}
+    "resonancePattern:3-fold harmonic",
+    "harmonicFrequency:432"
   ],
   "bidirectional": true
 }
@@ -361,52 +385,52 @@ Properties: hierarchyLevel=1, parentChild=true
 
 ## Example Relationship Patterns
 
-### Hierarchical
+### Hierarchical (MCP String Format)
 ```json
 {
   "relationshipType": "CONTAINS",
   "properties": [
-    {"key": "hierarchyLevel", "value": "1"},
-    {"key": "parentChild", "value": "true"},
-    {"key": "containmentType", "value": "structural"}
+    "hierarchyLevel:1",
+    "parentChild:true",
+    "containmentType:structural"
   ]
 }
 ```
 
-### Resonance (QL-Specific)
+### Resonance (QL-Specific, MCP String Format)
 ```json
 {
   "relationshipType": "RESONATES_WITH",
   "properties": [
-    {"key": "resonancePattern", "value": "3-fold harmonic"},
-    {"key": "harmonicFrequency", "value": "432"},
-    {"key": "modalityBridge", "value": "Spanda-Paramarsa"},
-    {"key": "subsystemLink", "value": "1-to-2"}
+    "resonancePattern:3-fold harmonic",
+    "harmonicFrequency:432",
+    "modalityBridge:Spanda-Paramarsa",
+    "subsystemLink:1-to-2"
   ]
 }
 ```
 
-### Temporal
+### Temporal (MCP String Format)
 ```json
 {
   "relationshipType": "TEMPORAL_SEQUENCE",
   "properties": [
-    {"key": "sequenceOrder", "value": "1"},
-    {"key": "temporalContext", "value": "Nara developmental phase"},
-    {"key": "phaseTransition", "value": "dialogical-synthesis"}
+    "sequenceOrder:1",
+    "temporalContext:Nara developmental phase",
+    "phaseTransition:dialogical-synthesis"
   ]
 }
 ```
 
-### Semantic/Transformational
+### Semantic/Transformational (MCP String Format)
 ```json
 {
   "relationshipType": "TRANSFORMS_INTO",
   "properties": [
-    {"key": "transformationType", "value": "vibrational-to-symbolic"},
-    {"key": "alchemicalStage", "value": "nigredo-albedo"},
-    {"key": "confidence", "value": "0.85"},
-    {"key": "derivationPath", "value": "#2,#2-3,#3"}
+    "transformationType:vibrational-to-symbolic",
+    "alchemicalStage:nigredo-albedo",
+    "confidence:0.85",
+    "derivationPath:#2,#2-3,#3"
   ]
 }
 ```
@@ -460,6 +484,7 @@ Properties: hierarchyLevel=1, parentChild=true
 
 ---
 
-**Implementation Date**: 2025-10-02
-**Feature Status**: Ready for implementation
+**Implementation Date**: 2025-10-02 (Initial) | 2025-10-02 (Revised for MCP compatibility)
+**Feature Status**: Ready for FULL re-implementation (previous version removed due to MCP schema errors)
 **Architecture Compliance**: Verified against CLAUDE.md patterns
+**MCP Compatibility**: ✅ Corrected - uses simple string array instead of nested objects

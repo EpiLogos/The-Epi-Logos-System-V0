@@ -66,7 +66,7 @@ type Query {
     searchCoordinates(query: String!, subsystem: Int, limit: Int): SearchResponse
     getSubsystemCoordinates(subsystem: Int!, limit: Int): SubsystemCoordinatesResponse
     getPathBetweenCoordinates(startCoordinate: String!, endCoordinate: String!, maxHops: Int): GraphPath
-    semanticCoordinateDiscovery(queryText: String!, maxResults: Int): [BimbaCoordinateMatch!]!
+    semanticCoordinateDiscovery(queryText: String!, maxResults: Int, alpha: Float): [BimbaCoordinateMatch!]!
 }
 
 """Structured mutation error with code taxonomy"""

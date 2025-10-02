@@ -395,7 +395,7 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
 
           {/* Main Content - Flex Container like QuaternalLogicPage */}
           {(epiLogosState.isExpanded || isTransitioning || epiLogosState.imageFullyVisible) && (
-            <div className="flex-1 flex flex-col relative mt-5">
+            <div className="flex-1 flex flex-col relative">
               {/* Particle Container - Same pattern as Quaternal Logic */}
               <div 
                 ref={modalPanelRef}
@@ -419,9 +419,8 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
                     
                     // NORMAL MODAL TRANSITIONS - Only when not in page transition
                     !isTransitioning && "epi-panel-smooth-transition",
-                    
-                    // During page transition: Maintain current expanded state + add margin
-                    isTransitioning && "m-5",
+
+                    // During page transition: Maintain current expanded state
                     isTransitioning && epiLogosState.animationPhase === 'complete' && "epi-panel-height-expanded",
                     
                     // ANIMATION PHASE STATES - Only when not transitioning

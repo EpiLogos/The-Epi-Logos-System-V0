@@ -272,7 +272,8 @@ The tool returns comprehensive node information including name, subsystem, conte
                         "type": "object",
                         "properties": {
                             "query_text": {"type": "string", "description": "Natural language query text"},
-                            "max_results": {"type": "integer", "description": "Maximum results", "default": 5}
+                            "max_results": {"type": "integer", "description": "Maximum results", "default": 5},
+                            "alpha": {"type": "number", "description": "Hybrid weight (vector vs BM25): 0..1", "minimum": 0, "maximum": 1, "default": 0.6}
                         },
                         "required": ["query_text"]
                     }
@@ -309,6 +310,46 @@ The tool returns comprehensive node information including name, subsystem, conte
                         }
                     }
                 )
+                ,
+                Tool(
+                    name="create_bimba_relationship",
+                    description=(
+                        "Create or update relationship between Bimba coordinates (admin only). "
+                        "Uses MERGE for idempotent operations - pre-validates coordinates to prevent node creation. "
+                        "Properties format: array of 'key:value' strings (e.g., ['hierarchyLevel:1', 'resonancePattern:harmonic']). "
+                        "Open schema - define properties that make sense for your relationship type."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "fromCoordinate": {
+                                "type": "string",
+                                "pattern": r"^#(\d+([-\.]\d+)*)?$",
+                                "description": "Source Bimba coordinate"
+                            },
+                            "toCoordinate": {
+                                "type": "string",
+                                "pattern": r"^#(\d+([-\.]\d+)*)?$",
+                                "description": "Target Bimba coordinate"
+                            },
+                            "relationshipType": {
+                                "type": "string",
+                                "description": "Relationship type in UPPERCASE_UNDERSCORES format (e.g., CONTAINS, RESONATES_WITH)"
+                            },
+                            "properties": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "description": "Properties as 'key:value' strings (e.g., ['hierarchyLevel:1', 'resonancePattern:3-fold harmonic'])"
+                            },
+                            "bidirectional": {
+                                "type": "boolean",
+                                "description": "Create reverse relationship as well"
+                            }
+                        },
+                        "required": ["fromCoordinate", "toCoordinate", "relationshipType"],
+                        "additionalProperties": False
+                    }
+                )
             ]
         
         @self.server.call_tool()
@@ -333,6 +374,8 @@ The tool returns comprehensive node information including name, subsystem, conte
                     return await self._handle_regenerate_node_embedding(arguments)
                 elif name == "regenerate_all_embeddings":
                     return await self._handle_regenerate_all_embeddings(arguments)
+                elif name == "create_bimba_relationship":
+                    return await self._handle_create_bimba_relationship(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -634,13 +677,14 @@ The tool returns comprehensive node information including name, subsystem, conte
         try:
             query_text = arguments.get("query_text")
             max_results = int(arguments.get("max_results", 5))
+            alpha = arguments.get("alpha", None)
             if not query_text:
                 return [TextContent(type="text", text="Error: query_text is required")]
 
             if not self.bimba_client:
                 return [TextContent(type="text", text="Error: Semantic discovery service not initialized")]
 
-            result = await self.bimba_client.semantic_coordinate_discovery(query_text, max_results)
+            result = await self.bimba_client.semantic_coordinate_discovery(query_text, max_results, alpha)
             if result.get("success"):
                 lines: list[str] = [f"Results ({len(result.get('results', []))}):"]
                 for i, r in enumerate(result.get("results", []), start=1):
@@ -780,7 +824,74 @@ The tool returns comprehensive node information including name, subsystem, conte
         except Exception as e:
             logger.error(f"Error in regenerate_all_embeddings: {e}")
             return [TextContent(type="text", text=f"Error: {str(e)}")]
-    
+
+    async def _handle_create_bimba_relationship(self, arguments: dict) -> list[TextContent]:
+        """Handle relationship creation via GraphQL (admin).
+
+        Parses 'key:value' string array into property objects for GraphQL.
+        """
+        try:
+            # Validate required fields
+            required = ["fromCoordinate", "toCoordinate", "relationshipType"]
+            missing = [k for k in required if not arguments.get(k)]
+            if missing:
+                return [TextContent(type="text", text=f"Error: missing required fields: {', '.join(missing)}")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Relationship creation client not initialized")]
+
+            # Parse "key:value" strings into GraphQL format
+            property_list = []
+            for prop_str in arguments.get("properties", []):
+                if ":" in prop_str:
+                    key, value = prop_str.split(":", 1)
+                    property_list.append({"key": key.strip(), "value": value.strip()})
+
+            # Build payload for GraphQL
+            payload = {
+                "fromCoordinate": arguments["fromCoordinate"],
+                "toCoordinate": arguments["toCoordinate"],
+                "relationshipType": arguments["relationshipType"],
+                "properties": property_list
+            }
+            if "bidirectional" in arguments:
+                payload["bidirectional"] = arguments["bidirectional"]
+
+            resp = await self.bimba_client.create_bimba_relationship(payload)
+
+            if resp.get("success"):
+                rel = resp.get("relationship") or {}
+                was_update = resp.get("wasUpdate", False)
+                action = "Updated" if was_update else "Created"
+
+                # Format response
+                lines: list[str] = []
+                lines.append(f"{action} relationship: {rel.get('fromCoordinate')} -[{rel.get('type')}]-> {rel.get('toCoordinate')}")
+
+                # Show properties
+                props = rel.get("properties", [])
+                if props:
+                    prop_strs = [f"{p.get('key')}={p.get('value')}" for p in props]
+                    lines.append(f"Properties: {', '.join(prop_strs)}")
+
+                # Show reverse if bidirectional
+                rev_rel = resp.get("reverseRelationship")
+                if rev_rel:
+                    lines.append(f"\nReverse: {rev_rel.get('fromCoordinate')} -[{rev_rel.get('type')}]-> {rev_rel.get('toCoordinate')}")
+
+                return [TextContent(type="text", text="\n".join(lines))]
+
+            # Handle errors
+            errs = resp.get("errors") or []
+            if errs:
+                code = errs[0].get("code")
+                msg = errs[0].get("message")
+                return [TextContent(type="text", text=f"Relationship creation failed [{code}]: {msg}")]
+            return [TextContent(type="text", text=f"Relationship creation failed: {resp}")]
+        except Exception as e:
+            logger.error(f"Error in create_bimba_relationship: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
     def _get_schema_resource(self) -> str:
         """Get coordinate schema resource."""
         schema = {

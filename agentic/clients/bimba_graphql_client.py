@@ -311,11 +311,11 @@ class BimbaGraphQLClient(BackendHttpClient):
                 "error": error_msg or "GraphQL query failed",
             }
 
-    async def semantic_coordinate_discovery(self, query_text: str, max_results: int = 5) -> Dict[str, Any]:
+    async def semantic_coordinate_discovery(self, query_text: str, max_results: int = 5, alpha: Optional[float] = None) -> Dict[str, Any]:
         """Discover coordinates matching natural language descriptions via GraphQL."""
         query = """
-        query SemanticCoordinateDiscovery($queryText: String!, $maxResults: Int) {
-          semanticCoordinateDiscovery(queryText: $queryText, maxResults: $maxResults) {
+        query SemanticCoordinateDiscovery($queryText: String!, $maxResults: Int, $alpha: Float) {
+          semanticCoordinateDiscovery(queryText: $queryText, maxResults: $maxResults, alpha: $alpha) {
             coordinate
             name
             similarity
@@ -326,7 +326,7 @@ class BimbaGraphQLClient(BackendHttpClient):
           }
         }
         """
-        variables = {"queryText": query_text, "maxResults": max_results}
+        variables = {"queryText": query_text, "maxResults": max_results, "alpha": alpha}
         resp = await self.post("/graphql", json_data={"query": query, "variables": variables})
         if "data" in resp and resp["data"] is not None:
             return {"success": True, "results": resp["data"].get("semanticCoordinateDiscovery", [])}

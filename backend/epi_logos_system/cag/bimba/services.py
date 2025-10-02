@@ -564,7 +564,7 @@ class NodeService:
             return False
         return True
 
-    def semantic_coordinate_discovery(self, query_text: str, max_results: Optional[int] = 5) -> list[dict]:
+    def semantic_coordinate_discovery(self, query_text: str, max_results: Optional[int] = 5, alpha: Optional[float] = None) -> list[dict]:
         """Perform semantic-to-coordinate discovery via Neo4j vector index.
 
         Guardrails:
@@ -668,11 +668,19 @@ class NodeService:
         bm_norm = norm_map(bm25_list, "bm25", "coordinate")
 
         # Weighted union
-        alpha = 0.6  # vector weight
+        try:
+            a = float(alpha) if alpha is not None else 0.6
+        except Exception:
+            a = 0.6
+        if a < 0.0:
+            a = 0.0
+        if a > 1.0:
+            a = 1.0
+        alpha_val = a
         union_coords = set(vec_norm.keys()) | set(bm_norm.keys())
         reranked = []
         for c in union_coords:
-            score = alpha * vec_norm.get(c, 0.0) + (1 - alpha) * bm_norm.get(c, 0.0)
+            score = alpha_val * vec_norm.get(c, 0.0) + (1 - alpha_val) * bm_norm.get(c, 0.0)
             reranked.append((c, score))
         reranked.sort(key=lambda t: t[1], reverse=True)
 

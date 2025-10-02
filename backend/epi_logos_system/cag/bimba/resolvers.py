@@ -163,7 +163,7 @@ def resolve_create_bimba_node(_: Any, info: Any, input: dict) -> dict:
 
 
 @query.field("semanticCoordinateDiscovery")
-def resolve_semantic_coordinate_discovery(_: Any, info: Any, queryText: str, maxResults: Optional[int] = 5) -> list[dict]:
+def resolve_semantic_coordinate_discovery(_: Any, info: Any, queryText: str, maxResults: Optional[int] = 5, alpha: Optional[float] = None) -> list[dict]:
     """Semantic-to-coordinate discovery using vector similarity search.
 
     - Accepts natural language text and optional maxResults (default 5, capped at 20)
@@ -171,7 +171,7 @@ def resolve_semantic_coordinate_discovery(_: Any, info: Any, queryText: str, max
     """
     service = info.context["service"]
     try:
-        return service.semantic_coordinate_discovery(queryText, maxResults)
+        return service.semantic_coordinate_discovery(queryText, maxResults, alpha)
     except Exception:
         # On error, return empty list to avoid leaking internals via GraphQL errors
         return []

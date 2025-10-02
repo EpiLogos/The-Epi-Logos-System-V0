@@ -655,8 +655,8 @@ html, body {
 /* POSITIONING - Only when not transitioning */
 @utility epi-panel-positioned {
   position: absolute;
-  bottom: 20px;
-  right: 20px;
+  bottom: 0px;
+  right: 0px;
 }
 
 /* TRANSITION BLUR - Applied during text fade phase */
@@ -690,14 +690,14 @@ html, body {
 }
 
 @utility epi-panel-width-expanded {
-  width: calc(100vw - 420px - 40px);
+  width: calc(100vw - 420px);
   height: 0px;
   opacity: 1;
 }
 
 @utility epi-panel-height-expanded {
-  width: calc(100vw - 420px - 40px);
-  height: calc(100vh - 40px);
+  width: calc(100vw - 420px);
+  height: 100vh;
   opacity: 1;
   border-color: #ccc;
 }
