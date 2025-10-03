@@ -158,6 +158,28 @@ The tool returns comprehensive node information including name, subsystem, conte
                 )
                 ,
                 Tool(
+                    name="get_node_details_complete",
+                    description=(
+                        "Get ALL properties for a Bimba coordinate without schema restrictions (COMPLETE). "
+                        "Returns every Neo4j property via Generic scalar - no filtering, no type mapping. "
+                        "Perfect for discovering unknown/custom properties or accessing coordinate-specific fields "
+                        "not in the canonical schema. Automatically excludes embeddings metadata and internal timestamps. "
+                        "For structured canonical fields, use get_node_by_coordinate_extended instead. "
+                        "For quick lookups, use resolve_coordinate instead."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {
+                                "type": "string",
+                                "description": "Bimba coordinate to retrieve all properties for",
+                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                            }
+                        },
+                        "required": ["bimbaCoordinate"]
+                    }
+                ),
+                Tool(
                     name="get_node_by_coordinate_extended",
                     description=(
                         "Deep inspection of a Bimba coordinate with COMPREHENSIVE property set. "
@@ -266,13 +288,14 @@ The tool returns comprehensive node information including name, subsystem, conte
                     name="semantic_coordinate_discovery",
                     description=(
                         "Discover Bimba coordinates that semantically match a natural language description. "
-                        "Returns ranked matches with similarity scores and semantic context."
+                        "Returns ranked matches with similarity scores and semantic context. "
+                        "Default 7 results enables parent + complete mod6 children (e.g., #1 + #1-0 through #1-5)."
                     ),
                     inputSchema={
                         "type": "object",
                         "properties": {
                             "query_text": {"type": "string", "description": "Natural language query text"},
-                            "max_results": {"type": "integer", "description": "Maximum results", "default": 5},
+                            "max_results": {"type": "integer", "description": "Maximum results (default 7 for mod6 QL alignment)", "default": 7},
                             "alpha": {"type": "number", "description": "Hybrid weight (vector vs BM25): 0..1", "minimum": 0, "maximum": 1, "default": 0.6}
                         },
                         "required": ["query_text"]
@@ -360,6 +383,8 @@ The tool returns comprehensive node information including name, subsystem, conte
                     return await self._handle_resolve_coordinate(arguments)
                 elif name == "get_node_relationships":
                     return await self._handle_get_node_relationships(arguments)
+                elif name == "get_node_details_complete":
+                    return await self._handle_get_node_details_complete(arguments)
                 elif name == "get_node_by_coordinate_extended":
                     return await self._handle_get_node_by_coordinate_extended(arguments)
                 elif name == "get_path_between_coordinates":
@@ -478,6 +503,40 @@ The tool returns comprehensive node information including name, subsystem, conte
             )]
     
     # Note: Removed coordinate validation - GraphQL backend handles all format validation
+    async def _handle_get_node_details_complete(self, arguments: dict) -> list[TextContent]:
+        """Handle complete node details retrieval via GraphQL (all properties via Generic scalar)."""
+        try:
+            coordinate = arguments.get("bimbaCoordinate")
+            if not coordinate:
+                return [TextContent(type="text", text="Error: bimbaCoordinate parameter is required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Complete node service not initialized")]
+
+            result = await self.bimba_client.get_node_details_complete(coordinate)
+
+            if result.get("success"):
+                all_props = result.get("allProperties") or {}
+
+                # Format complete properties response
+                lines: list[str] = []
+                lines.append(f"=== COMPLETE NODE DETAILS: {coordinate} ===\n")
+                lines.append(f"All Neo4j properties (embeddings/timestamps filtered):\n")
+
+                # Display all properties in JSON-like format
+                import json
+                formatted_props = json.dumps(all_props, indent=2, default=str)
+                lines.append(formatted_props)
+
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                error = result.get("error", "Unknown error")
+                return [TextContent(type="text", text=f"Complete details retrieval failed: {error}")]
+
+        except Exception as e:
+            logger.error(f"Error in get_node_details_complete: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
     async def _handle_get_node_by_coordinate_extended(self, arguments: dict) -> list[TextContent]:
         """Handle extended node inspection via GraphQL (comprehensive property set)."""
         try:
@@ -676,7 +735,7 @@ The tool returns comprehensive node information including name, subsystem, conte
         """Handle semantic coordinate discovery via GraphQL."""
         try:
             query_text = arguments.get("query_text")
-            max_results = int(arguments.get("max_results", 5))
+            max_results = int(arguments.get("max_results", 7))  # Default 7 for mod6 QL alignment (parent + 6 children)
             alpha = arguments.get("alpha", None)
             if not query_text:
                 return [TextContent(type="text", text="Error: query_text is required")]

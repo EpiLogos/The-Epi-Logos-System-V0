@@ -22,11 +22,17 @@ Sprint 3 plan has been reorganized to optimize the foundational development sequ
 
 ### Primary Stories (Foundation Building)
 
-#### ✅ COMPLETED (4 stories)
+#### ✅ COMPLETED (4 stories + 1 enhancement)
 1. **02.02** - Neighboring Node Discovery
 2. **02.03** - Graph Path Traversal
 3. **02.03.1** - Semantic-to-Coordinate Resolution
 4. **02.25** - Bimba Node Embedding Generation Tool
+5. **[ENHANCEMENT]** - Complete Node Details Retrieval Tool (getNodeDetailsComplete)
+   - Three-tier retrieval architecture: LEAN → COMPLETE → EXTENDED
+   - Generic scalar for schema-free property access
+   - Auto-filtering of embeddings/timestamps
+   - Neo4j type serialization (DateTime, Duration, Point)
+   - Integrated: GraphQL, Agent Tools, MCP Server
 
 #### 🟡 IN PROGRESS / PENDING (3 stories)
 5. **02.24** - **Multi-Agent Architecture Foundation** [NEW - THIS SPRINT]

@@ -1,3 +1,5 @@
+scalar Generic
+
 type BimbaNode {
     coordinate: String!
     name: String!
@@ -11,6 +13,13 @@ type BimbaNode {
     uuid: String
     createdAt: String
     updatedAt: String
+}
+
+"""Complete node with ALL Neo4j properties via Generic scalar - no filtering"""
+type BimbaNodeComplete {
+    coordinate: String!
+    name: String!
+    allProperties: Generic!
 }
 
 """Direction of a relationship relative to the queried node"""
@@ -61,6 +70,7 @@ type SubsystemCoordinatesResponse {
 
 type Query {
     getNodeByCoordinate(coordinate: String!): BimbaNode
+    getNodeDetailsComplete(coordinate: String!): BimbaNodeComplete
     getNodeByCoordinateExtended(coordinate: String!): BimbaNodeExtended
     getNodeWithRelationships(coordinate: String!): NodeWithEdges
     searchCoordinates(query: String!, subsystem: Int, limit: Int): SearchResponse

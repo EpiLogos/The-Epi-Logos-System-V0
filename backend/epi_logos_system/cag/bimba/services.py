@@ -6,10 +6,13 @@ from shared.database import Neo4jClient
 import os
 import math
 from typing import List, Dict, Any
+import logging
 
 from backend.epi_logos_system.shared.embeddings import get_text_embedding
 import hashlib
 from datetime import datetime, timezone
+
+logger = logging.getLogger(__name__)
 
 class BimbaNode(BaseModel):
     coordinate: str
@@ -373,6 +376,91 @@ class NodeService:
         # Return complete property set (Neo4j already fetched everything)
         return dict(node_data)
 
+    def get_node_complete(self, coordinate: str) -> dict | None:
+        """Get node with ALL Neo4j properties (no filtering).
+
+        Returns dict with coordinate, name, and allProperties containing
+        every property from Neo4j via Generic scalar, regardless of schema.
+        Automatically filters out embeddings metadata and internal timestamps.
+        This enables agents to access any property without knowing field names.
+        """
+        node_data = self._repo.neo4j_client.get_bimba_node(coordinate)
+        if not node_data:
+            return None
+
+        # Filter out embeddings metadata and internal timestamps
+        # These are system-internal properties not useful for agent reasoning
+        exclude_props = {
+            # Embeddings metadata (from regenerate_node_embedding)
+            "embeddings",
+            "embedding_updated_at",
+            "embedding_model",
+            "embedding_dim",
+            "embedding_hash",
+            # Internal system timestamps (different from user-facing createdAt/updatedAt)
+            "created_at",
+            "updated_at",
+            "lastUpdated",  # Duplicate of updated_at
+        }
+
+        # Filter properties while preserving all others
+        filtered_props = {k: v for k, v in node_data.items() if k not in exclude_props}
+
+        # Serialize Neo4j types to JSON-compatible values
+        # Generic scalar expects JSON-serializable data, but Neo4j returns DateTime, Duration, Point, etc.
+        serialized_props = self._serialize_neo4j_types(filtered_props)
+
+        return {
+            "coordinate": node_data.get("bimbaCoordinate"),
+            "name": node_data.get("name"),
+            "allProperties": serialized_props  # Fully JSON-serializable properties
+        }
+
+    def _serialize_neo4j_types(self, data: Any) -> Any:
+        """Recursively serialize Neo4j types to JSON-compatible values.
+
+        Handles:
+        - DateTime -> ISO string
+        - Duration -> string representation
+        - Point -> dict with coordinates
+        - Date, Time -> ISO string
+        - Lists and dicts (recursively)
+        """
+        if data is None:
+            return None
+
+        # Neo4j DateTime (has iso_format method)
+        if hasattr(data, 'iso_format'):
+            return data.iso_format()
+
+        # Neo4j Duration
+        if hasattr(data, 'months') and hasattr(data, 'days') and hasattr(data, 'seconds'):
+            return str(data)
+
+        # Neo4j Point (spatial)
+        if hasattr(data, 'srid') and hasattr(data, 'coords'):
+            return {
+                'srid': data.srid,
+                'x': data.coords[0] if len(data.coords) > 0 else None,
+                'y': data.coords[1] if len(data.coords) > 1 else None,
+                'z': data.coords[2] if len(data.coords) > 2 else None,
+            }
+
+        # Python datetime (fallback for any datetime objects)
+        if hasattr(data, 'isoformat'):
+            return data.isoformat()
+
+        # Lists - recursively serialize elements
+        if isinstance(data, list):
+            return [self._serialize_neo4j_types(item) for item in data]
+
+        # Dicts - recursively serialize values
+        if isinstance(data, dict):
+            return {k: self._serialize_neo4j_types(v) for k, v in data.items()}
+
+        # Primitives (str, int, float, bool) pass through
+        return data
+
     def get_node_relationships(self, coordinate: str) -> dict | None:
         """Return a node bundled with its immediate relationship edges.
 
@@ -564,7 +652,7 @@ class NodeService:
             return False
         return True
 
-    def semantic_coordinate_discovery(self, query_text: str, max_results: Optional[int] = 5, alpha: Optional[float] = None) -> list[dict]:
+    def semantic_coordinate_discovery(self, query_text: str, max_results: Optional[int] = 7, alpha: Optional[float] = None) -> list[dict]:
         """Perform semantic-to-coordinate discovery via Neo4j vector index.
 
         Guardrails:
@@ -572,9 +660,10 @@ class NodeService:
         - Identity anchored strictly by bimbaCoordinate
         - Timeout enforced via driver (15s default)
         - Result cap at 20
+        - Default 7 results: enables parent + complete mod6 children (e.g., #1 + #1-0 through #1-5)
         """
         # Enforce defaults and caps
-        k_default = 5
+        k_default = 7  # Mod6 QL alignment: parent + 6 children = complete structure
         k_cap = 20
         k = k_default if max_results is None else int(max_results)
         if k < 1:
@@ -709,6 +798,59 @@ class NodeService:
         labels = list(rec.get("labels") or [])
         return props, labels
 
+    def _serialize_relationships(self, coordinate: str) -> list[str]:
+        """Serialize outgoing relationships for embedding context.
+
+        Returns list of formatted relationship strings like:
+        "CONTAINS -> #1-2 (hierarchyLevel=1, parentChild=true)"
+        """
+        lines = []
+
+        # Get max relationships from env (default 10 to prevent token overflow)
+        max_rels = int(os.getenv("MAX_RELATIONSHIPS_PER_NODE", "10"))
+
+        try:
+            # Fetch relationships using existing method
+            rel_data = self.get_node_relationships(coordinate)
+            if not rel_data:
+                return lines
+
+            edges = rel_data.get('edges', [])
+
+            # Limit to prevent token overflow
+            for edge in edges[:max_rels]:
+                rel_type = edge.get('type')
+                neighbor = edge.get('neighbor', {})
+                neighbor_coord = neighbor.get('coordinate')
+                direction = edge.get('direction')
+
+                if not rel_type or not neighbor_coord:
+                    continue
+
+                # Use arrow notation for clarity
+                arrow = "->" if direction == "OUTGOING" else "<-"
+                rel_line = f"{rel_type} {arrow} {neighbor_coord}"
+
+                # Include neighbor name for semantic richness
+                neighbor_name = neighbor.get('name')
+                if neighbor_name:
+                    rel_line += f" [{neighbor_name}]"
+
+                # Include properties
+                props = edge.get('properties', [])
+                if props:
+                    prop_strs = [f"{p.get('key')}={p.get('value')}" for p in props if p.get('key') and p.get('value') is not None]
+                    if prop_strs:
+                        rel_line += f" ({', '.join(prop_strs)})"
+
+                lines.append(rel_line)
+        except Exception as e:
+            # If relationship fetching fails, continue without relationships
+            # (graceful degradation - embeddings still work without relationships)
+            logger.warning(f"Failed to serialize relationships for {coordinate}: {e}")
+
+        return lines
+
     def _serialize_properties_for_embedding(self, props: dict, labels: list[str]) -> tuple[str, str]:
         # Include nested structures; exclude only known metadata/embedding keys.
         exclude = {
@@ -749,6 +891,18 @@ class NodeService:
             if key in exclude or key in priority_fields:
                 continue
             flatten(props.get(key), key, lines)
+
+        # NEW: Include relationships if enabled
+        include_relationships = os.getenv("INCLUDE_RELATIONSHIPS_IN_EMBEDDINGS", "true").lower() == "true"
+        if include_relationships:
+            coord = props.get('bimbaCoordinate')
+            if coord:
+                rel_lines = self._serialize_relationships(coord)
+                if rel_lines:
+                    lines.append("")  # Blank line separator
+                    lines.append("Relationships:")
+                    lines.extend(rel_lines)
+
         text = "\n".join(lines)
         h = hashlib.sha256(text.encode("utf-8")).hexdigest()
         return text, h
@@ -829,6 +983,23 @@ class NodeService:
                 updated += 1
             skip += batch_size
         return {"success": True, "total": total, "updated": updated, "skipped": skipped}
+
+    def invalidate_node_embedding(self, coordinate: str) -> None:
+        """Invalidate node embedding by clearing the hash.
+
+        This forces regeneration on next semantic search or explicit regenerate call.
+        Used when relationships change to trigger re-embedding with new context.
+        """
+        try:
+            query = """
+            MATCH (n:BimbaNode { bimbaCoordinate: $c })
+            SET n.embedding_hash = null
+            RETURN 1
+            """
+            self._repo.neo4j_client.execute_query(query, {"c": coordinate})
+            logger.debug(f"Invalidated embedding for {coordinate}")
+        except Exception as e:
+            logger.warning(f"Failed to invalidate embedding for {coordinate}: {e}")
 
 
 def _cluster_id_from_coordinate(coordinate: str) -> str:

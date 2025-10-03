@@ -152,6 +152,47 @@ class HttpBimbaClient:
                 "error": f"HTTP request failed: {str(e)}"
             }
 
+    async def get_node_details_complete(self, coordinate: str) -> Dict[str, Any]:
+        """
+        Get ALL node properties from Neo4j without filtering.
+
+        Returns complete property set via Generic scalar - no schema restrictions.
+        Enables agents to access any property without knowing field names beforehand.
+
+        Args:
+            coordinate: The Bimba coordinate to retrieve
+
+        Returns:
+            Dict containing all properties or error
+        """
+        try:
+            result = await self.client.get_node_details_complete(coordinate)
+
+            if result.get("success"):
+                logger.info(f"Retrieved complete node details for: {coordinate}")
+                return {
+                    "success": True,
+                    "coordinate": coordinate,
+                    "allProperties": result.get("allProperties")
+                }
+            else:
+                error_msg = result.get("error", "Unknown error")
+                logger.warning(f"Failed to get complete details for {coordinate}: {error_msg}")
+                return {
+                    "success": False,
+                    "coordinate": coordinate,
+                    "allProperties": None,
+                    "error": error_msg
+                }
+        except Exception as e:
+            logger.error(f"Exception getting complete details for {coordinate}: {e}")
+            return {
+                "success": False,
+                "coordinate": coordinate,
+                "allProperties": None,
+                "error": f"HTTP request failed: {str(e)}"
+            }
+
     async def get_node_by_coordinate_extended(self, coordinate: str) -> Dict[str, Any]:
         """
         Get comprehensive node data with all flexible schema properties.
@@ -231,8 +272,11 @@ class HttpBimbaClient:
                 "error": f"HTTP request failed: {str(e)}",
             }
 
-    async def semantic_coordinate_discovery(self, query_text: str, max_results: int = 5) -> Dict[str, Any]:
-        """Discover Bimba coordinates matching a natural language query via GraphQL."""
+    async def semantic_coordinate_discovery(self, query_text: str, max_results: int = 7) -> Dict[str, Any]:
+        """Discover Bimba coordinates matching a natural language query via GraphQL.
+
+        Default 7 results enables parent + complete mod6 children (e.g., #1 + #1-0 through #1-5).
+        """
         try:
             result = await self.client.semantic_coordinate_discovery(query_text, max_results)
             if result.get("success"):

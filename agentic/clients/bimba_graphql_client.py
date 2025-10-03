@@ -87,6 +87,50 @@ class BimbaGraphQLClient(BackendHttpClient):
                 "error": error_msg or "GraphQL query failed"
             }
 
+    async def get_node_details_complete(self, coordinate: str) -> Dict[str, Any]:
+        """Get ALL node properties from Neo4j via Generic scalar (COMPLETE query)"""
+        query = """
+        query GetNodeComplete($coordinate: String!) {
+            getNodeDetailsComplete(coordinate: $coordinate) {
+                coordinate
+                name
+                allProperties
+            }
+        }
+        """
+
+        variables = {"coordinate": coordinate}
+        request_data = {"query": query, "variables": variables}
+
+        logger.info(f"Getting complete node details for: {coordinate}")
+        response = await self.post("/graphql", json_data=request_data)
+
+        if "data" in response and response["data"]:
+            node_data = response["data"]["getNodeDetailsComplete"]
+            if node_data:
+                return {
+                    "success": True,
+                    "coordinate": node_data["coordinate"],
+                    "name": node_data["name"],
+                    "allProperties": node_data["allProperties"]
+                }
+            else:
+                return {
+                    "success": False,
+                    "coordinate": coordinate,
+                    "allProperties": None,
+                    "error": "Coordinate not found"
+                }
+        else:
+            errors = response.get("errors", [])
+            error_msg = "; ".join([err.get("message", "Unknown error") for err in errors])
+            return {
+                "success": False,
+                "coordinate": coordinate,
+                "allProperties": None,
+                "error": error_msg or "GraphQL query failed"
+            }
+
     async def get_node_by_coordinate_extended(self, coordinate: str) -> Dict[str, Any]:
         """Get comprehensive node data with all flexible schema properties (COMPREHENSIVE query)"""
         query = """
@@ -311,8 +355,11 @@ class BimbaGraphQLClient(BackendHttpClient):
                 "error": error_msg or "GraphQL query failed",
             }
 
-    async def semantic_coordinate_discovery(self, query_text: str, max_results: int = 5, alpha: Optional[float] = None) -> Dict[str, Any]:
-        """Discover coordinates matching natural language descriptions via GraphQL."""
+    async def semantic_coordinate_discovery(self, query_text: str, max_results: int = 7, alpha: Optional[float] = None) -> Dict[str, Any]:
+        """Discover coordinates matching natural language descriptions via GraphQL.
+
+        Default 7 results enables parent + complete mod6 children (e.g., #1 + #1-0 through #1-5).
+        """
         query = """
         query SemanticCoordinateDiscovery($queryText: String!, $maxResults: Int, $alpha: Float) {
           semanticCoordinateDiscovery(queryText: $queryText, maxResults: $maxResults, alpha: $alpha) {

@@ -16,6 +16,17 @@ def resolve_get_node_by_coordinate(_: Any, info: Any, coordinate: str) -> dict |
     # Transform the Pydantic model into a dictionary for GraphQL.
     return node.model_dump() if node else None
 
+@query.field("getNodeDetailsComplete")
+def resolve_get_node_details_complete(_: Any, info: Any, coordinate: str) -> dict | None:
+    """Resolve complete node with ALL Neo4j properties via Generic scalar.
+
+    Returns BimbaNodeComplete with allProperties containing every property
+    from Neo4j, no filtering or mapping required. Enables agents to access
+    any property without knowing field names beforehand.
+    """
+    node_service = info.context["service"]
+    return node_service.get_node_complete(coordinate)
+
 @query.field("getNodeByCoordinateExtended")
 def resolve_get_node_by_coordinate_extended(_: Any, info: Any, coordinate: str) -> dict | None:
     """Resolve extended node with complete property set for comprehensive inspection.
@@ -163,10 +174,11 @@ def resolve_create_bimba_node(_: Any, info: Any, input: dict) -> dict:
 
 
 @query.field("semanticCoordinateDiscovery")
-def resolve_semantic_coordinate_discovery(_: Any, info: Any, queryText: str, maxResults: Optional[int] = 5, alpha: Optional[float] = None) -> list[dict]:
+def resolve_semantic_coordinate_discovery(_: Any, info: Any, queryText: str, maxResults: Optional[int] = 7, alpha: Optional[float] = None) -> list[dict]:
     """Semantic-to-coordinate discovery using vector similarity search.
 
-    - Accepts natural language text and optional maxResults (default 5, capped at 20)
+    - Accepts natural language text and optional maxResults (default 7 for mod6 QL alignment, capped at 20)
+    - Default 7 enables parent + complete mod6 children (e.g., #1 + #1-0 through #1-5)
     - Returns ranked BimbaCoordinateMatch objects
     """
     service = info.context["service"]
@@ -256,6 +268,10 @@ def resolve_create_bimba_relationship(_: Any, info: Any, input: dict) -> dict:
             properties=properties,
             bidirectional=bidirectional
         )
+
+        # Invalidate embeddings for both nodes (relationships now part of embedding context)
+        service.invalidate_node_embedding(from_coord)
+        service.invalidate_node_embedding(to_coord)
 
         # Map forward relationship to GraphQL schema
         forward_rel = result.get("forward", {})

@@ -99,9 +99,126 @@ for prop_str in arguments.get("properties", []):
 - Admin-only with multi-layer authorization
 - `wasUpdate` flag (operation type indication)
 
-**Architectural Learning**: MCP protocol boundaries require input simplification, but backend complexity can be preserved through handler-level transformation. Protocol compatibility ≠ capability limitation.
+#### Complete Node Details Retrieval Tool (2025-10-03)
+**Context**: Need for flexible node property access without schema restrictions for agent discovery
+**Challenge**: Generic scalar returns Neo4j DateTime objects causing JSON serialization failures
+**Problem Analysis**:
+- Generic scalar passes through Python objects as-is (no automatic conversion)
+- Neo4j returns `neo4j.time.DateTime` objects for temporal properties
+- FastAPI's `JSONResponse` requires fully JSON-serializable data
+- Extended query avoided this by explicit `str()` conversion but only for known fields
 
-**Tracking**: [ad-hoc-bimba-relationship-creation-tool.md](sprint_tracking/sprint-3/sprint-3-tracking/ad-hoc-bimba-relationship-creation-tool.md)
+**Root Cause**: Generic scalar + Neo4j types = serialization failure at JSONResponse boundary
+
+**Solution**: Three-tier retrieval architecture with Neo4j type serialization
+
+**Technical Implementation**:
+```python
+# Recursive Neo4j type converter
+def _serialize_neo4j_types(self, data: Any) -> Any:
+    # DateTime → ISO string (via iso_format())
+    if hasattr(data, 'iso_format'):
+        return data.iso_format()
+    # Duration → string
+    if hasattr(data, 'months') and hasattr(data, 'days'):
+        return str(data)
+    # Point → coordinates dict
+    if hasattr(data, 'srid') and hasattr(data, 'coords'):
+        return {'srid': data.srid, 'x': ..., 'y': ..., 'z': ...}
+    # Recursive for lists/dicts
+    # Primitives pass through
+```
+
+**Three-Tier Architecture**:
+1. **LEAN** - `getNodeByCoordinate` (~13 core fields, fast)
+2. **COMPLETE** - `getNodeDetailsComplete` (ALL properties via Generic scalar) ← NEW
+3. **EXTENDED** - `getNodeByCoordinateExtended` (~25 canonical typed fields)
+
+**Smart Filtering**: Auto-excludes system internals
+- Embeddings metadata: `embeddings`, `embedding_*`
+- Internal timestamps: `created_at`, `updated_at`, `lastUpdated`
+
+**Full Integration Stack**:
+- GraphQL: `scalar Generic` + `BimbaNodeComplete` type
+- Service: `get_node_complete()` + `_serialize_neo4j_types()`
+- Resolver: `getNodeDetailsComplete` GraphQL resolver
+- Client: `BimbaGraphQLClient.get_node_details_complete()`
+- Agent Tool: `@agent.tool` decorated orchestrator method
+- MCP: Tool definition + handler with JSON formatting
+
+**Key Learning**: Generic scalar enables schema evolution without GraphQL updates, but requires explicit type serialization for Neo4j objects before JSON boundary
+
+**Impact**: Agents can now discover and access ANY node property without predefined schema knowledge
+
+#### Relationship-Enriched Node Embeddings (Story 02.26) (2025-10-02)
+**Context**: Semantic search limited to node properties only - relationships structurally indexed but not semantically searchable
+**Opportunity**: Phase 1 of Parashakti relationship embeddings roadmap
+**Solution**: Include relationship context in node embeddings for immediate semantic search improvement
+
+**Technical Implementation**:
+```python
+# Node embedding serialization now includes relationships
+def _serialize_relationships(self, coordinate: str) -> list[str]:
+    """Format: TYPE -> #coord [Neighbor Name] (key=value, key2=value2)"""
+    # Example: "CONTAINS -> #1-2 [Internal Structure] (hierarchyLevel=1)"
+
+# Automatic invalidation on relationship changes
+def invalidate_node_embedding(self, coordinate: str):
+    """Clear hash to trigger regeneration on next use"""
+```
+
+**Key Features**:
+- Relationship type, direction, target coordinate
+- **Neighbor name inclusion** (semantic richness with minimal tokens)
+- All relationship properties
+- Automatic invalidation when relationships created/updated
+- Configurable limits: `MAX_RELATIONSHIPS_IN_EMBEDDINGS=10` (token overflow protection)
+
+**Semantic Search Benefits**:
+- Query: "coordinates containing hierarchical structures" → Matches via relationship patterns
+- Query: "resonant connections at 432Hz" → Finds nodes via relationship properties
+- Implicit relationship-aware discovery without dedicated relationship vector index
+
+**Strategic Alignment**:
+- **Phase 1** (Sprint 3): Composite node embeddings (THIS IMPLEMENTATION)
+- **Phase 2** (Sprint 5+): Dedicated relationship embeddings under Parashakti agent
+- **Phase 3** (Sprint 6+): MEF lens-based vibrational pattern analysis
+
+**Configuration**:
+- `INCLUDE_RELATIONSHIPS_IN_EMBEDDINGS=true` (default)
+- `MAX_RELATIONSHIPS_PER_NODE=10` (default)
+
+**Tracking**: [story-02.26-relationship-enriched-embeddings-tracking.md](sprint_tracking/sprint-3/sprint-3-tracking/story-02.26-relationship-enriched-embeddings-tracking.md)
+
+#### Mod6 QL Alignment - Default Results (2025-10-02)
+**Context**: Semantic search defaulting to 5 results
+**Insight**: Quaternal Logic operates on mod6 cycles - defaults should reflect philosophical foundations
+**Solution**: Change default from 5 → 6 to enable complete coordinate structure returns
+
+**Philosophical Rationale**:
+> "System architecture should reflect philosophical foundations at every level, including default parameter values. Mod6 QL requires 6-coordinate completeness (#0-#5)."
+
+**Implementation**:
+```python
+# Backend service
+k_default = 6  # Mod6 QL alignment: enables complete 6-coordinate return
+
+# GraphQL resolver
+def resolve_semantic_coordinate_discovery(..., maxResults: Optional[int] = 6):
+    """Default 6 enables returning complete mod6 QL coordinate sets (#0-#5)"""
+```
+
+**Example Use Case**:
+```
+Query: "the six fundamental subsystems"
+Returns: #0 Anuttara, #1 Paramasiva, #2 Parashakti,
+         #3 Mahamaya, #4 Nara, #5 Epii
+         ↑ Complete mod6 structure!
+```
+
+**Files Updated**: Backend (`services.py`, `resolvers.py`), Agentic (`bimba_graphql_client.py`, `http_bimba_tools.py`), MCP (`bimba_pratibimba_server.py`)
+
+**Key Insight**: Even small technical decisions (default parameter values) should align with core philosophical architecture (mod6 QL framework).
 
 ### Phenomenological Validation 🔬
 

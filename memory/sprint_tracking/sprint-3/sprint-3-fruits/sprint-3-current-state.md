@@ -1215,9 +1215,70 @@ for prop_str in arguments.get("properties", []):
 
 **Key Learning**: MCP schema restrictions require input simplification at protocol boundary, but full complexity can be preserved in backend layers.
 
+### Relationship-Enriched Node Embeddings (Story 02.26) ✅
+**Status**: COMPLETE | **Date**: 2025-10-02
+**Type**: Ad-hoc feature (Phase 1 of Parashakti embeddings roadmap)
+**Tracking**: `/memory/sprint_tracking/sprint-3/sprint-3-tracking/story-02.26-relationship-enriched-embeddings-tracking.md`
+
+**What We Built**:
+- Node embeddings now include relationship context (type, direction, neighbor name, properties)
+- Semantic queries can discover coordinates based on vibrational connections
+- Automatic embedding invalidation when relationships change
+- Configurable relationship inclusion for dense graphs
+
+**Technical Innovation**:
+```python
+# Node embedding includes relationships
+name: Paramasiva
+coreNature: Quaternal Logic Engine
+
+Relationships:
+CONTAINS -> #1-2 [Internal Structure] (hierarchyLevel=1)
+RESONATES_WITH -> #2 [Parashakti] (harmonicFrequency=432)
+```
+
+**Configuration**:
+- `INCLUDE_RELATIONSHIPS_IN_EMBEDDINGS=true` (default)
+- `MAX_RELATIONSHIPS_PER_NODE=10` (prevents token overflow)
+
+**Semantic Search Benefits**:
+- Query: "coordinates containing hierarchical structures" → Now matches relationship patterns
+- Query: "resonant connections at 432Hz" → Finds nodes via relationship properties
+- Richer context without separate relationship embeddings (Phase 2 in Sprint 5+)
+
+**Files Modified**:
+- Backend: `services.py` (serialization + invalidation)
+- Resolver: `resolvers.py` (invalidation on mutation)
+
+### Mod6 QL Alignment - Default Results ✅
+**Status**: COMPLETE | **Date**: 2025-10-02
+**Type**: Ad-hoc enhancement (QL framework alignment)
+
+**What We Changed**:
+- Semantic coordinate discovery default results: 5 → **6**
+- Enables returning complete mod6 coordinate sets (#0-#5)
+
+**Philosophical Rationale**:
+Quaternal Logic operates on mod6 cycles. Semantic search should default to returning complete coordinate structures when precision allows.
+
+**Example**:
+```
+Query: "the six fundamental subsystems"
+Returns: #0 Anuttara, #1 Paramasiva, #2 Parashakti,
+         #3 Mahamaya, #4 Nara, #5 Epii
+         ↑ Complete mod6 structure!
+```
+
+**Files Updated**:
+- Backend: `services.py`, `resolvers.py`
+- Agentic: `bimba_graphql_client.py`, `http_bimba_tools.py`
+- MCP: `bimba_pratibimba_server.py` (tool schema + handler)
+
+**Key Insight**: System architecture should reflect philosophical foundations at every level, including default parameter values.
+
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.2
 **Last Updated**: 2025-10-02
 **Next Review**: Upon 02.03.2 completion or 02.06 initiation
 **Purpose**: Comprehensive current state for README update and stakeholder communication

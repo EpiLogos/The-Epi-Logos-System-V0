@@ -416,6 +416,56 @@ if PYDANTIC_AI_AVAILABLE:
                 return {"success": False, "error": str(e), "node": None, "coordinate": coordinate}
 
         @agent.tool
+        async def get_node_details_complete(
+            ctx: RunContext[OrchestratorDeps],
+            coordinate: str,
+        ) -> Dict[str, Any]:
+            """Get ALL properties for a Bimba coordinate without schema restrictions (COMPLETE).
+
+            Returns every Neo4j property via Generic scalar - no filtering, no type mapping.
+            This is the most flexible retrieval tool: agents can access ANY property regardless
+            of whether it's in the GraphQL schema. Perfect for:
+            - Discovering unknown/custom properties on coordinates
+            - Accessing coordinate-specific fields not in canonical schema
+            - Full property inspection without predefined field knowledge
+
+            Automatically excludes embeddings metadata and internal timestamps.
+            For structured canonical fields, use inspect_coordinate_detailed instead.
+            For quick lookups, use resolve_coordinate instead.
+
+            Three-tier architecture:
+            - resolve_coordinate: LEAN (~13 core fields)
+            - get_node_details_complete: COMPLETE (all properties via Generic scalar) ← THIS
+            - inspect_coordinate_detailed: EXTENDED (~25 canonical typed fields)
+
+            Args:
+                coordinate: The coordinate to retrieve all properties for (e.g., #2, #2.3, #2-3-1)
+            """
+            try:
+                logger.info(f"🔍 Getting complete node details for: {coordinate}")
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "error": "Bimba client not available", "allProperties": None}
+
+                # Use complete query via HTTP client wrapper
+                from agentic.agents.orchestrator.tools.bimba.http_bimba_tools import HttpBimbaClient
+                http_client = HttpBimbaClient(ctx.deps.bimba_client)
+
+                result = await http_client.get_node_details_complete(coordinate)
+
+                if result.get("success"):
+                    logger.info(f"Successfully retrieved complete details for {coordinate}")
+                    return result
+                else:
+                    error = result.get("error", "Unknown error")
+                    logger.warning(f"Complete details retrieval failed for {coordinate}: {error}")
+                    return result
+
+            except Exception as e:
+                logger.error(f"Error getting complete node details for {coordinate}: {e}")
+                return {"success": False, "error": str(e), "allProperties": None, "coordinate": coordinate}
+
+        @agent.tool
         async def search_gnostic_space(
             ctx: RunContext[OrchestratorDeps],
             query: str,
