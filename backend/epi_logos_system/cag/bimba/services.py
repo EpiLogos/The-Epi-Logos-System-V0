@@ -376,13 +376,19 @@ class NodeService:
         # Return complete property set (Neo4j already fetched everything)
         return dict(node_data)
 
-    def get_node_complete(self, coordinate: str) -> dict | None:
-        """Get node with ALL Neo4j properties (no filtering).
+    def get_node_complete(self, coordinate: str, include_functional_properties: bool = False) -> dict | None:
+        """Get node with ALL Neo4j properties (selective filtering).
 
         Returns dict with coordinate, name, and allProperties containing
-        every property from Neo4j via Generic scalar, regardless of schema.
-        Automatically filters out embeddings metadata and internal timestamps.
+        properties from Neo4j via Generic scalar, regardless of schema.
+        Automatically filters out embeddings metadata, internal timestamps,
+        and functional properties (f_* prefixed) unless explicitly requested.
         This enables agents to access any property without knowing field names.
+
+        Args:
+            coordinate: Bimba coordinate to retrieve
+            include_functional_properties: If True, include f_* prefixed functional properties.
+                                          Default False filters them out.
         """
         node_data = self._repo.neo4j_client.get_bimba_node(coordinate)
         if not node_data:
@@ -404,7 +410,15 @@ class NodeService:
         }
 
         # Filter properties while preserving all others
-        filtered_props = {k: v for k, v in node_data.items() if k not in exclude_props}
+        # Additionally filter functional properties (f_* prefix) unless explicitly requested
+        def should_include_prop(key: str) -> bool:
+            if key in exclude_props:
+                return False
+            if key.startswith("f_") and not include_functional_properties:
+                return False
+            return True
+
+        filtered_props = {k: v for k, v in node_data.items() if should_include_prop(k)}
 
         # Serialize Neo4j types to JSON-compatible values
         # Generic scalar expects JSON-serializable data, but Neo4j returns DateTime, Duration, Point, etc.
@@ -467,6 +481,9 @@ class NodeService:
         Uses the shared Neo4j client to fetch both the node and all direct
         incoming/outgoing relationships, formatting the result to match the
         GraphQL schema NodeWithEdges shape.
+
+        Filters out embeddings metadata and internal timestamps from neighbor nodes
+        to keep the response clean and focused on semantic content.
         """
         # First, resolve the node itself
         node = self.get_node(coordinate)
@@ -483,6 +500,12 @@ class NodeService:
 
             # Normalize coordinate field to always be present
             neighbor_coord = neighbor.get("bimbaCoordinate")
+
+            # Skip edges with invalid neighbors (missing bimbaCoordinate)
+            if not neighbor_coord:
+                print(f"Warning: Skipping edge with neighbor missing bimbaCoordinate: {neighbor.get('name', 'Unknown')} (uuid: {neighbor.get('uuid', 'N/A')})")
+                continue
+
             neighbor_dict = {
                 "coordinate": neighbor_coord,
                 "name": neighbor.get("name"),
@@ -494,8 +517,8 @@ class NodeService:
                 "architecturalFunction": neighbor.get("architecturalFunction") or neighbor.get("function"),
                 "symbol": neighbor.get("symbol"),
                 "uuid": neighbor.get("uuid"),
-                "createdAt": str(neighbor.get("created_at")) if neighbor.get("created_at") else None,
-                "updatedAt": str(neighbor.get("updated_at")) if neighbor.get("updated_at") else None,
+                # Note: Intentionally omitting timestamps and embeddings metadata
+                # to keep relationship responses clean and focused on semantic content
             }
 
             # Flatten relationship properties into key-value array
@@ -710,15 +733,32 @@ class NodeService:
                 if not coord or coord in seen_coords:
                     continue
                 seen_coords.add(coord)
-                name = n.get("name") or coord
+
+                # Ensure name is always a string (defensive against arrays)
+                name_raw = n.get("name")
+                if isinstance(name_raw, list):
+                    name = "; ".join(str(item) for item in name_raw if item) or coord
+                else:
+                    name = str(name_raw) if name_raw else coord
+
                 score = float(r.get("score") or 0.0)
+
+                # Extract semanticContext, ensuring it's always a string (not array)
+                # Try description, coreNature, operationalEssence in order
+                semantic_ctx = n.get("description") or n.get("coreNature") or n.get("operationalEssence")
+                # If it's a list, join with semicolons; otherwise use as-is
+                if isinstance(semantic_ctx, list):
+                    semantic_ctx = "; ".join(str(item) for item in semantic_ctx if item)
+                elif semantic_ctx is not None:
+                    semantic_ctx = str(semantic_ctx)
+
                 # Map to GraphQL type fields
                 results.append(
                     {
                         "coordinate": coord,
                         "name": name,
                         "similarity": score,
-                        "semanticContext": n.get("description") or n.get("coreNature") or n.get("operationalEssence"),
+                        "semanticContext": semantic_ctx,
                         "namespace": "Bimba",
                         "clusterId": _cluster_id_from_coordinate(coord),
                         "clusterTheme": _cluster_theme_from_coordinate(coord),
@@ -784,6 +824,111 @@ class NodeService:
                 d = {**d, "similarity": score}
             out.append(d)
         return out
+
+    def lexical_coordinate_search(self, search_string: str, limit: Optional[int] = None) -> list[dict]:
+        """Perform lexical substring search across all BimbaNode properties.
+
+        Direct property iteration for exact substring matching when semantic/fulltext search fails.
+        Heavier query but more precise - finds substrings like 'Iti' in 'My-Self/Iti'.
+
+        Args:
+            search_string: String to search for in any property
+            limit: Max results (default 20, capped at 50)
+
+        Returns:
+            List of dicts with coordinate, name, description
+        """
+        # Enforce limits
+        limit_default = 20
+        limit_cap = 50
+        result_limit = limit_default if limit is None else int(limit)
+        if result_limit < 1:
+            result_limit = limit_default
+        result_limit = min(result_limit, limit_cap)
+
+        # Cypher query with safe property checking
+        query = """
+        MATCH (n:BimbaNode)
+        WHERE any(key IN keys(n) WHERE
+            (n[key] IS :: STRING AND n[key] CONTAINS $searchString) OR
+            (n[key] IS :: LIST<ANY> AND any(item IN n[key] WHERE item IS :: STRING AND item CONTAINS $searchString))
+        )
+        RETURN n.bimbaCoordinate AS coordinate, n.name AS name, n.description AS description
+        LIMIT $limit
+        """
+
+        try:
+            records, _summary, _keys = self._repo.neo4j_client.execute_query(
+                query,
+                {"searchString": search_string, "limit": result_limit}
+            )
+
+            results = []
+            for record in records:
+                coord = record.get("coordinate")
+                name = record.get("name")
+                desc = record.get("description")
+
+                if coord:  # Only include if coordinate exists
+                    results.append({
+                        "coordinate": coord,
+                        "name": name or coord,  # Fallback to coordinate if name missing
+                        "description": desc
+                    })
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Lexical search failed for '{search_string}': {e}")
+            return []
+
+    def get_direct_children(self, bimba_coordinate: str) -> list[dict]:
+        """Get direct child nodes of a given Bimba coordinate.
+
+        Returns lean data (name, coordinate, primaryDesignation, description) for all child nodes
+        whose bimbaCoordinate begins with the parent's coordinate.
+
+        Args:
+            bimba_coordinate: Parent coordinate to find children for
+
+        Returns:
+            List of dicts with child node data
+        """
+        # Cypher query - find children via hierarchical coordinate matching
+        query = """
+        MATCH (parent:BimbaNode {bimbaCoordinate: $bimbaCoordinate})-[]->(child:BimbaNode)
+        WHERE child.bimbaCoordinate STARTS WITH parent.bimbaCoordinate
+        RETURN child {
+            .name,
+            .bimbaCoordinate,
+            .primaryDesignation,
+            .description
+        } AS child
+        """
+
+        try:
+            records, _summary, _keys = self._repo.neo4j_client.execute_query(
+                query,
+                {"bimbaCoordinate": bimba_coordinate}
+            )
+
+            children = []
+            for record in records:
+                child_data = record.get("child")
+                if child_data:
+                    # Map bimbaCoordinate to coordinate for consistency
+                    children.append({
+                        "coordinate": child_data.get("bimbaCoordinate"),
+                        "name": child_data.get("name"),
+                        "primaryDesignation": child_data.get("primaryDesignation"),
+                        "description": child_data.get("description")
+                    })
+
+            return children
+
+        except Exception as e:
+            logger.error(f"Failed to get direct children for '{bimba_coordinate}': {e}")
+            return []
 
     def _fetch_node_props_and_labels(self, coordinate: str) -> tuple[dict, list[str]]:
         query = """

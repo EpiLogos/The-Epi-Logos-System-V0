@@ -131,8 +131,8 @@ The tool returns comprehensive node information including name, subsystem, conte
                         "properties": {
                             "bimbaCoordinate": {
                                 "type": "string",
-                                "description": "Epi-Logos Bimba coordinate. Formats: '#' (system root), '#N' (subsystem), '#N-N-N' (hyphen-linked), '#N.N' (dot-linked, typically after #4). Examples: '#', '#0', '#1', '#1-2', '#3-4-5', '#4.2', '#2-3-5-4.2'",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                                "description": "Epi-Logos Bimba coordinate. Formats: '#' (system root), '#N' (subsystem), '#N-N-N' (hyphen-linked), '#N.N' (dot-linked, typically after #4), '#N/N' (slash for reflective and/or). Examples: '#', '#0', '#1', '#1-2', '#3-4-5', '#4.2', '#0-5-0/1-4'",
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
                             }
                         },
                         "required": ["bimbaCoordinate"]
@@ -150,7 +150,7 @@ The tool returns comprehensive node information including name, subsystem, conte
                             "bimbaCoordinate": {
                                 "type": "string",
                                 "description": "Bimba coordinate to inspect for relationships.",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
                             }
                         },
                         "required": ["bimbaCoordinate"]
@@ -161,9 +161,11 @@ The tool returns comprehensive node information including name, subsystem, conte
                     name="get_node_details_complete",
                     description=(
                         "Get ALL properties for a Bimba coordinate without schema restrictions (COMPLETE). "
-                        "Returns every Neo4j property via Generic scalar - no filtering, no type mapping. "
+                        "Returns Neo4j properties via Generic scalar with selective filtering. "
                         "Perfect for discovering unknown/custom properties or accessing coordinate-specific fields "
-                        "not in the canonical schema. Automatically excludes embeddings metadata and internal timestamps. "
+                        "not in the canonical schema. By default excludes embeddings metadata, internal timestamps, "
+                        "and functional properties (f_* prefix). Set includeFunctionalProperties=true to include "
+                        "f_* prefixed functional properties. "
                         "For structured canonical fields, use get_node_by_coordinate_extended instead. "
                         "For quick lookups, use resolve_coordinate instead."
                     ),
@@ -173,7 +175,12 @@ The tool returns comprehensive node information including name, subsystem, conte
                             "bimbaCoordinate": {
                                 "type": "string",
                                 "description": "Bimba coordinate to retrieve all properties for",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
+                            },
+                            "includeFunctionalProperties": {
+                                "type": "boolean",
+                                "description": "If true, include f_* prefixed functional properties (default: false)",
+                                "default": False
                             }
                         },
                         "required": ["bimbaCoordinate"]
@@ -194,7 +201,7 @@ The tool returns comprehensive node information including name, subsystem, conte
                             "bimbaCoordinate": {
                                 "type": "string",
                                 "description": "Bimba coordinate for detailed inspection",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
                             }
                         },
                         "required": ["bimbaCoordinate"]
@@ -266,12 +273,12 @@ The tool returns comprehensive node information including name, subsystem, conte
                             "startCoordinate": {
                                 "type": "string",
                                 "description": "Starting Bimba coordinate",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
                             },
                             "endCoordinate": {
                                 "type": "string",
                                 "description": "Ending Bimba coordinate",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
                             },
                             "maxHops": {
                                 "type": "integer",
@@ -313,7 +320,7 @@ The tool returns comprehensive node information including name, subsystem, conte
                             "bimbaCoordinate": {
                                 "type": "string",
                                 "description": "Bimba coordinate to regenerate embedding for",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$"
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
                             }
                         },
                         "required": ["bimbaCoordinate"]
@@ -347,12 +354,12 @@ The tool returns comprehensive node information including name, subsystem, conte
                         "properties": {
                             "fromCoordinate": {
                                 "type": "string",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$",
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$",
                                 "description": "Source Bimba coordinate"
                             },
                             "toCoordinate": {
                                 "type": "string",
-                                "pattern": r"^#(\d+([-\.]\d+)*)?$",
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$",
                                 "description": "Target Bimba coordinate"
                             },
                             "relationshipType": {
@@ -371,6 +378,51 @@ The tool returns comprehensive node information including name, subsystem, conte
                         },
                         "required": ["fromCoordinate", "toCoordinate", "relationshipType"],
                         "additionalProperties": False
+                    }
+                )
+                ,
+                Tool(
+                    name="lexical_coordinate_search",
+                    description=(
+                        "Lexical substring search across all Bimba node properties. "
+                        "Direct property iteration for exact substring matching when semantic/fulltext search fails. "
+                        "Finds substrings like 'Iti' in 'My-Self/Iti'. Heavier query but more precise. "
+                        "Use when semantic search misses exact string matches or for finding coordinates with specific text patterns."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "searchString": {
+                                "type": "string",
+                                "description": "String to search for in any property (case-sensitive)"
+                            },
+                            "limit": {
+                                "type": "integer",
+                                "description": "Maximum results to return (default 20, capped at 50)",
+                                "minimum": 1,
+                                "default": 20
+                            }
+                        },
+                        "required": ["searchString"]
+                    }
+                ),
+                Tool(
+                    name="get_direct_children",
+                    description=(
+                        "Get direct child nodes of a Bimba coordinate. "
+                        "Returns lean data (name, coordinate, primaryDesignation, description) for hierarchical children. "
+                        "Useful for exploring coordinate hierarchies and discovering sub-coordinates."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {
+                                "type": "string",
+                                "description": "Parent Bimba coordinate (#N[-|.]N...)",
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
+                            }
+                        },
+                        "required": ["bimbaCoordinate"]
                     }
                 )
             ]
@@ -401,6 +453,10 @@ The tool returns comprehensive node information including name, subsystem, conte
                     return await self._handle_regenerate_all_embeddings(arguments)
                 elif name == "create_bimba_relationship":
                     return await self._handle_create_bimba_relationship(arguments)
+                elif name == "lexical_coordinate_search":
+                    return await self._handle_lexical_coordinate_search(arguments)
+                elif name == "get_direct_children":
+                    return await self._handle_get_direct_children(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -510,10 +566,12 @@ The tool returns comprehensive node information including name, subsystem, conte
             if not coordinate:
                 return [TextContent(type="text", text="Error: bimbaCoordinate parameter is required")]
 
+            include_functional = arguments.get("includeFunctionalProperties", False)
+
             if not self.bimba_client:
                 return [TextContent(type="text", text="Error: Complete node service not initialized")]
 
-            result = await self.bimba_client.get_node_details_complete(coordinate)
+            result = await self.bimba_client.get_node_details_complete(coordinate, include_functional)
 
             if result.get("success"):
                 all_props = result.get("allProperties") or {}
@@ -949,6 +1007,102 @@ The tool returns comprehensive node information including name, subsystem, conte
             return [TextContent(type="text", text=f"Relationship creation failed: {resp}")]
         except Exception as e:
             logger.error(f"Error in create_bimba_relationship: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    async def _handle_lexical_coordinate_search(self, arguments: dict) -> list[TextContent]:
+        """Handle lexical substring search via GraphQL.
+
+        Direct property iteration for exact substring matching when semantic/fulltext search fails.
+        """
+        try:
+            search_string = arguments.get("searchString")
+            if not search_string:
+                return [TextContent(type="text", text="Error: searchString parameter is required")]
+
+            limit = arguments.get("limit")
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Lexical search client not initialized")]
+
+            result = await self.bimba_client.lexical_coordinate_search(search_string, limit)
+
+            if result.get("success"):
+                results = result.get("results", [])
+                lines: list[str] = []
+                lines.append(f"Lexical search for '{search_string}': {len(results)} results")
+
+                for i, r in enumerate(results, 1):
+                    coord = r.get("coordinate")
+                    name = r.get("name")
+                    desc = r.get("description")
+
+                    line = f"{i}. {coord}"
+                    if name:
+                        line += f" ({name})"
+                    lines.append(line)
+
+                    if desc:
+                        # Truncate long descriptions
+                        desc_preview = desc[:100] + "..." if len(desc) > 100 else desc
+                        lines.append(f"   {desc_preview}")
+
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                error = result.get("error", "Unknown error")
+                return [TextContent(type="text", text=f"Lexical search failed: {error}")]
+
+        except Exception as e:
+            logger.error(f"Error in lexical_coordinate_search: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    async def _handle_get_direct_children(self, arguments: dict) -> list[TextContent]:
+        """Handle direct children query via GraphQL.
+
+        Returns lean data for hierarchical child nodes of a given coordinate.
+        """
+        try:
+            bimba_coordinate = arguments.get("bimbaCoordinate")
+            if not bimba_coordinate:
+                return [TextContent(type="text", text="Error: bimbaCoordinate parameter is required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Bimba client not initialized")]
+
+            result = await self.bimba_client.get_direct_children(bimba_coordinate)
+
+            if result.get("success"):
+                children = result.get("children", [])
+                lines: list[str] = []
+                lines.append(f"Direct children of '{bimba_coordinate}': {len(children)} child nodes")
+
+                if not children:
+                    lines.append("(No children found)")
+                else:
+                    for i, child in enumerate(children, 1):
+                        coord = child.get("coordinate")
+                        name = child.get("name")
+                        primary_designation = child.get("primaryDesignation")
+                        desc = child.get("description")
+
+                        line = f"{i}. {coord}"
+                        if name:
+                            line += f" - {name}"
+                        if primary_designation:
+                            line += f" ({primary_designation})"
+                        lines.append(line)
+
+                        if desc:
+                            # Truncate long descriptions
+                            desc_preview = desc[:100] + "..." if len(desc) > 100 else desc
+                            lines.append(f"   {desc_preview}")
+
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                error = result.get("error", "Unknown error")
+                return [TextContent(type="text", text=f"Get direct children failed: {error}")]
+
+        except Exception as e:
+            logger.error(f"Error in get_direct_children: {e}")
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
     def _get_schema_resource(self) -> str:

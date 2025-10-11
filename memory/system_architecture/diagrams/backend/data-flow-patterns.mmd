@@ -26,7 +26,7 @@ sequenceDiagram
         F->>A: POST /api/ag-ui/run (resolve #2-3-1)
         A->>A: Create orchestrator agent
         A->>B: GraphQL coordinate query
-        B->>N: MATCH (n:BimbaNode {coordinate: "#2-3-1"})
+        B->>N: MATCH (n:BimbaNode {bimbaCoordinate: "#2-3-1"})
         N-->>B: Node data + relationships
         B-->>A: GraphQL response
         A->>R: Cache coordinate result
@@ -35,12 +35,23 @@ sequenceDiagram
 
     %% Document Intelligence Flow
     rect rgb(5, 150, 105, 0.1)
-        Note over F,Q: Document Intelligence Flow
-        F->>A: POST /api/ag-ui/run (ingest wisdom)
+        Note over F,N: Semantic Intelligence Flow (Bimba)
+        F->>A: POST /api/ag-ui/run (semantic search)
+        A->>B: GraphQL semanticCoordinateDiscovery(queryText)
+        B->>N: Vector similarity search on BimbaNode.embeddings (Neo4j vector index)
+        N-->>B: Ranked coordinate matches
+        B-->>A: GraphQL response
+        A-->>F: SSE stream with ranked results
+    end
+
+    %% Document Intelligence Flow (Sprint 4 target)
+    rect rgb(5, 150, 105, 0.1)
+        Note over F,Q: Document Intelligence Flow (LightRAG)
+        F->>A: POST /api/ag-ui/run (ingest/analyze document)
         A->>A: Activate gnostic tools
         A->>B: POST /api/lightrag/ingest
-        B->>N: Store document graph
-        B->>Q: Store vector embeddings
+        B->>N: Store document graph (metadata/links)
+        B->>Q: Store vector embeddings (Qdrant collections)
         B->>R: Cache document metadata
         B-->>A: Ingestion confirmation
         A-->>F: SSE stream with processing status
@@ -56,6 +67,31 @@ sequenceDiagram
         B->>R: Update session context
         B-->>A: Episode creation confirmation
         A-->>F: SSE stream with memory status
+    end
+
+    %% Admin Node Creation Flow (02.06)
+    rect rgb(16, 185, 129, 0.1)
+        Note over F,N: Admin Node Creation Flow
+        F->>A: POST /api/ag-ui/run (create node)
+        A->>B: GraphQL mutation createBimbaNode(input) (admin)
+        B->>N: CREATE (n:BimbaNode {bimbaCoordinate: ..., ...})
+        N-->>B: Created node data
+        B-->>A: Mutation payload
+        A-->>F: SSE confirmation
+    end
+
+    %% Embedding Regeneration Flow (02.25/02.26)
+    rect rgb(59, 130, 246, 0.1)
+        Note over B,N: Embedding Regeneration Flow
+        F->>A: POST /api/ag-ui/run (regenerate embeddings)
+        A->>B: GraphQL mutation regenerateAllEmbeddings(batchSize, force) (admin)
+        loop Batches
+            B->>N: Fetch batch of nodes
+            B->>B: Generate Gemini embeddings (1536-d) per node
+            B->>N: SET n.embeddings = [...], n.embeddingGenerated = timestamp
+        end
+        B-->>A: Summary {total, updated, skipped}
+        A-->>F: SSE progress + result
     end
 
     %% Real-time Streaming Flow

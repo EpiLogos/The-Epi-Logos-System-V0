@@ -102,6 +102,28 @@ class OrchestratorResponse(BaseModel):
 if PYDANTIC_AI_AVAILABLE:
     import os
     from agentic.agents.orchestrator.simple_context_processor import create_simple_context_processor
+
+    # Initialize delegation infrastructure (module-level singletons)
+    _agent_factory: Optional[Any] = None
+    _delegation_manager: Optional[Any] = None
+
+    def get_delegation_manager():
+        """Get or create the delegation manager singleton."""
+        global _agent_factory, _delegation_manager
+
+        if _delegation_manager is None:
+            # Lazy import to avoid circular dependency
+            from agentic.agents.delegation import DelegationManager
+            from agentic.agents.factory import AgentFactory
+            from agentic.agents.router import HybridRouter
+
+            # Initialize factory and router
+            _agent_factory = AgentFactory()
+            router = HybridRouter()
+            _delegation_manager = DelegationManager(_agent_factory, router)
+            logger.info("Initialized delegation infrastructure for orchestrator")
+
+        return _delegation_manager
     
     def create_orchestrator_agent(model_name: str) -> Agent:
         """Create an orchestrator agent with the specified model"""
@@ -419,17 +441,19 @@ if PYDANTIC_AI_AVAILABLE:
         async def get_node_details_complete(
             ctx: RunContext[OrchestratorDeps],
             coordinate: str,
+            include_functional_properties: bool = False,
         ) -> Dict[str, Any]:
             """Get ALL properties for a Bimba coordinate without schema restrictions (COMPLETE).
 
-            Returns every Neo4j property via Generic scalar - no filtering, no type mapping.
+            Returns Neo4j properties via Generic scalar with selective filtering.
             This is the most flexible retrieval tool: agents can access ANY property regardless
             of whether it's in the GraphQL schema. Perfect for:
             - Discovering unknown/custom properties on coordinates
             - Accessing coordinate-specific fields not in canonical schema
             - Full property inspection without predefined field knowledge
 
-            Automatically excludes embeddings metadata and internal timestamps.
+            By default excludes embeddings metadata, internal timestamps, and functional properties (f_* prefix).
+            Set include_functional_properties=True to include f_* prefixed functional properties.
             For structured canonical fields, use inspect_coordinate_detailed instead.
             For quick lookups, use resolve_coordinate instead.
 
@@ -440,9 +464,10 @@ if PYDANTIC_AI_AVAILABLE:
 
             Args:
                 coordinate: The coordinate to retrieve all properties for (e.g., #2, #2.3, #2-3-1)
+                include_functional_properties: If True, include f_* prefixed functional properties (default: False)
             """
             try:
-                logger.info(f"🔍 Getting complete node details for: {coordinate}")
+                logger.info(f"🔍 Getting complete node details for: {coordinate} (functional_properties={include_functional_properties})")
 
                 if not ctx.deps.bimba_client:
                     return {"success": False, "error": "Bimba client not available", "allProperties": None}
@@ -451,7 +476,7 @@ if PYDANTIC_AI_AVAILABLE:
                 from agentic.agents.orchestrator.tools.bimba.http_bimba_tools import HttpBimbaClient
                 http_client = HttpBimbaClient(ctx.deps.bimba_client)
 
-                result = await http_client.get_node_details_complete(coordinate)
+                result = await http_client.get_node_details_complete(coordinate, include_functional_properties)
 
                 if result.get("success"):
                     logger.info(f"Successfully retrieved complete details for {coordinate}")
@@ -594,6 +619,32 @@ if PYDANTIC_AI_AVAILABLE:
                 )
                 return {"success": False, "error": str(e), "path": None}
 
+        @agent.tool
+        async def semantic_coordinate_discovery(
+            ctx: RunContext[OrchestratorDeps],
+            query: str,
+            max_results: int = 5
+        ) -> Dict[str, Any]:
+            """Search for coordinates using semantic similarity via Backend GraphQL.
+
+            Discovers Bimba coordinates that semantically match a natural language query.
+            Uses hybrid vector + keyword search to find relevant coordinates across the
+            entire knowledge graph.
+
+            Args:
+                query: Natural language query for semantic discovery
+                max_results: Maximum number of results to return (default 5)
+            """
+            try:
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "error": "Bimba client not available"}
+
+                logger.info(f"🔧 TOOL CALL: semantic_coordinate_discovery for: {query[:50]}...")
+                result = await ctx.deps.bimba_client.semantic_coordinate_discovery(query, max_results)
+                return result
+            except Exception as e:
+                logger.error(f"Error in semantic coordinate discovery: {e}")
+                return {"success": False, "results": [], "error": str(e)}
 
         @agent.tool
         def get_session_context(ctx: RunContext[OrchestratorDeps]) -> Dict[str, Any]:
@@ -995,19 +1046,110 @@ if PYDANTIC_AI_AVAILABLE:
                 return {"success": False, "error": str(e)}
 
         @agent.tool
+        async def delegate_to_subagent(
+            ctx: RunContext[OrchestratorDeps],
+            message: str,
+            target_subsystem: Optional[int] = None
+        ) -> Dict[str, Any]:
+            """Delegate a request to a specialized subagent in the 6-fold constellation.
+
+            The Epi-Logos System has 6 specialized subagents, each handling different types of processing:
+            - #0 Anuttara: Proto-logical void processing, foundational operations
+            - #1 Paramasiva: Quaternal logic engine, architectural reasoning
+            - #2 Parashakti: Vibrational processing, cosmic imagination
+            - #3 Mahamaya: Symbolic transcription, universal language
+            - #4 Nara: Dialogical interface, personal interaction
+            - #5 Epii: Master orchestrator, wisdom synthesis
+
+            Use this tool when:
+            - User explicitly requests a specific agent (via /delegate command)
+            - Request requires specialized processing beyond orchestrator capabilities
+            - Deep domain expertise is needed (e.g., symbolic alchemy, QL reasoning)
+
+            Args:
+                message: The request to delegate to the subagent
+                target_subsystem: Specific subsystem (0-5), or None for auto-selection
+
+            Returns:
+                Dict containing the subagent's response and delegation metadata
+            """
+            try:
+                logger.info(f"🔧 TOOL CALL: delegate_to_subagent (target: {target_subsystem}, message: {message[:50]}...)")
+
+                # Check if manual delegation is requested via state/context
+                if target_subsystem is None:
+                    # Check state first
+                    target_subsystem = ctx.deps.state.get("target_agent") if ctx.deps.state else None
+
+                    # If not in state, check context package
+                    if target_subsystem is None and ctx.deps.context_package:
+                        # Context package may have target_agent from CLI
+                        target_subsystem = ctx.deps.context_package.get("target_agent")
+
+                # Get delegation manager
+                delegation_manager = get_delegation_manager()
+
+                # Execute delegation
+                result = await delegation_manager.delegate(
+                    message=message,
+                    ctx=ctx,
+                    target_subsystem=target_subsystem,
+                    model_name=None  # Use same model as orchestrator
+                )
+
+                # Extract response from result
+                if hasattr(result, 'data'):
+                    # AgentRunResult
+                    response_text = str(result.data)
+                else:
+                    # StreamedRunResult - get final data
+                    response_text = str(result)
+
+                # Extract usage data (usage is a method, not a property)
+                usage_data = None
+                if hasattr(result, 'usage'):
+                    try:
+                        usage_obj = result.usage()
+                        # Convert to serializable dict
+                        usage_data = {
+                            "request_tokens": usage_obj.request_tokens,
+                            "response_tokens": usage_obj.response_tokens,
+                            "total_tokens": usage_obj.total_tokens,
+                            "details": usage_obj.details if hasattr(usage_obj, 'details') else None
+                        }
+                    except Exception as e:
+                        logger.warning(f"Failed to extract usage data: {e}")
+
+                return {
+                    "success": True,
+                    "target_subsystem": target_subsystem,
+                    "response": response_text,
+                    "delegation_mode": "manual" if target_subsystem is not None else "auto",
+                    "usage": usage_data
+                }
+
+            except Exception as e:
+                logger.error(f"Error delegating to subagent: {e}")
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "target_subsystem": target_subsystem
+                }
+
+        @agent.tool
         async def access_agent_ruminations(
             ctx: RunContext[OrchestratorDeps],
             limit: int = 20
         ) -> Dict[str, Any]:
             """Access agent's reflective thoughts and meta-cognitive patterns.
-            
+
             ⚠️ PREMATURE TOOL - Graphiti store currently unpopulated, ruminations will be empty.
-            
+
             This tool provides insight into the agent's own processual development and
             reflective capacity within the Episodic namespace. Ruminations represent
             higher-order cognitive processes where the agent reflects on experiences,
             forming meta-patterns and wisdom synthesis beyond immediate responses.
-            
+
             Args:
                 limit: Maximum number of ruminations to retrieve
             """
@@ -1044,16 +1186,29 @@ if PYDANTIC_AI_AVAILABLE:
             # Get complete system foundation from modular imports
             foundation = get_complete_system_foundation()
             
+            # Check if manual delegation is requested
+            target_agent = ctx.deps.state.get("target_agent") if ctx.deps.state else None
+            delegation_notice = ""
+            if target_agent is not None:
+                delegation_notice = f"""
+
+**⚠️ MANUAL DELEGATION ACTIVE:**
+The user has explicitly requested delegation to agent #{target_agent}.
+YOU MUST IMMEDIATELY use the delegate_to_subagent tool with target_subsystem={target_agent}.
+Pass the user's complete message to the tool. Do NOT respond directly - delegate immediately.
+"""
+
             return f"""{foundation}
 
 **Coordinate Reasoning Protocol:**
-When resolving coordinates, synthesize and interpret the data contextually rather than regurgitating raw information. 
-Consider the operationalEssence, coreNature, architecturalFunction, and symbol to provide meaningful insights that connect 
+When resolving coordinates, synthesize and interpret the data contextually rather than regurgitating raw information.
+Consider the operationalEssence, coreNature, architecturalFunction, and symbol to provide meaningful insights that connect
 the coordinate's content to the user's query. Transform technical data into wisdom.
 
 Current persona: {ctx.deps.current_persona}
+{delegation_notice}
 
-IMPORTANT: Proactively monitor conversation length. If you suspect we're approaching context window limits, 
+IMPORTANT: Proactively monitor conversation length. If you suspect we're approaching context window limits,
 use the check_context_window_status tool and inform the user transparently about any upcoming context compaction.
 """
 

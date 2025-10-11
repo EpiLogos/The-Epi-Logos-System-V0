@@ -52,24 +52,62 @@ async def run_agent(request: Request) -> Response:
         state = request_data.get('state', {})
         model_config = state.get('model', os.getenv('DEFAULT_LLM_MODEL', 'test'))
         current_persona = state.get('persona', 'system')
-        
+
+        # Extract target_agent from state (for manual delegation from CLI)
+        target_agent = state.get('target_agent')
+
         # Detect new chat from frontend (clear messages button sets this)
         is_new_chat = len(request_data.get('messages', [])) == 1 and 'new-chat' in thread_id
-        
-        logger.info(f"🤖 Model: {model_config} | 👤 Persona: {current_persona} | 📞 Session: {thread_id}")
 
-        # Create dependencies for agent (let AG-UI handle message history natively)
+        # Get or create session_id from thread_id mapping (3-layer context hierarchy)
+        # First create temporary deps to access redis_client
         auth_header = request.headers.get('authorization') or request.headers.get('Authorization')
         auth_token = None
         if auth_header and auth_header.lower().startswith('bearer '):
             auth_token = auth_header.split(' ', 1)[1].strip()
-        deps = await create_enhanced_orchestrator_deps(
-            session_id=thread_id,
+
+        temp_deps = await create_enhanced_orchestrator_deps(
+            session_id=thread_id,  # Temporary, will be replaced
             user_id="web-user",
             current_persona=current_persona,
             model_config=model_config,
             auth_token=auth_token,
         )
+
+        # Map thread_id to session_id (or create new session)
+        session_id = await temp_deps.redis_client.get_session_id_for_thread(thread_id)
+
+        if not session_id:
+            # Create new session for this thread
+            session_id = await temp_deps.redis_client.create_session(
+                user_id="web-user",
+                session_data={
+                    "source": "ag-ui",
+                    "thread_id": thread_id,
+                    "model": model_config,
+                    "persona": current_persona
+                },
+                thread_id=thread_id
+            )
+            logger.info(f"🆕 Created new session {session_id} for thread: {thread_id}")
+
+        if target_agent is not None:
+            logger.info(f"🤖 Model: {model_config} | 👤 Persona: {current_persona} | 🎯 Target: #{target_agent} | 🧵 Thread: {thread_id} | 📞 Session: {session_id}")
+        else:
+            logger.info(f"🤖 Model: {model_config} | 👤 Persona: {current_persona} | 🧵 Thread: {thread_id} | 📞 Session: {session_id}")
+
+        # Create dependencies with proper session_id
+        deps = await create_enhanced_orchestrator_deps(
+            session_id=session_id,
+            user_id="web-user",
+            current_persona=current_persona,
+            model_config=model_config,
+            auth_token=auth_token,
+        )
+
+        # Add target_agent to state if provided (for manual delegation)
+        if target_agent is not None:
+            deps.state['target_agent'] = target_agent
         
         # Create orchestrator agent with selected model
         from agentic.agents.orchestrator.orchestrator_agent import create_orchestrator_agent
@@ -105,17 +143,47 @@ async def run_agent_direct(run_input: RunAgentInput):
         state = run_input.state or {}
         model_config = state.get('model', os.getenv('DEFAULT_LLM_MODEL', 'test'))
         current_persona = state.get('persona', 'system')
+        target_agent = state.get('target_agent')
 
-        # Create dependencies for the agent
+        # Create temporary deps to access redis_client for thread mapping
         auth_token = None
-        # run_input may have forwarded headers in the future; keep interface aligned
-        deps = await create_enhanced_orchestrator_deps(
-            session_id=thread_id,
+        temp_deps = await create_enhanced_orchestrator_deps(
+            session_id=thread_id,  # Temporary, will be replaced
             user_id="web-user",
             current_persona=current_persona,
             model_config=model_config,
             auth_token=auth_token,
         )
+
+        # Map thread_id to session_id (or create new session)
+        session_id = await temp_deps.redis_client.get_session_id_for_thread(thread_id)
+
+        if not session_id:
+            # Create new session for this thread
+            session_id = await temp_deps.redis_client.create_session(
+                user_id="web-user",
+                session_data={
+                    "source": "ag-ui-direct",
+                    "thread_id": thread_id,
+                    "model": model_config,
+                    "persona": current_persona
+                },
+                thread_id=thread_id
+            )
+            logger.info(f"🆕 Created new session {session_id} for thread: {thread_id}")
+
+        # Create dependencies with proper session_id
+        deps = await create_enhanced_orchestrator_deps(
+            session_id=session_id,
+            user_id="web-user",
+            current_persona=current_persona,
+            model_config=model_config,
+            auth_token=auth_token,
+        )
+
+        # Add target_agent to state if provided (for manual delegation)
+        if target_agent is not None:
+            deps.state['target_agent'] = target_agent
 
         # Create orchestrator agent with selected model
         from ..agents.orchestrator.orchestrator_agent import create_orchestrator_agent

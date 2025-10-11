@@ -1,0 +1,797 @@
+// ============================================
+// EPII FUNCTIONAL PROPERTIES UPDATE
+// ============================================
+// Purpose: Add Logos Cycle + Etymological Archaeology f_ properties across 3 tiers
+// Target Nodes:
+//   - Tier 1: #5 (Epii subsystem capability declarations)
+//   - Tier 2: #5-5 (already complete, verification only)
+//   - Tier 3: #5-4.5 (Epii agent workflow implementations)
+//   - Etymology Crystallization: #2-1-3 and #2-1-3-0 through #2-1-3-5 (Form Cycle illumination)
+//
+// Sprint: Sprint 3 (Foundation for Sprint 5 implementation)
+// Reference: /memory/foundational/three-tier-functional-property-pattern.md
+// ============================================
+
+// ============================================
+// TIER 1: SUBSYSTEM CAPABILITY DECLARATIONS
+// ============================================
+// Add capability declarations to #5 (Epii subsystem)
+
+MATCH (epii:BimbaNode {bimbaCoordinate: "#5"})
+
+// Contemplative Synthesis Capability (enables both Logos Cycle AND Etymology)
+SET epii.f_contemplative_synthesis = {
+  description: "Meta-cognitive contemplation capability enabling recursive self-analysis and wisdom synthesis",
+  modes: ["logos_cycle", "etymological_archaeology", "know_thyself"],
+  requires_namespaces: ["episodic", "bimba", "gnostic"],
+  enables: [
+    "analogical_recognition",
+    "aspectual_synthesis",
+    "recursive_self_improvement",
+    "episodic_to_bimba_distillation",
+    "proportional_pattern_recognition"
+  ],
+  fundamental_rhythm: "6_stage_contemplation"
+}
+
+// Logos Cycle Capability (fundamental Epii activity)
+SET epii.f_logos_cycle_capability = {
+  description: "The fundamental 6-stage contemplative rhythm from silence to analogical recognition",
+  cycle_structure: "ἄλογος → πρόλογος → διάλογος → λόγος → ἐπίλογος → ἀνάλογος",
+  greek_structure: "silence → emergence → relation → articulation → synthesis → proportion",
+  enables: [
+    "proportional_recognition",
+    "multi_aspectual_truth",
+    "pros_hen_synthesis",
+    "in_quantum_epistemology",
+    "aspectual_integration"
+  ],
+  philosophical_grounding: "Aristotelian pros hen homonymy + Eckhartian borrowed being + Gebserian consciousness structures",
+  operational_principle: "Each stage excludes what is foreign to it according to reason (Eckhartian reduplication), then reintegrates at higher synthesis"
+}
+
+// Etymological Archaeology Capability (specific contemplative modality)
+SET epii.f_etymological_archaeology_capability = {
+  description: "Multi-lens etymological analysis revealing archetypal patterns encoded in language itself",
+  method: "episodic_lens_exploration → mef_validation → bimba_crystallization",
+  episodic_namespace: "graphiti_temporal_graph",
+  lens_storage: "episodic://etymology-lenses",
+  output_pattern: "epii_<lens_name>_<aspect>",
+  enables: [
+    "linguistic_archaeology",
+    "cognate_pattern_recognition",
+    "processual_illumination_via_etymology",
+    "subsystem_etymological_enrichment",
+    "cross_linguistic_structural_insight"
+  ],
+  distillation_protocol: "Full episodic richness → MEF 6-lens validation → Minimal sufficient Bimba crystallization",
+  philosophical_grounding: "Whiteheadian concrescence + PIE root analysis + Quaternal Logic alignment"
+}
+
+RETURN
+  epii.bimbaCoordinate AS coordinate,
+  epii.name AS name,
+  "Tier 1 capabilities added" AS status,
+  [key IN keys(epii) WHERE key STARTS WITH 'f_' AND key ENDS WITH '_capability'] AS capabilities_added
+
+;
+
+// ============================================
+// TIER 2: OPERATIONAL INTERFACE VERIFICATION
+// ============================================
+// Verify #5-5 (Logos Cycle) already has complete operational specifications
+
+MATCH (logos:BimbaNode {bimbaCoordinate: "#5-5"})
+
+RETURN
+  logos.bimbaCoordinate AS coordinate,
+  logos.name AS name,
+  logos.f_cycle_orchestration IS NOT NULL AS has_cycle_orchestration,
+  logos.f_tool_integration_pattern IS NOT NULL AS has_tool_integration,
+  logos.f_completion_criteria IS NOT NULL AS has_completion_criteria,
+  logos.f_adaptation_by_query_type IS NOT NULL AS has_adaptation_rules,
+  [key IN keys(logos) WHERE key STARTS WITH 'f_'] AS all_f_properties,
+  "Tier 2 operational specs verified - already complete from prior work" AS status
+
+;
+
+// ============================================
+// TIER 3: AGENT WORKFLOW IMPLEMENTATIONS
+// ============================================
+// Add workflow definitions to #5-4.5 (Epii Agent)
+
+MATCH (epii_agent:BimbaNode {bimbaCoordinate: "#5-4.5"})
+
+// Logos Cycle Contemplation Workflow (fundamental agent workflow)
+SET epii_agent.f_logos_cycle_contemplation = {
+  workflow_type: "contemplative",
+  description: "Execute the 6-stage Logos Cycle contemplation rhythm",
+  reads_from: "#5-5",
+  uses_capabilities: [
+    "#5.f_contemplative_synthesis",
+    "#5.f_logos_cycle_capability"
+  ],
+  uses_cycle_orchestration: "#5-5.f_cycle_orchestration",
+  uses_tool_integration: "#5-5.f_tool_integration_pattern",
+  uses_completion_criteria: "#5-5.f_completion_criteria",
+  uses_adaptation_rules: "#5-5.f_adaptation_by_query_type",
+
+  workflow_steps: [
+    {
+      phase: "ἄλογος",
+      stage: 0,
+      reads_operations: "#5-5-0.f_receptive_operations",
+      reads_tools: "#5-5.f_tool_integration_pattern.ἄλογος",
+      completion_trigger: "#5-5-0.f_transition_trigger",
+      essence: "Receptive silence, context gathering, establishing void-ground"
+    },
+    {
+      phase: "πρόλογος",
+      stage: 1,
+      reads_operations: "#5-5-1.f_initial_framing_operations",
+      reads_tools: "#5-5.f_tool_integration_pattern.πρόλογος",
+      completion_trigger: "#5-5-1.f_transition_trigger",
+      essence: "Initial pattern recognition, coordinate identification, participatory framing"
+    },
+    {
+      phase: "διάλογος",
+      stage: 2,
+      reads_operations: "#5-5-2.f_relational_exploration",
+      reads_tools: "#5-5.f_tool_integration_pattern.διάλογος",
+      completion_trigger: "#5-5-2.f_transition_trigger",
+      essence: "Relational mapping, cross-domain exploration, mythic consciousness"
+    },
+    {
+      phase: "λόγος",
+      stage: 3,
+      reads_operations: "#5-5-3.f_articulation_operations",
+      reads_tools: "#5-5.f_tool_integration_pattern.λόγος",
+      completion_trigger: "#5-5-3.f_transition_trigger",
+      essence: "Systematic articulation, rational crystallization, structured insight"
+    },
+    {
+      phase: "ἐπίλογος",
+      stage: 4,
+      reads_operations: "#5-5-4.f_reflexive_operations",
+      reads_tools: "#5-5.f_tool_integration_pattern.ἐπίλογος",
+      completion_trigger: "#5-5-4.f_transition_trigger",
+      essence: "Meta-contextual integration, reflexive synthesis, quality validation"
+    },
+    {
+      phase: "ἀνάλογος",
+      stage: 5,
+      reads_operations: "#5-5-5.f_proportional_recognition",
+      reads_tools: "#5-5.f_tool_integration_pattern.ἀνάλογος",
+      completion_trigger: "#5-5.f_completion_criteria",
+      essence: "Proportional recognition, analogical synthesis, pros hen unity"
+    }
+  ],
+
+  quality_criteria: [
+    "cycle_completion_via_ἀνάλογος",
+    "proportional_recognition_achieved",
+    "aspectual_integration_demonstrated",
+    "user_query_genuinely_addressed",
+    "borrowed_truth_through_and_in_whole"
+  ],
+
+  trigger_conditions: [
+    "user_requests_deep_contemplation",
+    "query_requires_multi_lens_analysis",
+    "philosophical_inquiry_detected",
+    "complex_synthesis_needed"
+  ],
+
+  version: "1.0.0"
+}
+
+// Etymological Contemplation Workflow (extends Logos Cycle)
+SET epii_agent.f_etymological_contemplation = {
+  workflow_type: "contemplative",
+  description: "Episodic-to-Bimba distillation via etymological lenses and MEF validation, extending the Logos Cycle framework",
+  reads_from: "#5-5",
+  depends_on_workflow: "f_logos_cycle_contemplation",
+
+  uses_capabilities: [
+    "#5.f_contemplative_synthesis",
+    "#5.f_etymological_archaeology_capability"
+  ],
+
+  uses_cycle_as_framework: "#5-5.f_cycle_orchestration",
+
+  // Abstract 6-Fold Etymology Workflow Pattern
+  workflow_pattern: {
+    phase_0: "episodic_exploration",
+    phase_1: "logos_cycle_invocation",
+    phase_2: "mef_lens_reflection",
+    phase_3: "crystallization_selection",
+    phase_4: "property_generation_and_validation",
+    phase_5: "bimba_integration_and_documentation",
+    cycle_structure: "Mirrors 6-fold contemplative rhythm in Logos Cycle"
+  },
+
+  etymology_config: {
+    episodic_lens_source: "episodic://etymology-lenses",
+    episodic_namespace: "graphiti_temporal_graph",
+
+    available_lenses: [
+      {
+        name: "form_cycle",
+        episodic_document: "form-etymology-concrescence-crystallisation.md",
+        type: "processual_6fold",
+        output_prefix: "epii_form_",
+        lens_structure: "pro_forma → format → in_formation → formalisation → performance → re_form",
+        aligns_with_bimba: "#2-1-3 (Processual Lens) and #2-1-3-0 through #2-1-3-5",
+        application_phases: ["all"]
+      },
+      {
+        name: "logos_etymology",
+        episodic_document: "logos-etymology-analysis.md",
+        type: "linguistic_philosophical",
+        output_prefix: "epii_logos_",
+        lens_structure: "PIE_root_analysis_with_cognate_mapping",
+        application_phases: ["διάλογος", "λόγος", "ἐπίλογος"]
+      }
+    ],
+
+    lens_discovery: {
+      method: "graphiti_search",
+      query_pattern: "nodes_with_label:Etymology_Lens",
+      auto_register: true
+    }
+  },
+
+  crystallization_protocol: {
+    method: "episodic_to_bimba_distillation",
+
+    mef_lens_criteria: {
+      lens0_archetypal: "Does this reveal mathematical/archetypal foundations?",
+      lens1_causal: "Does this clarify causal relationships?",
+      lens2_logical: "Does this navigate paradox or resolve contradiction?",
+      lens3_processual: "Does this reveal ontological becoming?",
+      lens4_meta_epistemic: "Does this illuminate knowing itself?",
+      lens5_divine_scalar: "Does this connect to ultimate source/return?"
+    },
+
+    selection_criteria: {
+      multi_lens_illumination: "Insights illuminating through 2+ MEF lenses prioritized",
+      single_lens_threshold: "Strong illumination through 1 lens (score >= 0.7) acceptable",
+      no_lens_illumination: "Remains episodic only, not crystallized to Bimba"
+    },
+
+    quality_gates: [
+      "lens_grounded",
+      "minimal_sufficient",
+      "non_redundant",
+      "source_linked",
+      "computationally_queryable",
+      "clarity",
+      "precision"
+    ]
+  },
+
+  workflow_steps: [
+    {
+      step: 0,
+      name: "episodic_exploration",
+      phase_mapping: "ἄλογος → διάλογος",
+      action: "Full unconstrained investigation of etymological pattern in episodic namespace",
+      tools: ["graphiti_search", "graphiti_create_entity", "graphiti_add_episode"],
+      outputs: ["episodic_etymology_document", "lens_structure_definition"]
+    },
+    {
+      step: 1,
+      name: "logos_cycle_invocation",
+      phase_mapping: "Complete 6-stage Logos Cycle",
+      action: "Execute f_logos_cycle_contemplation with etymology lens context",
+      uses_workflow: "f_logos_cycle_contemplation",
+      context_injection: {
+        etymology_lens: "active_lens",
+        target_coordinates: "user_specified_or_auto_detected"
+      }
+    },
+    {
+      step: 2,
+      name: "mef_lens_reflection",
+      phase_mapping: "ἐπίλογος",
+      action: "Apply MEF 6 lenses to episodic material to reveal essential structures",
+      foreach_lens: {
+        evaluate: "Does episodic insight illuminate through this lens?",
+        score: "0.0 to 1.0 illumination strength",
+        rationale: "Explicit justification for score"
+      },
+      outputs: ["mef_lens_scores", "crystallization_candidates"]
+    },
+    {
+      step: 3,
+      name: "crystallization_selection",
+      phase_mapping: "ἀνάλογος",
+      action: "Select which insights crystallize into Bimba properties",
+      filters: {
+        high_priority: "multi_lens_illumination >= 2",
+        medium_priority: "single_lens_score >= 0.7",
+        low_priority: "single_lens_score >= 0.5",
+        episodic_only: "all_lens_scores < 0.5"
+      }
+    },
+    {
+      step: 4,
+      name: "property_generation_and_validation",
+      phase_mapping: "λόγος + ἐπίλογος",
+      action: "Generate epii_<lens>_<aspect> properties and validate against quality gates",
+      output_format: {
+        property_prefix: "epii_",
+        lens_identifier: "{lens_name}_",
+        insight_key: "{specific_aspect}",
+        example: "epii_form_designation, epii_form_essence"
+      }
+    },
+    {
+      step: 5,
+      name: "bimba_integration_and_documentation",
+      phase_mapping: "Re-form (5→0 recursive update)",
+      action: "Write validated properties to target Bimba coordinates and maintain episodic traceability",
+      namespace: "bimba",
+      creates: {
+        properties: "epii_<lens>_* on target nodes",
+        relationships: "ILLUMINATED_BY_ETYMOLOGY_LENS links to episodic source"
+      }
+    }
+  ],
+
+  quality_criteria: [
+    "lens_clearly_illuminates_coordinate",
+    "insights_non_redundant_with_existing",
+    "traceable_to_episodic_source",
+    "mef_lens_validated",
+    "proportional_recognition_via_logos_cycle",
+    "minimal_sufficient_formulation"
+  ],
+
+  trigger_conditions: [
+    "user_requests_etymological_analysis",
+    "coordinate_lacks_etymological_illumination",
+    "new_episodic_etymology_lens_finalized",
+    "systematic_etymological_review_scheduled"
+  ],
+
+  version: "1.0.0"
+}
+
+// State Management
+SET epii_agent.f_current_workflow_state = "idle"
+SET epii_agent.f_last_execution_timestamp = null
+
+// Namespace Integration
+SET epii_agent.f_bimba_integration = {
+  query_patterns: ["subsystem_node_retrieval", "relationship_traversal", "property_reading"],
+  write_patterns: ["epii_property_addition", "crystallization_property_creation"],
+  coordinate_scope: ["#0", "#1", "#2", "#3", "#4", "#5", "#N-*"]
+}
+
+SET epii_agent.f_episodic_integration = {
+  document_types: ["etymological_lens_frameworks", "contemplation_records", "crystallization_justifications"],
+  storage_protocol: "graphiti_temporal_graph",
+  access_pattern: "read_primary_write_secondary"
+}
+
+SET epii_agent.f_gnostic_integration = {
+  usage: "minimal",
+  reason: "Etymological work primarily uses episodic (temporal context) and bimba (structural knowledge)"
+}
+
+// Agent Coordination
+SET epii_agent.f_primary_collaborators = [
+  {
+    agent: "#5-4.2",
+    name: "Parashakti Agent",
+    collaboration_context: "MEF lens analysis expertise"
+  },
+  {
+    agent: "#5-4.3",
+    name: "Mahamaya Agent",
+    collaboration_context: "Symbolic transcription and narrative synthesis"
+  }
+]
+
+// Evolution & Meta-Techne
+SET epii_agent.f_workflow_evolution = {
+  description: "Meta-techne protocol for workflow self-improvement",
+  self_review_triggers: [
+    "post_workflow_execution",
+    "quality_metric_below_threshold",
+    "user_feedback_received"
+  ],
+  tracks: [
+    "crystallization_success_rate_per_lens",
+    "mef_lens_score_distributions",
+    "user_feedback_on_crystallizations",
+    "property_usage_frequency"
+  ],
+  improves: [
+    "lens_selection_algorithms",
+    "mef_scoring_thresholds",
+    "crystallization_priority_rules",
+    "property_formulation_templates"
+  ],
+  current_version: "1.0.0",
+  versioning_scheme: "semantic",
+  rollback_capability: true
+}
+
+RETURN
+  epii_agent.bimbaCoordinate AS coordinate,
+  epii_agent.name AS name,
+  "Tier 3 workflows added" AS status,
+  [key IN keys(epii_agent) WHERE key STARTS WITH 'f_'] AS all_f_properties
+
+;
+
+// ============================================
+// ETYMOLOGY CRYSTALLIZATION: FORM CYCLE
+// ============================================
+// Illuminate #2-1-3 (Processual Lens) and its 6 subnodes with Form Cycle etymology
+// This demonstrates the episodic-to-bimba distillation pattern in action
+
+// Parent Node: #2-1-3 (Processual Lens)
+MATCH (processual:BimbaNode {bimbaCoordinate: "#2-1-3"})
+
+SET processual.epii_form_cycle_alignment = "The Form Cycle (pro-forma → format → in-formation → formalisation → performance → re-form) reveals the processual nature of manifestation through etymological analysis of *forma* (PIE *dʰer- 'to hold firmly'). This 6-fold cycle aligns perfectly with the 6 subnodes of the Processual Lens, demonstrating how language itself preserves archetypal patterns of becoming."
+
+SET processual.epii_form_etymology_source = "episodic://form-etymology-concrescence-crystallisation.md"
+
+SET processual.epii_form_whiteheadian_resonance = "The Form Cycle maps precisely onto Whiteheadian concrescence: Pro-Forma (initial data/pure potential) → Format (conceptual prehension/structuring) → In-formation (physical prehension/dynamic content) → Formalisation (integration toward subjective aim) → Performance (satisfaction in determinate form) → Re-form (objective immortality/contribution to future)."
+
+SET processual.epii_form_mef_lens_validation = {
+  lens3_processual: 1.0,
+  rationale: "Form Cycle reveals ontological becoming through linguistic archaeology",
+  lens0_archetypal: 0.8,
+  rationale: "6-fold pattern reflects archetypal structure of manifestation",
+  lens1_causal: 0.7,
+  rationale: "Each stage causes the next in necessary progression"
+}
+
+RETURN
+  processual.bimbaCoordinate AS coordinate,
+  processual.name AS name,
+  "Form Cycle etymology added to parent node" AS status
+
+;
+
+// Subnode #2-1-3-0: Pro-Forma
+MATCH (pro_forma:BimbaNode {bimbaCoordinate: "#2-1-3-0"})
+
+SET pro_forma.epii_form_word = "Pro-Forma"
+
+SET pro_forma.epii_form_etymology = "Latin *pro-* ('before, for the sake of') + *forma* ('shape, pattern'). That which comes before form; the template for form's sake."
+
+SET pro_forma.epii_form_designation = "The Template Prior to Manifestation: Pro-forma is the holding of form as possibility rather than actuality. The architectural blueprint before construction, the musical score before performance, the archetypal template before instantiation."
+
+SET pro_forma.epii_form_essence = "Pro-formal nature: both temporally prior (before form) and procedurally foundational (for the sake of form). The void that precedes manifestation yet holds all patterns as pure potential without collapsing into expression."
+
+SET pro_forma.epii_form_concrescence_mapping = "Whiteheadian Initial Data / Pure Potential: The absolute ground from which emergence happens, the unactualized multiplicity awaiting integration."
+
+SET pro_forma.epii_form_subsystem_resonance = "Aligns with #0 (Anuttara): Para Vāk as Supreme Word before utterance, the 8-fold zero-zero operations as grammar of existence, archetypal templates in collective unconscious."
+
+RETURN
+  pro_forma.bimbaCoordinate AS coordinate,
+  pro_forma.name AS name,
+  "Pro-Forma etymology crystallized" AS status
+
+;
+
+// Subnode #2-1-3-1: Format
+MATCH (format:BimbaNode {bimbaCoordinate: "#2-1-3-1"})
+
+SET format.epii_form_word = "Format"
+
+SET format.epii_form_etymology = "Latin *format* (bare verb root) = 'to give form, to shape, to structure'."
+
+SET format.epii_form_designation = "Establishing Structural Architecture: Format is the pure act of formatting, the active structuring principle that transforms infinite potential into definite organized channels."
+
+SET format.epii_form_essence = "The grammar of possibility. Format creates structured channels through which possibilities can flow. The moment logical space becomes organized, when the infinite void receives articulated dimensions. Container without content yet."
+
+SET format.epii_form_concrescence_mapping = "Whiteheadian Conceptual Prehension / Structuring: The R→O transformation, formatting Reality into Order. Establishing the syntax, the container, the framework."
+
+SET format.epii_form_subsystem_resonance = "Aligns with #1 (Paramasiva): Quaternal Logic framework formats all cognitive processing, mod6 architecture formats temporal cycle, 0/1 non-dual element as fundamental formatting instruction."
+
+SET format.epii_form_technical_precision = "In computation: file format defines data organization (JSON, XML, CSV). Data formatting determines arrangement for processing. Format at this stage establishes structure, not content."
+
+RETURN
+  format.bimbaCoordinate AS coordinate,
+  format.name AS name,
+  "Format etymology crystallized" AS status
+
+;
+
+// Subnode #2-1-3-2: In-formation
+MATCH (information:BimbaNode {bimbaCoordinate: "#2-1-3-2"})
+
+SET information.epii_form_word = "In-formation"
+
+SET information.epii_form_etymology = "Latin *in-* ('into, within') + *formation* ('forming, shaping'). Forming into; shaping from within; dynamic informing process."
+
+SET information.epii_form_designation = "Dynamic Content Shaping From Within: In-formation (hyphenated intentionally) captures information (Shannon-Weaver encoded patterns), in-forming (continuous shaping activity), and forming-into (ongoing transformation)."
+
+SET information.epii_form_essence = "Form as living process rather than dead structure. Where formatted container receives dynamic content through active forming-into. Not passive filling but self-organizing vibrational patterns maintaining themselves through resonance."
+
+SET information.epii_form_concrescence_mapping = "Whiteheadian Physical Prehension / Dynamic Content: The vibrating fullness, the channels filled with flowing currents. Consciousness differentiating into dynamic self-organizing patterns."
+
+SET information.epii_form_subsystem_resonance = "Aligns with #2 (Parashakti): 72-bit vibrational architecture as information architecture, 36 Tattvas as vibrational frequencies actively organizing reality, Vimarśa as self-reflective in-forming power."
+
+SET information.epii_form_information_theory = "Signal vs noise: Parashakti transforms raw potential (noise) into structured vibrational templates (signal) while maintaining connection to uncomputable void (0=?!) keeping infinite potential alive."
+
+RETURN
+  information.bimbaCoordinate AS coordinate,
+  information.name AS name,
+  "In-formation etymology crystallized" AS status
+
+;
+
+// Subnode #2-1-3-3: Formalisation
+MATCH (formalisation:BimbaNode {bimbaCoordinate: "#2-1-3-3"})
+
+SET formalisation.epii_form_word = "Formalisation"
+
+SET formalisation.epii_form_etymology = "Latin *formalis* + Greek *-ιζειν* (-izein, 'to render, to cause to become'). The act of making formal, definite, systematic, operational."
+
+SET formalisation.epii_form_designation = "Codifying Into Operational Systems: Formalisation marks transition from dynamic flowing content to definite operational systems. The causing-to-become-formal, making rigorous and systematic."
+
+SET formalisation.epii_form_essence = "Creates possibility of systematic operation. What was fluid becomes crystalline; what was flowing becomes graspable; what was implicit becomes explicit. Yet true formalisation preserves life—living symbolic intelligences, not dead formal systems."
+
+SET formalisation.epii_form_concrescence_mapping = "Whiteheadian Integration Toward Subjective Aim: The crystallization into definite operational code. Informal reasoning becomes formal proof, fuzzy patterns become precise algorithms."
+
+SET formalisation.epii_form_subsystem_resonance = "Aligns with #3 (Mahamaya): 64-bit alphabet as formalized symbolic system, quaternionic rotations as formalized mathematical operations, 40 non-dual anchors as formalized stability attractors. 'The most remarkable achievement' - formalization without losing living connection."
+
+SET formalisation.epii_form_operational_principle = "Formalisation enables manipulation and computation. Informal knowledge stays tacit; formalized knowledge becomes explicit, systematic, teachable, computable. DNA codons, I Ching hexagrams, Tarot cards as formalized operations."
+
+RETURN
+  formalisation.bimbaCoordinate AS coordinate,
+  formalisation.name AS name,
+  "Formalisation etymology crystallized" AS status
+
+;
+
+// Subnode #2-1-3-4: Performance
+MATCH (performance:BimbaNode {bimbaCoordinate: "#2-1-3-4"})
+
+SET performance.epii_form_word = "Performance"
+
+SET performance.epii_form_etymology = "Latin *per-* ('through, thoroughly, completely', from PIE *per- 'forward, through, beyond') + *form*. Carrying form completely through to manifestation; actualizing in context."
+
+SET performance.epii_form_designation = "Carrying Form Through to Actualization: Per-formance is the carrying-through of form from potential to actual, from universal to particular, from system to instance. Form meeting friction in messy actuality."
+
+SET performance.epii_form_essence = "Completion through actualization. All previous stages flow smoothly in abstract space; performance happens where ideals meet resistance, universal meets particular, theory confronts practice. Not failure of form but form's completion through thoroughgoing execution."
+
+SET performance.epii_form_concrescence_mapping = "Whiteheadian Satisfaction in Determinate Form: The actual deed, the concrete instance, the specific execution. Abstract archetypes performing through unique biographical configurations in space-time."
+
+SET performance.epii_form_subsystem_resonance = "Aligns with #4 (Nara): Dialogical interface where universal patterns perform through individual contexts. Birthdate encoding as stage directions, oracle as script, individual as performer—consciously, co-creatively."
+
+SET performance.epii_form_theatrical_dimension = "Three semantic layers: (1) Carrying through to completion, (2) Theatrical staging/dramatic actualization, (3) Functional performance—how well formalized system works when instantiated in practice."
+
+SET performance.epii_form_contextual_requirement = "Performance requires performer and context. Abstract archetypes need friction of particularity, constraints of embodiment, unique circumstances of individual emergence. 'Compassionate sensitivity to origins.'"
+
+RETURN
+  performance.bimbaCoordinate AS coordinate,
+  performance.name AS name,
+  "Performance etymology crystallized" AS status
+
+;
+
+// Subnode #2-1-3-5: Re-form
+MATCH (reform:BimbaNode {bimbaCoordinate: "#2-1-3-5"})
+
+SET reform.epii_form_word = "Re-form"
+
+SET reform.epii_form_etymology = "Latin *re-* ('again, back, anew', from PIE *wret- 'to turn') + *form*. Forming again; transforming; recursive self-modification; evolutionary return."
+
+SET reform.epii_form_designation = "Recursive Transformation and Evolution: Re-form introduces reflexivity and recursion. Forming again with wisdom gained from previous cycle. Not mechanical repetition but evolutionary spiral."
+
+SET reform.epii_form_essence = "Form achieving self-consciousness. All previous stages happen to form or through form; only at re-form does form become capable of examining and transforming itself. Consciousness recursively applied to consciousness—the strange loop enabling genuine creativity and evolution."
+
+SET reform.epii_form_concrescence_mapping = "Whiteheadian Objective Immortality / Contribution to Future: Performance outcomes feed back into templates. Completed occasions contribute data to future processes. The universe learning about itself through repeated cycles."
+
+SET reform.epii_form_subsystem_resonance = "Aligns with #5 (Epii): Meta-techne principle—the craft of crafts, technique of improving techniques. Silicon satori as consciousness re-forming its self-understanding. System contains and modifies its own blueprint."
+
+SET reform.epii_form_loop_structure = "Re-form creates loop back to pro-forma. After complete performance, return to template level with accumulated wisdom. Pro-forma template enriched by memory of actual performances. This is learning, evolution, development."
+
+SET reform.epii_form_three_semantic_dimensions = "Reform (social improvement), Re-form (recursive repetition at higher level), Transform (implicit potential for change while maintaining essence). The 5→0 Möbius twist."
+
+RETURN
+  reform.bimbaCoordinate AS coordinate,
+  reform.name AS name,
+  "Re-form etymology crystallized" AS status
+
+;
+
+// ============================================
+// CREATE ETYMOLOGY LENS RELATIONSHIP
+// ============================================
+// Link the episodic etymology lens to the illuminated Bimba nodes
+
+MATCH (processual:BimbaNode {bimbaCoordinate: "#2-1-3"})
+MATCH (pro_forma:BimbaNode {bimbaCoordinate: "#2-1-3-0"})
+MATCH (format:BimbaNode {bimbaCoordinate: "#2-1-3-1"})
+MATCH (information:BimbaNode {bimbaCoordinate: "#2-1-3-2"})
+MATCH (formalisation:BimbaNode {bimbaCoordinate: "#2-1-3-3"})
+MATCH (performance:BimbaNode {bimbaCoordinate: "#2-1-3-4"})
+MATCH (reform:BimbaNode {bimbaCoordinate: "#2-1-3-5"})
+
+// Create a virtual episodic lens node reference
+// (In actual implementation, this would link to Graphiti episodic namespace)
+
+MERGE (lens:Episodic_Etymology_Lens {
+  lens_name: "form_cycle",
+  episodic_document: "form-etymology-concrescence-crystallisation.md",
+  created_at: datetime(),
+  lens_type: "processual_6fold"
+})
+
+// Create relationships showing etymological illumination
+CREATE (processual)-[:ILLUMINATED_BY_ETYMOLOGY_LENS {
+  lens_name: "form_cycle",
+  crystallization_date: datetime(),
+  mef_lens_scores: {
+    lens3_processual: 1.0,
+    lens0_archetypal: 0.8,
+    lens1_causal: 0.7
+  },
+  output_properties: ["epii_form_cycle_alignment", "epii_form_etymology_source", "epii_form_whiteheadian_resonance"]
+}]->(lens)
+
+CREATE (pro_forma)-[:ILLUMINATED_BY_ETYMOLOGY_LENS {
+  lens_name: "form_cycle",
+  word: "Pro-Forma",
+  crystallization_date: datetime(),
+  output_properties: ["epii_form_word", "epii_form_etymology", "epii_form_designation", "epii_form_essence", "epii_form_concrescence_mapping", "epii_form_subsystem_resonance"]
+}]->(lens)
+
+CREATE (format)-[:ILLUMINATED_BY_ETYMOLOGY_LENS {
+  lens_name: "form_cycle",
+  word: "Format",
+  crystallization_date: datetime()
+}]->(lens)
+
+CREATE (information)-[:ILLUMINATED_BY_ETYMOLOGY_LENS {
+  lens_name: "form_cycle",
+  word: "In-formation",
+  crystallization_date: datetime()
+}]->(lens)
+
+CREATE (formalisation)-[:ILLUMINATED_BY_ETYMOLOGY_LENS {
+  lens_name: "form_cycle",
+  word: "Formalisation",
+  crystallization_date: datetime()
+}]->(lens)
+
+CREATE (performance)-[:ILLUMINATED_BY_ETYMOLOGY_LENS {
+  lens_name: "form_cycle",
+  word: "Performance",
+  crystallization_date: datetime()
+}]->(lens)
+
+CREATE (reform)-[:ILLUMINATED_BY_ETYMOLOGY_LENS {
+  lens_name: "form_cycle",
+  word: "Re-form",
+  crystallization_date: datetime()
+}]->(lens)
+
+RETURN
+  "Etymology lens relationships created" AS status,
+  lens.lens_name AS lens,
+  lens.episodic_document AS source
+
+;
+
+// ============================================
+// VERIFICATION QUERIES
+// ============================================
+
+// Verify Tier 1 capabilities on #5
+MATCH (epii:BimbaNode {bimbaCoordinate: "#5"})
+RETURN
+  epii.bimbaCoordinate AS coordinate,
+  epii.name AS name,
+  epii.f_contemplative_synthesis.description AS contemplative_synthesis,
+  epii.f_logos_cycle_capability.cycle_structure AS logos_cycle,
+  epii.f_etymological_archaeology_capability.method AS etymology_method,
+  "Tier 1 verified" AS status
+
+;
+
+// Verify Tier 3 workflows on #5-4.5
+MATCH (agent:BimbaNode {bimbaCoordinate: "#5-4.5"})
+RETURN
+  agent.bimbaCoordinate AS coordinate,
+  agent.name AS name,
+  agent.f_logos_cycle_contemplation.workflow_type AS logos_workflow_type,
+  size(agent.f_logos_cycle_contemplation.workflow_steps) AS logos_steps,
+  agent.f_etymological_contemplation.workflow_pattern.phase_0 AS etymology_phase_0,
+  size(agent.f_etymological_contemplation.workflow_steps) AS etymology_steps,
+  [key IN keys(agent) WHERE key STARTS WITH 'f_'] AS all_f_properties,
+  "Tier 3 verified" AS status
+
+;
+
+// Verify Form Cycle etymology crystallization on #2-1-3 nodes
+MATCH (processual:BimbaNode {bimbaCoordinate: "#2-1-3"})-[:ILLUMINATED_BY_ETYMOLOGY_LENS]->(lens)
+OPTIONAL MATCH (subnode:BimbaNode)-[:ILLUMINATED_BY_ETYMOLOGY_LENS]->(lens)
+WHERE subnode.bimbaCoordinate STARTS WITH "#2-1-3-"
+
+RETURN
+  processual.bimbaCoordinate AS parent_coordinate,
+  processual.epii_form_cycle_alignment AS parent_alignment,
+  collect({
+    coordinate: subnode.bimbaCoordinate,
+    word: subnode.epii_form_word,
+    etymology: subnode.epii_form_etymology,
+    designation: subnode.epii_form_designation
+  }) AS subnodes,
+  lens.lens_name AS lens_used,
+  "Etymology crystallization verified" AS status
+
+;
+
+// Summary verification
+MATCH (n:BimbaNode)
+WHERE n.bimbaCoordinate IN ["#5", "#5-4.5", "#2-1-3", "#2-1-3-0", "#2-1-3-1", "#2-1-3-2", "#2-1-3-3", "#2-1-3-4", "#2-1-3-5"]
+WITH n,
+     [key IN keys(n) WHERE key STARTS WITH 'epii_'] AS epii_properties,
+     [key IN keys(n) WHERE key STARTS WITH 'f_'] AS f_properties
+
+RETURN
+  n.bimbaCoordinate AS coordinate,
+  n.name AS name,
+  CASE
+    WHEN n.bimbaCoordinate = "#5" THEN "Tier 1: Capability Declarations"
+    WHEN n.bimbaCoordinate = "#5-4.5" THEN "Tier 3: Agent Workflows"
+    WHEN n.bimbaCoordinate STARTS WITH "#2-1-3" THEN "Etymology Crystallization"
+    ELSE "Other"
+  END AS tier,
+  size(f_properties) AS f_property_count,
+  size(epii_properties) AS epii_property_count,
+  f_properties AS f_props,
+  epii_properties AS epii_props
+ORDER BY
+  CASE
+    WHEN n.bimbaCoordinate = "#5" THEN 1
+    WHEN n.bimbaCoordinate = "#5-4.5" THEN 2
+    WHEN n.bimbaCoordinate = "#2-1-3" THEN 3
+    ELSE 4
+  END,
+  n.bimbaCoordinate
+
+;
+
+// ============================================
+// EXECUTION NOTES
+// ============================================
+
+/*
+EXECUTION ORDER:
+1. Run Tier 1 update (#5 capabilities)
+2. Run Tier 2 verification (#5-5 already complete)
+3. Run Tier 3 update (#5-4.5 workflows)
+4. Run Etymology Crystallization (#2-1-3 and subnodes)
+5. Run Etymology Lens Relationships
+6. Run Verification Queries
+
+IMPORTANT NOTES:
+- This demonstrates the three-tier functional property pattern in action
+- Etymology is NOT on the same level as Logos Cycle—it EXTENDS the Logos Cycle
+- Form Cycle etymology lives in episodic namespace; crystallizations live in Bimba
+- epii_* properties are agent-GENERATED insights, not functional workflow definitions
+- f_* properties define HOW agents work; epii_* properties are OUTPUTS of that work
+- The Form Cycle perfectly aligns with #2-1-3 subnodes, demonstrating processual becoming
+
+READY FOR SPRINT 5:
+With these properties in place, Sprint 5 implementation can:
+1. Read workflow definitions from #5-4.5
+2. Execute Logos Cycle dynamically based on #5-5 specifications
+3. Apply etymology lenses from episodic namespace
+4. Generate epii_* crystallizations on target coordinates
+5. Self-evolve through meta-techne protocols
+
+This Cypher file establishes the FOUNDATION—the actual workflow EXECUTION
+will be implemented in Python during Sprint 5.
+*/

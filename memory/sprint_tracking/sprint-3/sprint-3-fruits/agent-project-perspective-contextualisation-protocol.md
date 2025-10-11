@@ -151,6 +151,7 @@ The system becomes **self-aware** not through magic, but through structured proc
 - `semantic_coordinate_discovery` - find related concepts
 - `update_bimba_node` - write refinements back
 - `regenerate_node_embedding` - ensure discoverability
+- many more!
 
 **New Requirement**: Ensure agents have MCP client access at initialization time through dependency injection pattern that Pydantic AI supports natively.
 

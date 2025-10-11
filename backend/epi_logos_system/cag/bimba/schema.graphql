@@ -62,6 +62,31 @@ type SearchResponse {
     error: String
 }
 
+type LexicalSearchResult {
+    coordinate: String!
+    name: String!
+    description: String
+}
+
+type LexicalSearchResponse {
+    success: Boolean!
+    results: [LexicalSearchResult!]!
+    error: String
+}
+
+type DirectChildrenResult {
+    coordinate: String!
+    name: String!
+    primaryDesignation: String
+    description: String
+}
+
+type DirectChildrenResponse {
+    success: Boolean!
+    children: [DirectChildrenResult!]!
+    error: String
+}
+
 type SubsystemCoordinatesResponse {
     success: Boolean!
     coordinates: [BimbaNode!]!
@@ -70,13 +95,15 @@ type SubsystemCoordinatesResponse {
 
 type Query {
     getNodeByCoordinate(coordinate: String!): BimbaNode
-    getNodeDetailsComplete(coordinate: String!): BimbaNodeComplete
+    getNodeDetailsComplete(coordinate: String!, includeFunctionalProperties: Boolean): BimbaNodeComplete
     getNodeByCoordinateExtended(coordinate: String!): BimbaNodeExtended
     getNodeWithRelationships(coordinate: String!): NodeWithEdges
     searchCoordinates(query: String!, subsystem: Int, limit: Int): SearchResponse
     getSubsystemCoordinates(subsystem: Int!, limit: Int): SubsystemCoordinatesResponse
     getPathBetweenCoordinates(startCoordinate: String!, endCoordinate: String!, maxHops: Int): GraphPath
     semanticCoordinateDiscovery(queryText: String!, maxResults: Int, alpha: Float): [BimbaCoordinateMatch!]!
+    lexicalCoordinateSearch(searchString: String!, limit: Int): LexicalSearchResponse
+    directChildren(bimbaCoordinate: String!): DirectChildrenResponse
 }
 
 """Structured mutation error with code taxonomy"""

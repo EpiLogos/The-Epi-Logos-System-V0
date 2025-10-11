@@ -17,15 +17,22 @@ def resolve_get_node_by_coordinate(_: Any, info: Any, coordinate: str) -> dict |
     return node.model_dump() if node else None
 
 @query.field("getNodeDetailsComplete")
-def resolve_get_node_details_complete(_: Any, info: Any, coordinate: str) -> dict | None:
-    """Resolve complete node with ALL Neo4j properties via Generic scalar.
+def resolve_get_node_details_complete(
+    _: Any, info: Any, coordinate: str, includeFunctionalProperties: bool = False
+) -> dict | None:
+    """Resolve complete node with selective property filtering via Generic scalar.
 
-    Returns BimbaNodeComplete with allProperties containing every property
-    from Neo4j, no filtering or mapping required. Enables agents to access
+    Returns BimbaNodeComplete with allProperties containing properties
+    from Neo4j. By default filters out f_* prefixed functional properties,
+    embeddings metadata, and internal timestamps. Enables agents to access
     any property without knowing field names beforehand.
+
+    Args:
+        coordinate: Bimba coordinate to retrieve
+        includeFunctionalProperties: If True, include f_* functional properties
     """
     node_service = info.context["service"]
-    return node_service.get_node_complete(coordinate)
+    return node_service.get_node_complete(coordinate, includeFunctionalProperties)
 
 @query.field("getNodeByCoordinateExtended")
 def resolve_get_node_by_coordinate_extended(_: Any, info: Any, coordinate: str) -> dict | None:
@@ -187,6 +194,63 @@ def resolve_semantic_coordinate_discovery(_: Any, info: Any, queryText: str, max
     except Exception:
         # On error, return empty list to avoid leaking internals via GraphQL errors
         return []
+
+@query.field("lexicalCoordinateSearch")
+def resolve_lexical_coordinate_search(_: Any, info: Any, searchString: str, limit: Optional[int] = None) -> dict:
+    """Lexical substring search across all BimbaNode properties.
+
+    Direct property iteration for exact substring matching when semantic/fulltext search fails.
+    Finds substrings like 'Iti' in 'My-Self/Iti'. Heavier query but more precise.
+
+    Args:
+        searchString: String to search for in any property
+        limit: Max results (default 20, capped at 50)
+
+    Returns:
+        LexicalSearchResponse with success flag and results list
+    """
+    service = info.context["service"]
+    try:
+        results = service.lexical_coordinate_search(searchString, limit)
+        return {
+            "success": True,
+            "results": results,
+            "error": None
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "results": [],
+            "error": str(e)
+        }
+
+
+@query.field("directChildren")
+def resolve_direct_children(_: Any, info: Any, bimbaCoordinate: str) -> dict:
+    """Get direct child nodes of a Bimba coordinate.
+
+    Returns lean data (name, coordinate, primaryDesignation, description) for hierarchical children.
+
+    Args:
+        bimbaCoordinate: Parent coordinate to find children for
+
+    Returns:
+        DirectChildrenResponse with success flag and children list
+    """
+    service = info.context["service"]
+    try:
+        children = service.get_direct_children(bimbaCoordinate)
+        return {
+            "success": True,
+            "children": children,
+            "error": None
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "children": [],
+            "error": str(e)
+        }
 
 
 @mutation.field("regenerateNodeEmbedding")

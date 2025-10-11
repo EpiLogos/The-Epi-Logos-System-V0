@@ -14,11 +14,15 @@ import os
 import subprocess
 import httpx
 import asyncio
+import logging
 from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env files
 load_dotenv()  # loads .env from project root
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 async def check_mcp_server() -> bool:
@@ -204,8 +208,8 @@ async def get_session_status(session_id: str):
     
     try:
         redis_client = RedisClient()
-        await redis_client.connect()
-        
+        # Connection is automatic via lazy-initialized client property
+
         session_data = await redis_client.get_session(session_id)
         if session_data:
             return {

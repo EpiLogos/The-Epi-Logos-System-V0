@@ -87,11 +87,21 @@ class BimbaGraphQLClient(BackendHttpClient):
                 "error": error_msg or "GraphQL query failed"
             }
 
-    async def get_node_details_complete(self, coordinate: str) -> Dict[str, Any]:
-        """Get ALL node properties from Neo4j via Generic scalar (COMPLETE query)"""
+    async def get_node_details_complete(
+        self, coordinate: str, include_functional_properties: bool = False
+    ) -> Dict[str, Any]:
+        """Get ALL node properties from Neo4j via Generic scalar (COMPLETE query).
+
+        Args:
+            coordinate: Bimba coordinate to retrieve
+            include_functional_properties: If True, include f_* prefixed functional properties
+        """
         query = """
-        query GetNodeComplete($coordinate: String!) {
-            getNodeDetailsComplete(coordinate: $coordinate) {
+        query GetNodeComplete($coordinate: String!, $includeFunctionalProperties: Boolean) {
+            getNodeDetailsComplete(
+                coordinate: $coordinate
+                includeFunctionalProperties: $includeFunctionalProperties
+            ) {
                 coordinate
                 name
                 allProperties
@@ -99,7 +109,10 @@ class BimbaGraphQLClient(BackendHttpClient):
         }
         """
 
-        variables = {"coordinate": coordinate}
+        variables = {
+            "coordinate": coordinate,
+            "includeFunctionalProperties": include_functional_properties
+        }
         request_data = {"query": query, "variables": variables}
 
         logger.info(f"Getting complete node details for: {coordinate}")
@@ -278,7 +291,11 @@ class BimbaGraphQLClient(BackendHttpClient):
             }
 
     async def get_node_relationships(self, coordinate: str) -> Dict[str, Any]:
-        """Get a node with all direct relationship connections."""
+        """Get a node with all direct relationship connections.
+
+        Note: Neighbor nodes intentionally exclude timestamps and embeddings metadata
+        to keep responses focused on semantic content.
+        """
         query = """
         query GetNodeWithRelationships($coordinate: String!) {
             getNodeWithRelationships(coordinate: $coordinate) {
@@ -309,8 +326,6 @@ class BimbaGraphQLClient(BackendHttpClient):
                         architecturalFunction
                         symbol
                         uuid
-                        createdAt
-                        updatedAt
                     }
                     properties { key value }
                 }
@@ -380,6 +395,89 @@ class BimbaGraphQLClient(BackendHttpClient):
         errors = resp.get("errors", []) if isinstance(resp, dict) else []
         err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
         return {"success": False, "results": [], "error": err_msg or "GraphQL query failed"}
+
+    async def lexical_coordinate_search(self, search_string: str, limit: Optional[int] = None) -> Dict[str, Any]:
+        """Lexical substring search across all BimbaNode properties via GraphQL.
+
+        Direct property iteration for exact substring matching when semantic/fulltext search fails.
+        Finds substrings like 'Iti' in 'My-Self/Iti'.
+
+        Args:
+            search_string: String to search for in any property
+            limit: Max results (default 20, capped at 50)
+
+        Returns:
+            Dict with success flag, results list, and error (if any)
+        """
+        query = """
+        query LexicalCoordinateSearch($searchString: String!, $limit: Int) {
+          lexicalCoordinateSearch(searchString: $searchString, limit: $limit) {
+            success
+            results {
+              coordinate
+              name
+              description
+            }
+            error
+          }
+        }
+        """
+        variables = {"searchString": search_string, "limit": limit}
+        resp = await self.post("/graphql", json_data={"query": query, "variables": variables})
+
+        if "data" in resp and resp["data"] is not None:
+            search_response = resp["data"].get("lexicalCoordinateSearch", {})
+            return {
+                "success": search_response.get("success", False),
+                "results": search_response.get("results", []),
+                "error": search_response.get("error")
+            }
+
+        # Handle GraphQL errors
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {"success": False, "results": [], "error": err_msg or "GraphQL query failed"}
+
+    async def get_direct_children(self, bimba_coordinate: str) -> Dict[str, Any]:
+        """Get direct child nodes of a Bimba coordinate via GraphQL.
+
+        Returns lean data (name, coordinate, primaryDesignation, description) for hierarchical children.
+
+        Args:
+            bimba_coordinate: Parent coordinate to find children for
+
+        Returns:
+            Dict with success flag, children list, and error (if any)
+        """
+        query = """
+        query DirectChildren($bimbaCoordinate: String!) {
+          directChildren(bimbaCoordinate: $bimbaCoordinate) {
+            success
+            children {
+              coordinate
+              name
+              primaryDesignation
+              description
+            }
+            error
+          }
+        }
+        """
+        variables = {"bimbaCoordinate": bimba_coordinate}
+        resp = await self.post("/graphql", json_data={"query": query, "variables": variables})
+
+        if "data" in resp and resp["data"] is not None:
+            children_response = resp["data"].get("directChildren", {})
+            return {
+                "success": children_response.get("success", False),
+                "children": children_response.get("children", []),
+                "error": children_response.get("error")
+            }
+
+        # Handle GraphQL errors
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {"success": False, "children": [], "error": err_msg or "GraphQL query failed"}
 
     async def regenerate_node_embedding(self, coordinate: str) -> Dict[str, Any]:
         mutation = """

@@ -152,21 +152,27 @@ class HttpBimbaClient:
                 "error": f"HTTP request failed: {str(e)}"
             }
 
-    async def get_node_details_complete(self, coordinate: str) -> Dict[str, Any]:
+    async def get_node_details_complete(
+        self, coordinate: str, include_functional_properties: bool = False
+    ) -> Dict[str, Any]:
         """
-        Get ALL node properties from Neo4j without filtering.
+        Get ALL node properties from Neo4j with selective filtering.
 
         Returns complete property set via Generic scalar - no schema restrictions.
+        By default filters out f_* prefixed functional properties unless requested.
         Enables agents to access any property without knowing field names beforehand.
 
         Args:
             coordinate: The Bimba coordinate to retrieve
+            include_functional_properties: If True, include f_* functional properties
 
         Returns:
             Dict containing all properties or error
         """
         try:
-            result = await self.client.get_node_details_complete(coordinate)
+            result = await self.client.get_node_details_complete(
+                coordinate, include_functional_properties
+            )
 
             if result.get("success"):
                 logger.info(f"Retrieved complete node details for: {coordinate}")
@@ -286,6 +292,50 @@ class HttpBimbaClient:
         except Exception as e:
             logger.error(f"Exception in semantic_coordinate_discovery: {e}")
             return {"success": False, "results": [], "error": f"HTTP request failed: {str(e)}"}
+
+    async def lexical_coordinate_search(self, search_string: str, limit: Optional[int] = None) -> Dict[str, Any]:
+        """Lexical substring search across all Bimba properties via GraphQL.
+
+        Direct property iteration for exact substring matching when semantic/fulltext search fails.
+        Finds substrings like 'Iti' in 'My-Self/Iti'.
+
+        Args:
+            search_string: String to search for in any property
+            limit: Max results (default 20, capped at 50)
+
+        Returns:
+            Dict with success flag, results list, and error (if any)
+        """
+        try:
+            result = await self.client.lexical_coordinate_search(search_string, limit)
+            if result.get("success"):
+                return result
+            else:
+                return {"success": False, "results": [], "error": result.get("error", "Unknown error")}
+        except Exception as e:
+            logger.error(f"Exception in lexical_coordinate_search: {e}")
+            return {"success": False, "results": [], "error": f"HTTP request failed: {str(e)}"}
+
+    async def get_direct_children(self, bimba_coordinate: str) -> Dict[str, Any]:
+        """Get direct child nodes of a Bimba coordinate via GraphQL.
+
+        Returns lean data (name, coordinate, primaryDesignation, description) for hierarchical children.
+
+        Args:
+            bimba_coordinate: Parent coordinate to find children for
+
+        Returns:
+            Dict with success flag, children list, and error (if any)
+        """
+        try:
+            result = await self.client.get_direct_children(bimba_coordinate)
+            if result.get("success"):
+                return result
+            else:
+                return {"success": False, "children": [], "error": result.get("error", "Unknown error")}
+        except Exception as e:
+            logger.error(f"Exception in get_direct_children: {e}")
+            return {"success": False, "children": [], "error": f"HTTP request failed: {str(e)}"}
 
     async def regenerate_node_embedding(self, coordinate: str) -> Dict[str, Any]:
         """Regenerate embeddings for a node via GraphQL mutation."""

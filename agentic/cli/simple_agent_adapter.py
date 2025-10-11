@@ -40,11 +40,12 @@ class SimpleAgentAdapter:
         self.ag_ui_base = os.getenv("AGENTIC_BASE_URL", "http://localhost:8001")
         self.models_endpoint = f"{self.ag_ui_base}/api/v1/orchestrator/models"
         self.ag_ui_endpoint = f"{self.ag_ui_base}/api/v1/ag-ui/run"
-        
+        self.messages_endpoint = f"{self.ag_ui_base}/api/v1/orchestrator/threads/{{thread_id}}/messages"
+
         # Diagnostics
         self.diag = diagnostics or DiagnosticsRecorder()
         self.trace_id_override = trace_id_override
-        
+
         # Session state
         self.session_id: Optional[str] = None
         
@@ -148,15 +149,43 @@ class SimpleAgentAdapter:
         """Update system prompt override"""
         self.system_override = text or ""
         return True
-    
+
+    async def fetch_message_history(self, limit: int = 200) -> List[Dict[str, str]]:
+        """Fetch message history from backend for the current thread.
+
+        Returns:
+            List of message dicts with 'role' and 'content' keys
+        """
+        try:
+            endpoint = self.messages_endpoint.format(thread_id=self.thread_id)
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{endpoint}?limit={limit}") as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data.get("messages", [])
+                    else:
+                        logger.warning(f"Failed to fetch message history: {resp.status}")
+                        return []
+        except Exception as e:
+            logger.warning(f"Error fetching message history: {e}")
+            return []
+
     # --- Chat Streaming ---
     async def run_chat_stream(
-        self, 
-        message: str, 
+        self,
+        message: str,
         stream: bool = True,
-        stream_timeout: Optional[float] = None
+        stream_timeout: Optional[float] = None,
+        target_agent: Optional[int] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        """Stream chat response via AG-UI protocol"""
+        """Stream chat response via AG-UI protocol
+
+        Args:
+            message: User message
+            stream: Enable streaming
+            stream_timeout: Timeout for streaming
+            target_agent: Optional subsystem number (0-5) for manual delegation
+        """
         
         # GPT-5 doesn't support streaming - disable it automatically
         if "gpt-5" in self.model.lower():
@@ -175,7 +204,10 @@ class SimpleAgentAdapter:
         )
         
         try:
-            # Build AG-UI payload  
+            # Fetch message history from backend to maintain conversation context
+            previous_messages = await self.fetch_message_history()
+
+            # Build AG-UI payload with full conversation history
             agui_payload = build_run_agent_input(
                 thread_id=self.thread_id,
                 user_text=message,
@@ -183,7 +215,9 @@ class SimpleAgentAdapter:
                 system_override=self.system_override,
                 tools=None,
                 state={"model": self.model, "persona": self.persona_key},
-                forwarded_props={}
+                forwarded_props={},
+                target_agent=target_agent,
+                previous_messages=previous_messages
             )
             
             # Stream from AG-UI endpoint
@@ -296,29 +330,44 @@ class SimpleAgentAdapter:
     
     # --- CLI Compatibility Methods ---
     async def send_message(
-        self, 
-        message: str, 
-        stream: bool = True, 
+        self,
+        message: str,
+        stream: bool = True,
         strict: bool = False,
-        timeout_s: Optional[float] = None
+        timeout_s: Optional[float] = None,
+        target_agent: Optional[int] = None
     ) -> Tuple[AsyncGenerator[Dict[str, Any], None], Dict[str, Any]]:
-        """Send message and return stream iterator + metadata (CLI compatibility)"""
-        
+        """Send message and return stream iterator + metadata (CLI compatibility)
+
+        Args:
+            message: User message
+            stream: Enable streaming
+            strict: Strict mode
+            timeout_s: Streaming timeout
+            target_agent: Optional subsystem number (0-5) for manual delegation
+        """
+
         # GPT-5 doesn't support streaming - disable it automatically
         if "gpt-5" in self.model.lower():
             stream = False
-        
+
         # Generate metadata
         meta = {
             "model": self.model,
             "persona": self.persona_key,
             "session_id": self.session_id or self.thread_id,
             "stream": stream,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "target_agent": target_agent  # Add manual delegation target
         }
-        
+
         # Return stream iterator and metadata
-        stream_iter = self.run_chat_stream(message, stream=stream, stream_timeout=timeout_s)
+        stream_iter = self.run_chat_stream(
+            message,
+            stream=stream,
+            stream_timeout=timeout_s,
+            target_agent=target_agent
+        )
         return stream_iter, meta
     
     # Real orchestrator property for CLI compatibility

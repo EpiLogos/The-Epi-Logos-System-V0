@@ -44,12 +44,12 @@ Sprint 3 plan has been reorganized to optimize the foundational development sequ
    - PoC delegation: Orchestrator → Epii
    - Pydantic Graph research spike
 
-6. **02.06** - Bimba Node Creation [PENDING]
+6. **02.06** - Bimba Node Creation [COMPLETE]
    - Admin-gated node creation via GraphQL mutation
    - Coordinate uniqueness validation
    - Tool ecosystem integration
 
-7. **02.06.1** - Bimba Node Update Tool [PENDING]
+7. **02.06.1** - Bimba Node Update Tool [COMPLETE]
    - Flexible property updates
    - Extensible schema with validation
    - Partial update logic

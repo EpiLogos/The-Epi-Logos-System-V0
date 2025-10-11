@@ -15,10 +15,10 @@ schema drift and validation errors.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Mapping, MutableMapping, Sequence
+from typing import Any, Dict, List, Mapping, MutableMapping, Sequence, cast
 from uuid import uuid4
 
-from ag_ui.core import RunAgentInput, UserMessage, Context
+from ag_ui.core import RunAgentInput, UserMessage, AssistantMessage, Context, Message
 
 
 def build_context_system(text: str) -> Context:
@@ -41,8 +41,14 @@ def build_run_agent_input(
     tools: Sequence[Mapping[str, Any]] | None,
     state: Mapping[str, Any] | None,
     forwarded_props: Mapping[str, Any] | None,
+    target_agent: int | None = None,
+    previous_messages: Sequence[Mapping[str, str]] | None = None,
 ) -> RunAgentInput:
     """Build a validated RunAgentInput instance for AG-UI streaming.
+
+    Args:
+        target_agent: Optional subsystem number (0-5) for manual delegation
+        previous_messages: Optional list of previous messages with 'role' and 'content' keys
 
     Raises ValueError with actionable messages if required fields are missing.
     """
@@ -51,8 +57,24 @@ def build_run_agent_input(
     if forwarded_props is None:
         raise ValueError("forwarded_props missing: provide a mapping (e.g., {'thread_id': ...})")
 
-    # Messages
+    # Build messages list: previous messages + current message
+    messages_list: List[UserMessage | AssistantMessage] = []
+
+    # Add previous messages from conversation history
+    if previous_messages:
+        for prev_msg in previous_messages:
+            role = prev_msg.get("role", "user")
+            content = str(prev_msg.get("content", ""))
+
+            # Convert backend message format to AG-UI message types
+            if role == "assistant":
+                messages_list.append(AssistantMessage(id=str(uuid4()), content=content))
+            else:  # Default to user message
+                messages_list.append(UserMessage(id=str(uuid4()), content=content))
+
+    # Add current user message
     msg = UserMessage(id=str(uuid4()), content=str(user_text))
+    messages_list.append(msg)
 
     # Context list
     context_entries: list[Context] = [
@@ -60,6 +82,12 @@ def build_run_agent_input(
     ]
     if system_override:
         context_entries.append(build_context_system(system_override))
+
+    # Add target_agent to context if manual delegation requested
+    if target_agent is not None:
+        context_entries.append(
+            Context(description="target_agent", value=str(target_agent))
+        )
 
     # Tools and forwarded props defaults
     tools_list = list(tools or [])
@@ -69,12 +97,15 @@ def build_run_agent_input(
 
     # State default
     st = dict(state or {})
+    # Add target_agent to state for orchestrator to use
+    if target_agent is not None:
+        st["target_agent"] = target_agent
 
     # Construct and return a validated model
     return RunAgentInput(
         thread_id=thread_id,
         run_id=str(uuid4()),
-        messages=[msg],
+        messages=cast(List[Message], messages_list),  # Full conversation history
         context=context_entries,
         state=st,
         tools=tools_list,

@@ -12,12 +12,15 @@ from rich.console import Console
 from rich.prompt import Prompt
 from rich.table import Table
 from rich.panel import Panel
+from rich.tree import Tree
 from rich import box
 from rich.live import Live
 from rich.spinner import Spinner
 
 from agentic.cli.simple_agent_adapter import SimpleAgentAdapter
 from agentic.cli.diagnostics import DiagnosticsRecorder
+from agentic.cli.delegation_display import DelegationDisplay
+from agentic.agents.delegation_events import get_delegation_emitter
 
 app = typer.Typer(add_completion=False, help="Agentic chat CLI for Unified Orchestrator.")
 console = Console()
@@ -335,7 +338,11 @@ def chat(
         console.print("/use <model> — switch model live")
         console.print("/personas — list available personas; current")
         console.print("/persona <key-or-path> — switch persona")
+        console.print("/agents — list available subagents (constellation)")
+        console.print("/delegate <agent> — manually delegate next message to specific agent")
+        console.print("/auto — return to automatic routing (clear manual delegation)")
         console.print("/tools — list available tools from orchestrator")
+        console.print("/debug [on|off] — show context hierarchy & toggle delegation observability")
         console.print("/timeout <sec> — set streaming timeout per event")
         console.print("/sys [text] — view or set system override")
         console.print("/save [path] — save current transcript")
@@ -345,6 +352,16 @@ def chat(
         console.print("/stream [on|off] — toggle streaming mode")
         console.print("/clear — clear conversation context")
         console.print("/exit — quit")
+
+    # Agent constellation mapping
+    AGENT_CONSTELLATION = {
+        "anuttara": {"subsystem": 0, "coordinate": "#0", "description": "Proto-logical void processor"},
+        "paramasiva": {"subsystem": 1, "coordinate": "#1", "description": "Quaternal logic engine"},
+        "parashakti": {"subsystem": 2, "coordinate": "#2", "description": "Vibrational processor"},
+        "mahamaya": {"subsystem": 3, "coordinate": "#3", "description": "Symbolic transcription engine"},
+        "nara": {"subsystem": 4, "coordinate": "#4", "description": "Dialogical interface"},
+        "epii": {"subsystem": 5, "coordinate": "#5", "description": "Master orchestrator & wisdom synthesis"},
+    }
 
     async def run_loop():
         # Start session and load orchestrator capabilities
@@ -356,6 +373,14 @@ def chat(
 
         current_stream = stream
         current_timeout = float(stream_timeout)
+
+        # Manual delegation state
+        manual_delegation_target = None  # None = auto routing, or agent name for manual
+
+        # Initialize delegation observability
+        delegation_emitter = get_delegation_emitter()
+        delegation_display = DelegationDisplay(console)
+        delegation_emitter.add_listener(delegation_display.handle_event)
         while True:
             try:
                 user = Prompt.ask("[bold green]you[/]")
@@ -559,6 +584,94 @@ def chat(
                         console.print("Context cleared (new session will start on next message).")
                     except Exception as e:
                         console.print(f"[red]Clear failed:[/] {e}")
+                elif cmd == "/agents":
+                    # List available subagents
+                    t = Table(title="🤖 Agent Constellation (Subsystem Agents)", box=box.ROUNDED)
+                    t.add_column("Agent", style="cyan")
+                    t.add_column("Coordinate", style="magenta")
+                    t.add_column("Role", style="dim")
+
+                    for name, info in AGENT_CONSTELLATION.items():
+                        marker = "→ " if manual_delegation_target == name else "  "
+                        t.add_row(
+                            f"{marker}{name.title()}",
+                            info["coordinate"],
+                            info["description"]
+                        )
+
+                    console.print(t)
+                    if manual_delegation_target:
+                        console.print(f"[yellow]Manual delegation active: [bold]{manual_delegation_target.title()}[/bold][/yellow]")
+                    else:
+                        console.print("[dim]Automatic routing active (use /delegate <agent> to route manually)[/dim]")
+
+                elif cmd == "/delegate":
+                    # Manually delegate to specific agent
+                    if len(parts) < 2:
+                        console.print("[yellow]Usage: /delegate <agent>[/yellow]")
+                        console.print("[dim]Available agents: anuttara, paramasiva, parashakti, mahamaya, nara, epii[/dim]")
+                        console.print("[dim]Or use /agents to see full list[/dim]")
+                    else:
+                        agent_name = parts[1].lower()
+                        if agent_name in AGENT_CONSTELLATION:
+                            manual_delegation_target = agent_name
+                            agent_info = AGENT_CONSTELLATION[agent_name]
+                            console.print(f"[green]✓ Manual delegation set to:[/green] [bold cyan]{agent_name.title()}[/bold cyan] ({agent_info['coordinate']})")
+                            console.print(f"[dim]  {agent_info['description']}[/dim]")
+                            console.print("[dim]  Next message will be delegated to this agent[/dim]")
+                            console.print("[dim]  Use /auto to return to automatic routing[/dim]")
+                        else:
+                            console.print(f"[red]Unknown agent:[/red] {agent_name}")
+                            console.print("[dim]Available: anuttara, paramasiva, parashakti, mahamaya, nara, epii[/dim]")
+
+                elif cmd == "/auto":
+                    # Return to automatic routing
+                    if manual_delegation_target:
+                        console.print(f"[yellow]Clearing manual delegation to {manual_delegation_target.title()}[/yellow]")
+                        manual_delegation_target = None
+                        console.print("[green]✓ Automatic routing restored[/green]")
+                        console.print("[dim]  Router will automatically select agents based on request type[/dim]")
+                    else:
+                        console.print("[dim]Already in automatic routing mode[/dim]")
+
+                elif cmd == "/debug":
+                    # Show 3-layer context hierarchy and toggle observability
+                    if arg in ["on", "off"]:
+                        # Toggle mode
+                        if arg == "on":
+                            delegation_emitter.enable()
+                            console.print("[green]╔═ Debug Mode: ENABLED[/green]")
+                        else:
+                            delegation_emitter.disable()
+                            console.print("[yellow]╔═ Debug Mode: DISABLED[/yellow]")
+                    else:
+                        # Show context hierarchy status
+                        # Build context hierarchy tree
+                        tree = Tree("🧬 3-Layer Context Hierarchy", style="bold cyan")
+
+                        # Layer 1: Session
+                        session_branch = tree.add(f"[yellow]Layer 1: session_id[/yellow] = [dim]{adapter.session_id or 'not-initialized'}[/dim]")
+                        session_branch.add("[dim]Redis: User identity, cross-thread memory[/dim]")
+                        session_branch.add("[dim]Scope: All conversations for this CLI instance[/dim]")
+
+                        # Layer 2: Thread
+                        thread_branch = tree.add(f"[green]Layer 2: thread_id[/green] = [dim]{adapter.thread_id}[/dim]")
+                        thread_branch.add("[dim]AG-UI: Single conversation/chat[/dim]")
+                        thread_branch.add("[dim]Scope: Current CLI session[/dim]")
+
+                        # Layer 3: Context
+                        context_branch = tree.add("[blue]Layer 3: context_id[/blue] = [dim]a2a_{{uuid}}[/dim]")
+                        context_branch.add("[dim]Generated per delegation[/dim]")
+                        context_branch.add("[dim]Scope: Each orchestrator → subagent handoff[/dim]")
+
+                        console.print(Panel(tree, title="[bold]Context Architecture[/bold]", border_style="cyan"))
+
+                        # Show delegation observability status
+                        obs_status = "[green]ENABLED[/green]" if delegation_emitter.is_enabled() else "[yellow]DISABLED[/yellow]"
+                        console.print(f"\n[bold]Delegation Observability:[/bold] {obs_status}")
+                        console.print("[dim]Events: Router classification, Prakāśa init, Context handoff, Usage tracking[/dim]")
+                        console.print("\n[dim]Toggle: /debug on | /debug off[/dim]")
+
                 elif cmd == "/exit":
                     break
                 else:
@@ -574,11 +687,23 @@ def chat(
                 "model": current_model,
             })
 
+            # Check if manual delegation is active
+            target_subsystem = None
+            if manual_delegation_target:
+                target_subsystem = AGENT_CONSTELLATION[manual_delegation_target]["subsystem"]
+                console.print(f"[dim]→ Delegating to {manual_delegation_target.title()} (#{target_subsystem})[/dim]")
+
             spinner = Spinner("dots", text="thinking…")
             with Live(spinner, refresh_per_second=12, console=console):
                 try:
                     try:
-                        stream_iter, meta = await adapter.send_message(user, stream=current_stream, strict=no_fallback, timeout_s=current_timeout)
+                        stream_iter, meta = await adapter.send_message(
+                            user,
+                            stream=current_stream,
+                            strict=no_fallback,
+                            timeout_s=current_timeout,
+                            target_agent=target_subsystem
+                        )
                     except Exception as e:
                         console.print(f"[red]Streaming error:[/] {e}")
                         continue
@@ -597,6 +722,13 @@ def chat(
                     # Update current model from meta/status
                     if meta.get("model"):
                         current_model = meta["model"]
+
+                    # Clear manual delegation after successful send
+                    if manual_delegation_target:
+                        console.print(f"[dim]✓ Delegated to {manual_delegation_target.title()} (#{target_subsystem})[/dim]")
+                        manual_delegation_target = None  # Clear for next message
+                        console.print("[dim]  Automatic routing restored for next message (use /delegate to route manually again)[/dim]")
+
                     # Per-turn summary
                     if meta.get("latency_ms") is not None:
                         console.print(f"[dim]latency: {meta['latency_ms']} ms • model: {current_model}[/]")

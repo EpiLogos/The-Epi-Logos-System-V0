@@ -1,0 +1,70 @@
+flowchart TD
+
+%% Sprint 3 Bimba Graph Operations (Full Query/Mutation Suite)
+
+subgraph "GraphQL API (Bimba)"
+  %% Queries (Implemented unless noted)
+  Q_NODE[Query: getNodeByCoordinate(coordinate: String!)<br/>Returns BimbaNode]
+  Q_NODE_COMPLETE[Query: getNodeDetailsComplete(coordinate: String!, includeFunctionalProperties?: Bool)<br/>Returns BimbaNodeComplete]
+  Q_NODE_EXT[Query: getNodeByCoordinateExtended(coordinate: String!)<br/>Returns BimbaNodeExtended]
+  Q_REL[Query: getNodeWithRelationships(coordinate: String!)<br/>Returns NodeWithEdges]
+  Q_SEARCH[Query: searchCoordinates(query: String!, subsystem?: Int, limit?: Int)<br/>Returns SearchResponse — placeholder]
+  Q_SUBSYS[Query: getSubsystemCoordinates(subsystem: Int!, limit?: Int)<br/>Returns SubsystemCoordinatesResponse — placeholder]
+  Q_PATH[Query: getPathBetweenCoordinates(startCoordinate: String!, endCoordinate: String!, maxHops?: Int)<br/>Returns GraphPath]
+  Q_SEM[Query: semanticCoordinateDiscovery(queryText: String!, maxResults?: Int, alpha?: Float)<br/>Returns [BimbaCoordinateMatch]]
+  Q_LEX[Query: lexicalCoordinateSearch(searchString: String!, limit?: Int)<br/>Returns LexicalSearchResponse]
+  Q_CHILDREN[Query: directChildren(bimbaCoordinate: String!)<br/>Returns DirectChildrenResponse]
+
+  %% Mutations
+  M_CREATE[Mutation: createBimbaNode(input: CreateBimbaNodeInput!)<br/>Admin only]
+  M_UPDATE[Mutation: updateBimbaNode(input: UpdateBimbaNodeInput!)<br/>Admin only]
+  M_REL[Mutation: createBimbaRelationship(input: CreateBimbaRelationshipInput!)<br/>Admin only]
+  M_REGEN_ONE[Mutation: regenerateNodeEmbedding(coordinate: String!)<br/>Admin only]
+  M_REGEN_ALL[Mutation: regenerateAllEmbeddings(batchSize?: Int = 500, force?: Bool = false)<br/>Admin only]
+end
+
+subgraph "Neo4j (Bimba)"
+  N_NODE[(BimbaNode<br/>bimbaCoordinate unique)]
+  N_VEC{{Vector Index<br/>BimbaNode.embeddings}}
+end
+
+%% Guardrails
+G_ID[[Identity: bimbaCoordinate only]]
+G_READ[[Read Path Purity: no CREATE/MERGE]]
+G_HOPS[[Variable-length hops: literal bounds; maxHops default 5, cap 10]]
+G_ANCHOR[[Anchoring: equality on start/end coordinates]]
+
+%% Query Flows
+Q_NODE -->|MATCH by bimbaCoordinate| N_NODE
+Q_NODE_COMPLETE -->|Return allProperties via Generic| N_NODE
+Q_NODE_EXT -->|Return extended mapped props| N_NODE
+Q_REL -->|MATCH single-hop both directions| N_NODE
+Q_SEARCH -.->|Placeholder impl| N_NODE
+Q_SUBSYS -.->|Placeholder impl| N_NODE
+Q_PATH -->|shortestPath [*1..N] literal bounds| N_NODE
+Q_SEM -->|Vector similarity on index| N_VEC
+Q_LEX -->|Iterate properties; substring match| N_NODE
+Q_CHILDREN -->|MATCH direct parent→children| N_NODE
+
+%% Mutation Flows
+M_CREATE -->|CREATE node| N_NODE
+M_UPDATE -->|SET properties (flat + arrays)| N_NODE
+M_REL -->|MERGE/SET relationship| N_NODE
+M_REGEN_ONE -->|Generate 1536-d Gemini embedding| N_VEC
+M_REGEN_ALL -->|Batch regeneration with hash skip| N_VEC
+
+%% Guardrail Application
+Q_NODE & Q_NODE_COMPLETE & Q_NODE_EXT & Q_REL & Q_LEX & Q_CHILDREN --> G_ID & G_READ
+Q_PATH --> G_ID & G_READ & G_HOPS & G_ANCHOR
+Q_SEM --> G_READ
+M_CREATE & M_UPDATE & M_REL --> G_ID
+
+classDef query fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#ffffff
+classDef mutation fill:#059669,stroke:#047857,stroke-width:2px,color:#ffffff
+classDef db fill:#4ade80,stroke:#22c55e,stroke-width:2px,color:#000000
+classDef guard fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#ffffff
+
+class Q_NODE,Q_NODE_COMPLETE,Q_NODE_EXT,Q_REL,Q_SEARCH,Q_SUBSYS,Q_PATH,Q_SEM,Q_LEX,Q_CHILDREN query
+class M_CREATE,M_UPDATE,M_REL,M_REGEN_ONE,M_REGEN_ALL mutation
+class N_NODE,N_VEC db
+class G_ID,G_READ,G_HOPS,G_ANCHOR guard

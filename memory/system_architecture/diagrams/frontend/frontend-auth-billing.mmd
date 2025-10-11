@@ -1,0 +1,66 @@
+flowchart TD
+
+%% Frontend Auth & Billing Architecture (Sprint 3 Overhaul)
+
+subgraph "Auth Pages"
+  SIGNIN[/auth/signin]
+  CALLBACK[/auth/callback]
+  LINK[/auth/link-account]
+end
+
+subgraph "Account Pages"
+  ACCOUNT[/account]
+end
+
+subgraph "Auth Components"
+  PROVIDER[UnifiedAuthProvider]
+  PROTECTED[ProtectedRoute]
+  AUTHSTATUS[AuthStatus]
+  PASSREQ[PasswordRequirementsComponent]
+end
+
+subgraph "Billing UI"
+  SUBMAN[SubscriptionManager.tsx]
+  TIERS[Tier Comparison]
+  PORTAL[Customer Portal Link]
+end
+
+subgraph "Services"
+  BILLING[services/billing-service.ts]
+end
+
+subgraph "Integration"
+  HOOKS[Auth/Domain Hooks]
+  NAV[Navigation/Route Guards]
+end
+
+%% Page → Component Wiring
+SIGNIN --> PROVIDER
+SIGNIN --> PROTECTED
+SIGNIN --> AUTHSTATUS
+SIGNIN --> PASSREQ
+
+CALLBACK --> PROVIDER
+LINK --> PROVIDER
+
+ACCOUNT --> PROVIDER
+ACCOUNT --> PROTECTED
+ACCOUNT --> SUBMAN
+ACCOUNT --> TIERS
+ACCOUNT --> PORTAL
+
+%% Components → Services
+SUBMAN --> BILLING
+
+%% Context & Hooks
+PROVIDER --> HOOKS
+PROTECTED --> NAV
+
+classDef page fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#ffffff
+classDef comp fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#ffffff
+classDef service fill:#059669,stroke:#047857,stroke-width:2px,color:#ffffff
+
+class SIGNIN,CALLBACK,LINK,ACCOUNT page
+class PROVIDER,PROTECTED,AUTHSTATUS,PASSREQ,SUBMAN,TIERS,PORTAL,HOOKS,NAV comp
+class BILLING service
+

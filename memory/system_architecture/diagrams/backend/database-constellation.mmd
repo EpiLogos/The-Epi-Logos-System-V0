@@ -1,13 +1,14 @@
 graph TB
     %% Database Constellation Architecture
     
-    subgraph "Neo4j Aura Unified Graph"
+subgraph "Neo4j Unified Graph (Local/Aura)"
         direction TB
         
-        subgraph "Bimba Namespace"
+        subgraph "Bimba Namespace (with Vector Index)"
             BIMBA_NODES[Bimba Nodes<br/>Coordinate System]
             BIMBA_REL[Relationships<br/>Coordinate Links]
             BIMBA_META[Metadata<br/>Subsystem Context]
+            BIMBA_EMB[Embeddings Property<br/>Vector Index on BimbaNode.embeddings]
         end
         
         subgraph "LightRAG Namespace"
@@ -24,6 +25,7 @@ graph TB
         
         BIMBA_NODES --> BIMBA_REL
         BIMBA_REL --> BIMBA_META
+        BIMBA_NODES --> BIMBA_EMB
         LIGHT_DOCS --> LIGHT_CHUNKS
         LIGHT_CHUNKS --> LIGHT_ENTITIES
         GRAPH_EPISODES --> GRAPH_COMM
@@ -72,7 +74,7 @@ graph TB
         STREAM_CHAT --> STREAM_AGUI
     end
     
-    subgraph "Qdrant Vector Database"
+subgraph "Qdrant Vector Database"
         direction TB
         
         subgraph "Vector Collections"
@@ -83,13 +85,14 @@ graph TB
         
         VEC_DOCS --> VEC_CHUNKS
         VEC_CHUNKS --> VEC_ENTITIES
-    end
+end
     
     %% Cross-database Relationships
     BIMBA_NODES -.->|Coordinate Tags| LIGHT_DOCS
     LIGHT_DOCS -.->|Document References| GRAPH_EPISODES
     USER_PROFILES -.->|User Context| PRAT_PERSONAL
     BIMBA_NODES -.->|Cache Keys| CACHE_COORD
+    %% LightRAG vectors stored in Qdrant for document intelligence
     LIGHT_DOCS -.->|Vector Embeddings| VEC_DOCS
     
     %% Service Access Patterns
