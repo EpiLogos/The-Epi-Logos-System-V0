@@ -3,6 +3,9 @@ import { cn } from '../../utils/cn';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { SidebarToggle } from './SidebarToggle';
 import { useSidebarKeyboard } from '@/hooks/useSidebarKeyboard';
+import { useHexagonPanelKeyboard } from '@/hooks/useHexagonPanelKeyboard';
+import { HexagonSidebarPanel } from '../navigation/HexagonSidebarPanel';
+import { subsystemFeatures } from '@/config/subsystemFeatures';
 
 interface SidebarProps {
   children: React.ReactNode;
@@ -23,11 +26,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
   animationPhase = 'initial',
   className
 }) => {
-  // Get collapse state from context
-  const { isCollapsed, toggle } = useSidebar();
+  // Get collapse and panel state from context
+  const { isCollapsed, toggle, panelMode, closeHexagonPanel } = useSidebar();
 
   // Enable ESC key to toggle sidebar
   useSidebarKeyboard();
+
+  // Enable keyboard shortcuts for hexagon panel
+  useHexagonPanelKeyboard();
+
+  // Handle feature clicks (stubbed for now)
+  const handleFeatureClick = (subsystemId: string, feature: 'left' | 'right') => {
+    console.log(`Navigate to subsystem ${subsystemId}, feature: ${feature}`);
+    // TODO: Implement routing to feature modals/pages
+  };
+
+  // Handle action button clicks (stubbed for now)
+  const handleNotesClick = () => {
+    console.log('Open notes modal');
+    // TODO: Implement notes modal
+  };
+
+  const handleChatClick = () => {
+    console.log('Open AI chat modal');
+    // TODO: Implement AI chat modal
+  };
+
+  // If in hexagon-panel mode or transitioning, render hexagon panel
+  if (panelMode === 'hexagon-panel' || panelMode === 'transitioning-to-normal') {
+    return (
+      <HexagonSidebarPanel
+        subsystems={subsystemFeatures}
+        onClose={closeHexagonPanel}
+        onFeatureClick={handleFeatureClick}
+        onNotesClick={handleNotesClick}
+        onChatClick={handleChatClick}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={toggle}
+        isTransitioning={panelMode === 'transitioning-to-normal'}
+      />
+    );
+  }
   // Calculate width based on variant, modal state, and collapse state
   const getWidth = () => {
     // COLLAPSE STATE: Override all other states when collapsed

@@ -6,6 +6,8 @@ import { TextAnimate } from '../ui/TextAnimate';
 import { PageFadeIn } from '../ui/PageFadeIn';
 import { CoordinateTextWithModal } from '../ui/CoordinateTextWithModal';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
+import { HexagonButton } from '../navigation/HexagonButton';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 
 // Use UI system asset paths - CORRECTED to use -icon.png files
@@ -85,7 +87,8 @@ const SubsystemPanel: React.FC<SubsystemPanelProps> = ({
 
 export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate = '#' }) => {
   const [coordinateTextVisible, setCoordinateTextVisible] = useState(false);
-  
+  const { openHexagonPanel, panelMode } = useSidebar();
+
   // Inter-page transition hook - simplified like original CSS class approach
   const {
     isTransitioning,
@@ -192,33 +195,51 @@ export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate =
         </div>
 
         {/* Footer Links */}
-        <div className="flex flex-col gap-[10px] items-start text-left">
-          <TextAnimate 
-            visible={!textFadeStarted}
-            delay={1300}
-            duration="normal"
-            className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
-          >
-            Subsystems
-          </TextAnimate>
-          <div onClick={handleBackToMain}>
-            <TextAnimate 
+        <div className="flex flex-col gap-[10px]">
+          <div className="flex flex-col gap-[10px] items-start text-left">
+            <TextAnimate
               visible={!textFadeStarted}
-              delay={1600}
+              delay={1300}
               duration="normal"
               className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
             >
-              Epi:Logos
+              Subsystems
+            </TextAnimate>
+            <div onClick={handleBackToMain}>
+              <TextAnimate
+                visible={!textFadeStarted}
+                delay={1600}
+                duration="normal"
+                className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+              >
+                Epi:Logos
+              </TextAnimate>
+            </div>
+            <TextAnimate
+              visible={!textFadeStarted}
+              delay={1900}
+              duration="normal"
+              className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+            >
+              Account
             </TextAnimate>
           </div>
-          <TextAnimate 
-            visible={!textFadeStarted}
-            delay={1900}
-            duration="normal"
-            className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
-          >
-            Account
-          </TextAnimate>
+
+          {/* Hexagon Button - Centered */}
+          <div className="mt-6 flex justify-center w-full">
+            <TextAnimate
+              visible={!textFadeStarted}
+              delay={2200}
+              duration="normal"
+            >
+              <div className="translate-y-[3px]">
+                <HexagonButton
+                  onClick={openHexagonPanel}
+                  isOpen={panelMode === 'hexagon-panel'}
+                />
+              </div>
+            </TextAnimate>
+          </div>
         </div>
       </div>
 

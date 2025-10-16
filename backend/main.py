@@ -189,6 +189,10 @@ app.include_router(graphiti_router)
 from backend.epi_logos_system.conversations.api import router as conversations_router
 app.include_router(conversations_router)
 
+# Pratibimba (Personal Pratibimba management with session-based sync)
+from backend.epi_logos_system.pratibimba.api import router as pratibimba_router
+app.include_router(pratibimba_router)
+
 # AG-UI Protocol has been moved to Agentic layer (Trilaminar Architecture compliance)
 # Frontend should communicate with Agentic layer at http://localhost:8001/api/v1/ag-ui/*
 

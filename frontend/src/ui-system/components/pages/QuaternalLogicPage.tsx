@@ -13,8 +13,12 @@ import { GlowParticles } from '../ui/GlowParticles';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
 import { DetailsModalSystem } from '../ui/DetailsModalSystem';
 import { cn } from '../../lib/utils';
+import { HexagonButton } from '../navigation/HexagonButton';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 export const QuaternalLogicPage: React.FC<{ coordinate?: string }> = ({ coordinate = '#1-4' }) => {
+  const { openHexagonPanel, panelMode } = useSidebar();
+
   // Page transition state
   const {
     whiteOverlayVisible,
@@ -254,45 +258,63 @@ export const QuaternalLogicPage: React.FC<{ coordinate?: string }> = ({ coordina
             </div>
 
             {/* Footer Links - EXACT SAME PATTERN AS PARAMASIVA */}
-            <div className="flex flex-col gap-[10px] items-start text-left">
-              <div onClick={handleParamasivaClick}>
-                <TextAnimate 
+            <div className="flex flex-col gap-[10px]">
+              <div className="flex flex-col gap-[10px] items-start text-left">
+                <div onClick={handleParamasivaClick}>
+                  <TextAnimate
+                    visible={!textFadeStarted}
+                    delay={1300}
+                    duration="normal"
+                    className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+                  >
+                    Paramasiva
+                  </TextAnimate>
+                </div>
+                <div onClick={handleSubsystemsClick}>
+                  <TextAnimate
+                    visible={!textFadeStarted}
+                    delay={1600}
+                    duration="normal"
+                    className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+                  >
+                    Subsystems
+                  </TextAnimate>
+                </div>
+                <div onClick={handleEpiLogosClick}>
+                  <TextAnimate
+                    visible={!textFadeStarted}
+                    delay={1900}
+                    duration="normal"
+                    className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+                  >
+                    Epi:Logos
+                  </TextAnimate>
+                </div>
+                <TextAnimate
                   visible={!textFadeStarted}
-                  delay={1300}
+                  delay={2200}
                   duration="normal"
                   className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
                 >
-                  Paramasiva
+                  Account
                 </TextAnimate>
               </div>
-              <div onClick={handleSubsystemsClick}>
-                <TextAnimate 
+
+              {/* Hexagon Button - Centered */}
+              <div className="mt-6 flex justify-center w-full">
+                <TextAnimate
                   visible={!textFadeStarted}
-                  delay={1600}
+                  delay={2500}
                   duration="normal"
-                  className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
                 >
-                  Subsystems
+                  <div className="translate-y-[3px]">
+                    <HexagonButton
+                      onClick={openHexagonPanel}
+                      isOpen={panelMode === 'hexagon-panel'}
+                    />
+                  </div>
                 </TextAnimate>
               </div>
-              <div onClick={handleEpiLogosClick}>
-                <TextAnimate 
-                  visible={!textFadeStarted}
-                  delay={1900}
-                  duration="normal"
-                  className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
-                >
-                  Epi:Logos
-                </TextAnimate>
-              </div>
-              <TextAnimate 
-                visible={!textFadeStarted}
-                delay={2200}
-                duration="normal"
-                className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
-              >
-                Account
-              </TextAnimate>
             </div>
           </Sidebar>
 

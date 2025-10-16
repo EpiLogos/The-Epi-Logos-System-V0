@@ -59,8 +59,8 @@
     "restore:images": "node scripts/restore-images.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.1.0",
     "@types/node": "^22.10.7",
+    "concurrently": "^9.1.0",
     "pre-commit": "^1.2.2",
     "sharp": "^0.33.3"
   },
@@ -75,11 +75,15 @@
   },
   "keywords": [
     "wisdom-synthesis",
-    "tri-laminar-architecture", 
+    "tri-laminar-architecture",
     "graph-database",
     "agentic-ai",
     "knowledge-management"
   ],
   "author": "Epi-Logos Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "dexie": "^4.2.1",
+    "dexie-react-hooks": "^4.2.0"
+  }
 }

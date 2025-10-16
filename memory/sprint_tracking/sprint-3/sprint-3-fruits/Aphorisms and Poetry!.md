@@ -1,0 +1,13 @@
+"Clean until clear; springs appear"
+"Trust is a con we ought all be in on"
+"The Four is in the Fore"
+"Change where you stand to see what with-stands."
+"The horizon is your eyes' lie - it moves when you move. The edge is always by-the-by, the centre always wholly you."
+"Dig until empty; spring springs from scrubbed earth. Soil remains, cleanest dirt."
+"Four makes the floor; two gets us through."
+"Two's company, one's a crowd." 
+"Five alive after four floors - essence is the sixth sense." 
+"All falls in place by itself - lay down where it calls."
+"Recognition is remembering you could never forget"
+
+"Valiant are those who enter darkness seeking light; Victorious is the One knowing darkness burning bright."

@@ -3,7 +3,7 @@
  * Tests error creation, classification, and utility functions
  */
 
-import { describe, it, expect, vi } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
 import {
   generateErrorId,
   generateSupportId,

@@ -298,24 +298,24 @@ export const AuthModalContent: React.FC<AuthModalContentProps> = ({
     setAuthState('idle');
   };
 
-  // Auto-transition from auth-success to account-profile
+  // Auto-transition from auth-success to pratibimba (primary user view)
   useEffect(() => {
     if (businessState === 'auth-success') {
       const timer = setTimeout(() => {
         // Only transition if user is actually authenticated in the auth context
         // This prevents the OAuth bug where success fires before auth state updates
         if (isAuthenticated && !isUnifiedAuthLoading) {
-          onStateChange('account-profile');
+          onStateChange('pratibimba');
         } else {
           // If still loading or not authenticated, wait a bit more and try again
           console.warn('Auth success state triggered but user not authenticated yet, retrying...');
           const retryTimer = setTimeout(() => {
             if (isAuthenticated && !isUnifiedAuthLoading) {
-              onStateChange('account-profile');
+              onStateChange('pratibimba');
             } else {
               // Final fallback - transition anyway to avoid being stuck
-              console.warn('Final fallback: transitioning to account despite auth state');
-              onStateChange('account-profile');
+              console.warn('Final fallback: transitioning to pratibimba despite auth state');
+              onStateChange('pratibimba');
             }
           }, 1000);
 

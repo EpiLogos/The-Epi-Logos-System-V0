@@ -1,11 +1,12 @@
 // Business state type definition for EpiLogos modal system
-export type EpiLogosBusinessState = 
+export type EpiLogosBusinessState =
   | 'png-displayed'                    // PNG image shown (default)
   | 'dashboard'                        // NEW: Dashboard with 6 circles (default for authenticated)
   | 'auth-signin' | 'auth-signup'      // Authentication states
   | 'auth-oauth' | 'auth-success'      // OAuth flow states
-  | 'account-profile' | 'account-security' | 'account-billing' // Current account states
-  | 'account-notifications' | 'account-sessions' | 'account-preferences' // NEW: Additional account states
+  | 'pratibimba'                       // NEW: Personal Pratibimba hub (primary user view)
+  | 'account-profile' | 'account-security' | 'account-billing' // Account states (nested in Pratibimba)
+  | 'account-notifications' | 'account-sessions' | 'account-preferences' // Additional account states
   | 'chat';                             // Chat modal (new)
 
 // Account state type subset for AccountModalContent

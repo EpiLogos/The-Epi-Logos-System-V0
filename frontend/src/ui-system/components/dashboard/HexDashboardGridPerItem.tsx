@@ -17,7 +17,7 @@ const items: Array<{
   enabled: boolean;
   rotationPhase: 0 | 60 | 120 | 180 | 240 | 300;
 }> = [
-  { id: 'account', label: 'Account', image: '/ui-system/zen-circle.png', innerImage: '/ui-system/account-icon.png', route: 'account-profile', enabled: true, rotationPhase: 0 },
+  { id: 'pratibimba', label: 'Pratibimba', image: '/ui-system/zen-circle.png', innerImage: '/ui-system/zen-circle.png', route: 'pratibimba', enabled: true, rotationPhase: 0 },
   { id: 'system', label: 'System', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 60 },
   { id: 'subsystems', label: 'Subsystems', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 120 },
   { id: 'coordinates', label: 'Coordinates', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 180 },

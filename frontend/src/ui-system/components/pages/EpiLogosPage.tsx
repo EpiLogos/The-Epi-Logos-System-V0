@@ -18,6 +18,8 @@ import { TextAnimate } from '../ui/TextAnimate';
 import { useUnifiedAuth } from '@/auth/unified-auth-context';
 import { cn } from '../../utils/cn';
 import { type EpiLogosBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
+import { HexagonButton } from '../navigation/HexagonButton';
+import { useSidebar } from '@/contexts/SidebarContext';
 
 export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEntered = false }) => {
   // SEPARATED CONCERNS: Modal hook + Navigation hook (like ParamasivaPage)
@@ -31,7 +33,9 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
     currentTransitionDirection,
     transitionToSubsystemsFromEpiLogos
   } = useInterPageTransition();
-  
+
+  const { openHexagonPanel, panelMode } = useSidebar();
+
   // Authentication and business state management
   const { isAuthenticated, completeOAuth } = useUnifiedAuth();
   const [businessState, setBusinessState] = useState<EpiLogosBusinessState>('png-displayed');
@@ -356,35 +360,53 @@ export const EpiLogosPage: React.FC<{ initialEntered?: boolean }> = ({ initialEn
 
                 {/* Navigation Links - fade out then unmount in chat state */}
                 {nonThreadsMounted && (
-                <div className="flex flex-col gap-[10px] items-start text-left">
-                  <div onClick={handleSubsystemsClick}>
-                    <TextAnimate 
+                <div className="flex flex-col gap-[10px]">
+                  <div className="flex flex-col gap-[10px] items-start text-left">
+                    <div onClick={handleSubsystemsClick}>
+                      <TextAnimate
+                        visible={epiLogosState.showExpandedContent && !textFadeStarted && nonThreadsVisible}
+                        delay={600}
+                        duration="normal"
+                        className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+                      >
+                        Subsystems
+                      </TextAnimate>
+                    </div>
+                    <div onClick={handleBackToParamasiva}>
+                      <TextAnimate
+                        visible={epiLogosState.showExpandedContent && !textFadeStarted && nonThreadsVisible}
+                        delay={800}
+                        duration="normal"
+                        className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+                      >
+                        Paramasiva
+                      </TextAnimate>
+                    </div>
+                    <TextAnimate
                       visible={epiLogosState.showExpandedContent && !textFadeStarted && nonThreadsVisible}
-                      delay={600}
+                      delay={1000}
                       duration="normal"
                       className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
                     >
-                      Subsystems
+                      Account
                     </TextAnimate>
                   </div>
-                  <div onClick={handleBackToParamasiva}>
-                    <TextAnimate 
+
+                  {/* Hexagon Button - Centered */}
+                  <div className="mt-6 flex justify-center w-full">
+                    <TextAnimate
                       visible={epiLogosState.showExpandedContent && !textFadeStarted && nonThreadsVisible}
-                      delay={800}
+                      delay={1300}
                       duration="normal"
-                      className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
                     >
-                      Paramasiva
+                      <div className="translate-y-[3px]">
+                        <HexagonButton
+                          onClick={openHexagonPanel}
+                          isOpen={panelMode === 'hexagon-panel'}
+                        />
+                      </div>
                     </TextAnimate>
                   </div>
-                  <TextAnimate 
-                    visible={epiLogosState.showExpandedContent && !textFadeStarted && nonThreadsVisible}
-                    delay={1000}
-                    duration="normal"
-                    className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
-                  >
-                    Account
-                  </TextAnimate>
                 </div>
                 )}
               </>

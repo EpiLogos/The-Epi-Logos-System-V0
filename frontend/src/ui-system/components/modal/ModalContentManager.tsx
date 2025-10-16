@@ -9,6 +9,7 @@ import { AccountModalContent } from '../account/AccountModalContent';
 import { type EpiLogosBusinessState, type AccountBusinessState, type AuthBusinessState } from '@/hooks/ui-system/useEpiLogosBusinessStates';
 import { DashboardModalContent } from '../dashboard/DashboardModalContent';
 import { ChatModalContent } from '../chat/ChatModalContent';
+import PratibimbaHub from '../pratibimba/PratibimbaHub';
 import { SplashCursor } from '@/components/splash-cursor';
 
 interface ModalContentManagerProps {
@@ -143,12 +144,12 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
     );
   }
 
-  // Account States (authenticated users)
-  if (businessState.startsWith('account-')) {
+  // Pratibimba State (authenticated users - primary view)
+  if (businessState === 'pratibimba' || businessState.startsWith('account-')) {
     return (
       <AnimatePresence mode="wait">
         <motion.div
-          key={businessState} // Key changes trigger transitions between account states
+          key="pratibimba" // Use single key for pratibimba and account states
           className={cn(
             'content-transition-container no-opacity-filter-transition modal-content-panel mb-[5px]'
           )}
@@ -157,8 +158,8 @@ export const ModalContentManager: React.FC<ModalContentManagerProps> = ({
           exit={{ opacity: 0, filter: 'blur(4px)' }}
           transition={{ duration: 0.3, ease: 'easeOut' }}
         >
-          <AccountModalContent
-            businessState={businessState as AccountBusinessState}
+          <PratibimbaHub
+            businessState={businessState}
             onStateChange={safeOnStateChange}
           />
         </motion.div>
