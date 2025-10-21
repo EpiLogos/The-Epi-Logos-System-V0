@@ -4,6 +4,8 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { SidebarToggle } from './SidebarToggle';
 import { useSidebarKeyboard } from '@/hooks/useSidebarKeyboard';
 import { useHexagonPanelKeyboard } from '@/hooks/useHexagonPanelKeyboard';
+import { useSidebarWidth } from '@/hooks/useSidebarWidth';
+import { useSidebarSpacing } from '@/hooks/useSidebarSpacing';
 import { HexagonSidebarPanel } from '../navigation/HexagonSidebarPanel';
 import { subsystemFeatures } from '@/config/subsystemFeatures';
 
@@ -68,61 +70,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
     );
   }
   // Calculate width based on variant, modal state, and collapse state
-  const getWidth = () => {
-    // COLLAPSE STATE: Override all other states when collapsed
-    if (isCollapsed) {
-      return 'sidebar-collapsed'; // 64px collapsed width
-    }
+  const { width: sidebarWidth } = useSidebarWidth({
+    isCollapsed,
+    variant,
+    isModalExpanded,
+    isTransitioning,
+    transitionDirection,
+  });
 
-    if (variant === 'subsystems') {
-      return 'w-[300px]'; // Grid sidebar width
-    }
-
-    if (variant === 'paramasiva') {
-      // TRANSITION HANDLING: Multiple directions from Paramasiva
-      if (isTransitioning) {
-        if (transitionDirection === 'to-subsystems') {
-          // PARAMASIVA → SUBSYSTEMS: Shrink to grid width
-          return 'w-[300px]';
-        } else if (transitionDirection === 'to-quaternal') {
-          // PARAMASIVA → QUATERNAL LOGIC: Stay at 420px (main sidebar width)
-          return 'w-[420px]';
-        }
-      }
-
-      // NORMAL PARAMASIVA STATES
-      return isModalExpanded ? 'w-[420px]' : 'w-[calc(100vw-420px)]'; // Expanded left sidebar
-    }
-
-    if (variant === 'epi-logos') {
-      // REVERSE MODAL HANDLING: EpiLogos → Subsystems
-      if (isTransitioning) {
-        // During reverse transition: Sidebar should expand from 420px back to full screen
-        return 'w-screen'; // Back to full screen width
-      }
-
-      // NORMAL EPI-LOGOS STATES
-      // EPI-LOGOS: Full-width initial state → narrow expanded state
-      return isModalExpanded ? 'w-[420px]' : 'w-screen'; // Full screen → narrow sidebar
-    }
-
-    if (variant === 'main') {
-      // MAIN: Standard portfolio sidebar (quaternal logic page)
-      return 'w-[420px]'; // Fixed main sidebar width
-    }
-
-    return 'w-[420px]'; // Default
-  };
+  // Calculate spacing based on collapse state (Phase 2 Refactor)
+  const { utilityClass: spacingClass } = useSidebarSpacing(isCollapsed);
 
   return (
     <div className={cn(
       // Base sidebar styling - FIXED: Remove overflow-hidden when modal expanded to allow scrolling
-      "bg-[#f5f5f5] px-10 py-8 flex flex-col justify-between flex-shrink-0 h-screen max-h-screen relative modal-sidebar-panel",
+      "bg-[#f5f5f5] flex flex-col justify-between flex-shrink-0 h-screen max-h-screen relative modal-sidebar-panel",
+      // Spacing: use centralized spacing utility (replaces px-10 py-8 hardcoding)
+      spacingClass,
       // Only hide overflow when NOT in modal expanded state (to allow scrollable content)
       !isModalExpanded && "overflow-hidden",
 
-      // Width based on variant and state
-      getWidth(),
+      // Width based on variant and state (from useSidebarWidth hook)
+      sidebarWidth,
 
       // Collapse transition
       "sidebar-collapse-transition",

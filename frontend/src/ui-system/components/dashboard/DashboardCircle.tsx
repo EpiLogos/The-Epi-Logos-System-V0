@@ -46,7 +46,7 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
       type="button"
       aria-label={label}
       className={cn(
-        'dashboard-circle-container group relative isolate flex flex-col items-center justify-center w-36 min-h-36 mx-auto outline-none',
+        'dashboard-circle-container group relative isolate flex flex-col items-center justify-center w-36 min-h-36 mx-auto outline-none rotate-90',
         enabled ? 'cursor-pointer' : 'cursor-default',
       )}
       onClick={handleClick}
@@ -98,17 +98,25 @@ export const DashboardCircle: React.FC<DashboardCircleProps> = ({
           <div className="absolute inset-0 z-10 pointer-events-none dashboard-glass-scale">
             <CircularGlassOverlay
               size={size}
-              backgroundOpacity={0.15}
-              brightness={enabled ? 60 : 40}
-              opacity={enabled ? 0.85 : 0.95}
-              blur={8}
-              saturation={enabled ? 1.2 : 0.8}
+              backgroundOpacity={0.18}
+              brightness={enabled ? 70 : 85}
+              opacity={enabled ? 0.6 : 0.7}
+              blur={12}
+              saturation={enabled ? 1.22 : 0.87}
               enableRotation={true}
               rotationPhase={rotationPhase}
               className="dashboard-glass-compositor"
             />
           </div>
         )}
+
+        {/* White border ring - frames the circle */}
+        <div
+          className={cn(
+            'dashboard-border-ring',
+            !enabled && 'opacity-40'
+          )}
+        />
 
         {/* Same inner image but layered above glass when requested */}
         {innerAboveGlass && innerImage ? (

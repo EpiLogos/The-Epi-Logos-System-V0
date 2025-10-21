@@ -198,6 +198,158 @@ def invalidate_node_embedding(self, coordinate: str):
 **Philosophical Rationale**:
 > "System architecture should reflect philosophical foundations at every level, including default parameter values. Mod6 QL requires 6-coordinate completeness (#0-#5)."
 
+#### Quintessential Property Semantic Boosting (2025-10-19)
+**Context**: New `q_` prefix property convention for distilled, comprehensive node understanding
+**Challenge**: How to make quintessential properties rank higher in semantic search without manual index configuration
+**Solution**: Position-based weighting in embedding text serialization
+
+**Technical Implementation**:
+```python
+# Dynamic quintessential property detection
+quintessential_keys = sorted([
+    k for k in props.keys()
+    if re.match(r'^q(?:\d+)?_', k)  # Matches q_, q0_, q1_, q12_, etc.
+])
+
+# Priority ordering: Identity → Quintessence → Architecture
+priority_fields = [
+    "name", "symbol",           # Positions 1-2: Identity
+    *quintessential_keys,        # Positions 3+: QUINTESSENTIAL (boosted)
+    "coreNature",               # After quintessence: Architectural props
+    "operationalEssence",
+    "function",
+    "architecturalFunction"
+]
+```
+
+**Pattern Matching**:
+- `q_` - Base quintessential property
+- `q0_`, `q1_`, `q12_`, `q123_` - Versioned refinements (any digit count)
+- **Does NOT match**: `qx_` (non-numeric), `q` (no underscore)
+
+**Embedding Text Position Hierarchy**:
+```
+Position 1:    name                    ← Identity (highest weight)
+Position 2:    symbol                  ← Symbolic identity
+Position 3-N:  q_*, q0_*, q1_*, ...    ← QUINTESSENTIAL ESSENCE (boosted) ✨
+Position N+1:  coreNature              ← Architectural properties
+Position N+2:  operationalEssence
+...
+```
+
+**Why Position Matters**:
+- Embedding models process text **sequentially**
+- Earlier tokens establish **primary semantic anchors**
+- Later tokens contextualized **relative to** earlier ones
+- Result: Early text = stronger vector representation
+
+**Versioning Strategy**:
+- `q_` - Base/canonical quintessential property
+- `q0_` - Original formulation (retroactive when creating q1_)
+- `q1_`, `q2_`, etc. - Refined understanding (MEF-validated, episodic-sourced)
+- Non-destructive evolution preserves historical understanding
+
+**Complementary to f_ Properties**:
+- `f_` properties: What the node **does** operationally (execution)
+- `q_` properties: What the node **is** essentially (discovery)
+- Both serve consciousness-computing from complementary angles
+
+**Integration with Three-Tier Pattern**:
+- **Tier 1**: Capability declarations (f_ properties)
+- **Tier 2**: Interface specifications (f_ properties)
+- **Tier 3**: Workflow implementations (f_ properties)
+- **Cross-Tier**: Quintessential distillations (q_ properties for semantic discovery)
+
+**Implementation Location**: `backend/epi_logos_system/cag/bimba/services.py:1037-1047`
+
+**Future Enhancements** (Phase 2-3):
+- Phase 2: Fulltext index composite `q_quintessence` property
+- Phase 3: Optional embedding repetition boosting
+
+**Documentation**: [quintessential-property-semantic-boosting.md](sprint_tracking/sprint-3/sprint-3-tracking/quintessential-property-semantic-boosting.md)
+
+**Impact**: Nodes with well-distilled quintessential understanding now surface more effectively in semantic search, supporting episodic-to-bimba crystallization workflows
+
+### Critical Bug Fixes & Architecture Compliance (2025-10-21)
+
+#### Redis Client Architecture Fix
+**Problem Discovered**: Pratibimba API bypassing centralized Redis client infrastructure
+- Inline initialization: `Redis.from_url(os.getenv("REDIS_CLOUD_URL", "redis://localhost:6379"))`
+- Wrong environment variable: `REDIS_CLOUD_URL` (doesn't exist in `.env`)
+- Dumb localhost fallback creating connection failures (503/500 errors)
+- No centralized lifecycle management
+
+**Root Cause**:
+- `shared/database/redis_client.py` exists with proper `RedisClient` class using `REDIS_URL`
+- `main.py` only initialized Neo4j client, NOT Redis
+- OAuth routes expected `request.app.state.redis_client` (never set)
+- Each module attempted its own client → architectural inconsistency
+
+**Fix Applied**:
+1. **Backend main.py**: Initialize `RedisClient()` in lifespan startup (matching Neo4j pattern)
+2. **Dependency Injection**: Created `get_redis_client(request)` dependency injector
+3. **Pratibimba API Refactor**: Removed inline Redis initialization, injected `RedisClient` via `Depends(get_redis_client)`
+4. **Cleanup**: Added Redis client shutdown in lifespan cleanup handler
+5. **Environment Variable**: Now uses correct `REDIS_URL` from `.env`
+
+**Architecture Compliance**: Follows exact same pattern as Neo4j client:
+- Centralized initialization in `main.py` lifespan
+- Storage in `app.state.redis_client`
+- Dependency injection via FastAPI `Depends()`
+- Proper cleanup on shutdown
+
+**Files Modified**:
+- `backend/main.py` (lines 26, 48-53, 70, 90-92)
+- `backend/epi_logos_system/pratibimba/api.py` (all endpoints refactored)
+
+#### Pratibimba Sync Infinite Loop Fix
+**Problem Discovered**: Frontend stuck in infinite sync loop spamming `/api/pratibimba/sync` every ~30ms
+
+**Symptoms**:
+- Backend logs showing rapid-fire POST requests
+- Frontend flashing between "synced" and "local storage only"
+- Maximum update depth React error
+- User experience completely broken
+
+**Root Cause Analysis** (Deep Investigation Required):
+1. `syncToCloud()` updated IndexedDB syncState after successful sync (line 44-50 in sync service)
+2. `useLiveQuery()` detected IndexedDB change → `pratibimba` object reference changed
+3. `useEffect` in PratibimbaHub depended on `pratibimba` → re-ran effect
+4. Effect called `syncToCloud()` again → IndexedDB update
+5. **Infinite reactive loop**
+
+**Failed Attempts** (Learning Process):
+- ❌ Removed `getAuthHeader` from dependencies → didn't address root cause
+- ❌ Added `syncInitialized` state flag IN dependencies → made it worse (maximum update depth exceeded)
+
+**Correct Fix** (Separation of Concerns):
+1. **Removed IndexedDB update from `syncToCloud()`**:
+   - Sync service should ONLY sync to cloud, NOT modify local state
+   - Single Responsibility Principle violation was causing the loop
+
+2. **Empty dependency array `[]` in sync effect**:
+   - Sync runs exactly ONCE on component mount
+   - Does NOT re-run when `pratibimba` data changes
+   - Cleanup properly stops background sync on unmount
+
+3. **Service Layer Purity**:
+   - `syncToCloud()` now only performs HTTP POST to backend
+   - Component manages UI state separately (`setSyncStatus`)
+   - No cross-layer state mutation
+
+**Key Insight**: Service layer mixing concerns (sync + local state mutation) caused reactive queries (`useLiveQuery`) to trigger infinite component re-renders. Proper separation of concerns resolved it.
+
+**Why This Matters**:
+- `useLiveQuery` is a reactive Dexie hook that re-runs component when IndexedDB changes
+- ANY IndexedDB mutation inside a sync function will trigger re-renders
+- Effects that depend on reactive query results MUST NOT trigger mutations that affect those queries
+
+**Files Modified**:
+- `frontend/src/services/pratibimba-sync.service.ts` (removed lines 44-50 IndexedDB update)
+- `frontend/src/ui-system/components/pratibimba/PratibimbaHub.tsx` (empty deps array, removed `pratibimba` dependency)
+
+**Architectural Lesson**: Reactive state systems require strict unidirectional data flow. Bi-directional mutation loops (service mutates → query reacts → component re-renders → effect triggers service) are architectural anti-patterns.
+
 **Implementation**:
 ```python
 # Backend service
@@ -262,7 +414,14 @@ Returns: #0 Anuttara, #1 Paramasiva, #2 Parashakti,
 8. **Story 02.08**: Bimba Relationship Deletion
 9. **Story 02.09**: Safe Bimba Node Deletion
 10. **Story 02.11**: Personal Pratibimba Management
-11. **Story 02.11.1**: Pratibimba Hub Namespace Coordination
+11. ~~**Story 02.11.1**: Pratibimba Hub Namespace Coordination~~ **[MOVED TO SPRINT 10]**
+
+### Sprint Planning Adjustments
+
+**Story 02.11.1 Moved to Sprint 10** (2025-10-20):
+- **Rationale**: Story 02.11.1 (Pratibimba Hub Namespace Coordination) requires active Nara subsystem features (journal entries, Cases, user interaction workflows) that don't exist until Sprint 9-10. The story explicitly states "As a **Nara subsystem** preparing for user interaction workflows" and depends on completed Cases for hub updates.
+- **New Location**: Sprint 10 as primary story alongside 07.11 (Nara Persona Workflow)
+- **Sprint 3 Impact**: Enables clean sprint completion with foundational graph operations (02.02, 02.03, 02.03.1, 02.06) and basic user profile system (02.11)
 
 ### Architectural Patterns Established
 

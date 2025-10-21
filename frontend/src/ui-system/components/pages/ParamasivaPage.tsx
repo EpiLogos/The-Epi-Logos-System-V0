@@ -325,7 +325,7 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
 
           {/* Footer Links - EXACT SAME AS SUBSYSTEMS WITH TRANSITION EFFECTS */}
           {!modalState.isModalExpanded && (
-            <div className="flex flex-col gap-[10px]">
+            <div className="flex flex-col gap-[10px] mt-6">
               <div className="flex flex-col gap-[10px] items-start text-left">
                 <div onClick={handleQuaternalLogicClick}>
                   <TextAnimate

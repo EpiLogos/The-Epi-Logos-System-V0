@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../../utils/cn';
+import { useSidebarSpacing } from '@/hooks/useSidebarSpacing';
 import { SubsystemFeature } from '@/config/subsystemFeatures';
 import { SubsystemQuickAccess } from './SubsystemQuickAccess';
 import { FoundationalActions } from './FoundationalActions';
@@ -27,12 +28,17 @@ export const HexagonSidebarPanel: React.FC<HexagonSidebarPanelProps> = ({
   onToggleCollapse,
   isTransitioning = false
 }) => {
+  // Get spacing from centralized hook (Phase 2 Refactor)
+  const { utilityClass: spacingClass } = useSidebarSpacing(isCollapsed);
+
   return (
     <div
       className={cn(
         'bg-[#f5f5f5] flex flex-col justify-between h-screen max-h-screen relative border-r border-[#e0e0e0] flex-shrink-0',
-        // Width and padding based on collapse state (reusing sidebar patterns)
-        isCollapsed ? 'sidebar-collapsed' : 'w-[420px] px-10 py-8',
+        // Width and padding based on collapse state
+        isCollapsed ? 'sidebar-collapsed' : 'w-[420px]',
+        // Spacing: use centralized spacing utility (replaces px-10 py-8 hardcoding)
+        spacingClass,
         // Collapse transition (reusing sidebar pattern)
         'sidebar-collapse-transition',
         // Fade animation

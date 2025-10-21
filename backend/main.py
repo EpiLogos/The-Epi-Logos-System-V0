@@ -23,7 +23,7 @@ load_dotenv()  # loads .env
 # load_dotenv('.env.local')  # DISABLED: Using main .env file with all credentials
 
 # Import services - using shared database clients
-from shared.database import Neo4jClient
+from shared.database import Neo4jClient, RedisClient
 from backend.epi_logos_system.shared.config import get_config
 from backend.epi_logos_system.auth.oauth.routes import oauth_router
 from backend.epi_logos_system.cag.bimba.services import NodeService, NodeRepository
@@ -44,11 +44,20 @@ def get_neo4j_client(request: Request) -> Neo4jClient:
     """
     return request.app.state.neo4j_client
 
+# Dependency injection for Redis client
+def get_redis_client(request: Request) -> RedisClient:
+    """
+    Dependency injection for Redis client using app.state for explicit resource lifecycle.
+    Client is created on startup and reused across all requests.
+    """
+    return request.app.state.redis_client
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events with explicit resource management"""
     # Startup - initialize shared resources
     config = get_config()
+
     logger.info("Initializing Neo4j client with centralized configuration")
     app.state.neo4j_client = Neo4jClient(
         uri=config.neo4j_uri,
@@ -56,18 +65,32 @@ async def lifespan(app: FastAPI):
         password=config.neo4j_password,
         database=config.neo4j_database
     )
-    
+
+    logger.info("Initializing Redis client with centralized configuration")
+    app.state.redis_client = RedisClient()
+
+    # Test Redis connection on startup
+    if app.state.redis_client.test_connection():
+        logger.info("Redis client connected successfully")
+    else:
+        logger.warning("Redis connection test failed - some features may be unavailable")
+
     # AG-UI Protocol moved to Agentic layer - Backend handles only database operations
-    
+
     logger.info("Application startup complete")
-    
+
     yield
-    
+
     # Shutdown - cleanup resources explicitly
     try:
         if hasattr(app.state, 'neo4j_client'):
             app.state.neo4j_client.close()
             logger.info("Neo4j client connection closed successfully")
+
+        if hasattr(app.state, 'redis_client'):
+            app.state.redis_client.close()
+            logger.info("Redis client connection closed successfully")
+
         # AG-UI Protocol cleanup not needed - using Pydantic AI native integration
     except Exception as e:
         logger.error(f"Error during shutdown cleanup: {e}")

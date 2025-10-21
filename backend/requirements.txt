@@ -4,17 +4,23 @@ uvicorn[standard]>=0.34.0
 pydantic>=2.11.2,<3.0.0
 pydantic-settings>=2.7.1
 
-# Note: AG-UI Protocol moved to Agentic layer
-# pydantic-ai and ag-ui-protocol no longer needed in Backend
+# Note: AG-UI Protocol core functionality in Agentic layer
+# Backend still needs ag-ui-protocol for deprecated tests
+ag-ui-protocol==0.1.8
 
-# GraphQL with Ariadne
+# GraphQL with Ariadne and Strawberry
 ariadne==0.23.0
+strawberry-graphql>=0.220.0
 
 # Database drivers
 neo4j==5.28.0
 pymongo==4.10.1
 redis==5.2.1
 qdrant-client==1.15.1
+
+# RAG and Knowledge Graph
+lightrag-hku>=1.4.9
+graphiti-core==0.3.6
 
 # Authentication and security
 python-jose[cryptography]==3.3.0

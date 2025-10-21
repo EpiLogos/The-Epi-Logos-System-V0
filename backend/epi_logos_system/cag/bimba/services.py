@@ -5,6 +5,7 @@ from typing import Optional
 from shared.database import Neo4jClient
 import os
 import math
+import re
 from typing import List, Dict, Any
 import logging
 
@@ -1028,10 +1029,29 @@ class NodeService:
         lines: list[str] = []
         if labels:
             lines.append("labels: " + ",".join(sorted(labels)))
-        priority_fields = ["name", "symbol", "coreNature", "operationalEssence", "function", "architecturalFunction"]
+
+        # Priority fields: Core semantic properties
+        # Static priority fields (established architectural properties)
+        static_priority = ["name", "symbol", "coreNature", "operationalEssence", "function", "architecturalFunction"]
+
+        # Quintessential properties (q_, q0_, q1_, q12_ etc. prefixed) - dynamically discovered and prioritized
+        # These encapsulate distilled, essential understanding of a coordinate
+        # Pattern matches: q_, q0_, q1_, q12_, q123_, etc.
+        quintessential_keys = sorted([
+            k for k in props.keys()
+            if re.match(r'^q(?:\d+)?_', k)  # Matches q_ or q<digits>_
+        ])
+
+        # Combine: quintessential properties ranked HIGHEST (after name/symbol, before other core properties)
+        # This ensures semantic search strongly weights well-distilled understanding
+        priority_fields = ["name", "symbol"] + quintessential_keys + ["coreNature", "operationalEssence", "function", "architecturalFunction"]
+
+        # Serialize priority fields first (order matters for embedding weight)
         for pf in priority_fields:
             if pf in props and pf not in exclude:
                 flatten(props.get(pf), pf, lines)
+
+        # Then serialize remaining properties alphabetically
         for key in sorted(props.keys()):
             if key in exclude or key in priority_fields:
                 continue

@@ -12,10 +12,10 @@ import { pratibimbaDB } from '@/domains/pratibimba/pratibimba-db';
 import {
   updatePratibimbaGrowth,
   addKnowledgeConnection,
-  exportPratibimba,
-  createPratibimbaSeed
+  exportPratibimba
 } from '@/domains/pratibimba/pratibimba.domain';
 import type { PersonalPratibimba } from '@/domains/pratibimba/pratibimba.types';
+import { createPratibimbaSeed } from '@/domains/pratibimba/pratibimba.types';
 
 export interface UsePratibimbaReturn {
   pratibimba: PersonalPratibimba | undefined;

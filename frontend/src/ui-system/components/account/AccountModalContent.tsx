@@ -179,11 +179,11 @@ export const AccountModalContent: React.FC<AccountModalContentProps> = ({
     <div className="account-modal-container h-full flex flex-col pt-6 pb-1 px-4">
       <div className="account-header mb-4">
         <button
-          onClick={() => onStateChange('dashboard')}
+          onClick={() => onStateChange('pratibimba')}
           className="flex items-center text-ui-coord-text hover:text-ui-panel transition-colors font-mono text-sm mb-2"
         >
           <ChevronLeftIcon className="w-4 h-4 mr-2" />
-          Back to Dashboard
+          Back to Pratibimba
         </button>
       </div>
       {renderNavigation()}

@@ -15,6 +15,7 @@ export class PratibimbaSync {
 
   /**
    * Start sync session: upload to Redis Cloud
+   * Does NOT update IndexedDB to avoid triggering reactive queries
    */
   async syncToCloud(userId: string, authToken: string): Promise<void> {
     try {
@@ -40,15 +41,8 @@ export class PratibimbaSync {
         throw new Error(`Sync failed: ${response.statusText}`);
       }
 
-      // Update sync state
-      await pratibimbaDB.pratibimba.update(userId, {
-        syncState: {
-          ...local.syncState,
-          lastSyncedAt: new Date(),
-          cloudActive: true
-        }
-      });
-
+      // DO NOT update IndexedDB here - it triggers useLiveQuery and causes infinite loops
+      // The component managing sync should update state separately if needed
       console.log('Pratibimba synced to cloud successfully');
     } catch (error) {
       console.error('Failed to sync Pratibimba to cloud:', error);
@@ -62,9 +56,9 @@ export class PratibimbaSync {
    */
   async processSyncQueue(userId: string, authToken: string): Promise<void> {
     try {
+      // Use filter instead of where().equals() for boolean values
       const pending = await pratibimbaDB.syncQueue
-        .where('synced')
-        .equals(false)
+        .filter(item => item.synced === false)
         .toArray();
 
       if (pending.length === 0) {

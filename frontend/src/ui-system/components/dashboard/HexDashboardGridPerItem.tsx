@@ -15,14 +15,14 @@ const items: Array<{
   innerImage?: string;
   route: EpiLogosBusinessState | null;
   enabled: boolean;
-  rotationPhase: 0 | 60 | 120 | 180 | 240 | 300;
+  rotationPhase: number;
 }> = [
-  { id: 'pratibimba', label: 'Pratibimba', image: '/ui-system/zen-circle.png', innerImage: '/ui-system/zen-circle.png', route: 'pratibimba', enabled: true, rotationPhase: 0 },
-  { id: 'system', label: 'System', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 60 },
-  { id: 'subsystems', label: 'Subsystems', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 120 },
-  { id: 'coordinates', label: 'Coordinates', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 180 },
-  { id: 'agents', label: 'Chat', image: '/ui-system/zen-circle.png', innerImage: '/ui-system/chat-icon.png', route: 'chat', enabled: true, rotationPhase: 240 },
-  { id: 'settings', label: 'Settings', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 300 },
+  { id: 'pratibimba', label: 'Pratibimba', image: '/ui-system/zen-circle.png', innerImage: '/ui-system/account-icon.png', route: 'pratibimba', enabled: true, rotationPhase: 90 },
+  { id: 'system', label: 'System', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 150 },
+  { id: 'subsystems', label: 'Subsystems', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 210 },
+  { id: 'coordinates', label: 'Coordinates', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 270 },
+  { id: 'agents', label: 'Chat', image: '/ui-system/zen-circle.png', innerImage: '/ui-system/chat-icon.png', route: 'chat', enabled: true, rotationPhase: 330 },
+  { id: 'settings', label: 'Settings', image: '/ui-system/zen-circle.png', route: null, enabled: false, rotationPhase: 30 },
 ];
 
 // Simple hex layout using two rows with a horizontal offset on the second row
@@ -52,20 +52,94 @@ export const HexDashboardGridPerItem: React.FC<HexDashboardGridPerItemProps> = (
   const angles = useMemo(() => [0, 60, 120, 180, 240, 300].map((a) => (a * Math.PI) / 180), []);
   const center = box.size / 2;
 
+  // Calculate hexagon vertices that pass through circle centers
+  const hexagonPoints = useMemo(() => {
+    return angles
+      .map(angle => {
+        const x = center + r * Math.cos(angle);
+        const y = center + r * Math.sin(angle);
+        return `${x},${y}`;
+      })
+      .join(' ');
+  }, [angles, center, r]);
+
   return (
-    <div ref={containerRef} className="relative w-[min(92vw,700px)] aspect-square">
-      {items.map((it, idx) => {
-        const theta = angles[idx];
-        const cx = center + r * Math.cos(theta);
-        const cy = center + r * Math.sin(theta);
-        const left = cx - CIRCLE_SIZE / 2;
-        const top = cy - CIRCLE_SIZE / 2;
-        return (
-          <div key={it.id} className="absolute" style={{ left, top }}>
-            <DashboardCircle {...it} onNavigate={onNavigate} size={CIRCLE_SIZE} />
-          </div>
-        );
-      })}
+    <div className="relative w-[min(92vw,700px)] aspect-square">
+      {/* Background flower image - centered behind all content, NOT rotated */}
+      <div className="absolute inset-0 pointer-events-none -z-10 overflow-visible">
+        <img
+          src="/ui-system/Dashaboard flower.png"
+          alt="Dashboard Background"
+          className="opacity-40 object-contain absolute"
+          style={{
+            width: '200px',
+            height: '200px',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(calc(-50% + 10px), calc(-50% - 10px))'
+          }}
+        />
+      </div>
+
+      {/* Connecting hexagon framework - links all circle centers */}
+      <svg
+        className="absolute inset-0 pointer-events-none z-[5] transition-opacity duration-300"
+        style={{
+          width: box.size,
+          height: box.size,
+          transform: 'translate(12px, -8.5px) rotate(30deg) scale(1)',
+          transformOrigin: 'center'
+        }}
+      >
+        <defs>
+          <mask id="hexagon-mask">
+            {/* White background allows everything through */}
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            {/* Black circles block hexagon lines at each circle position */}
+            {angles.map((angle, idx) => {
+              const cx = center + r * Math.cos(angle);
+              const cy = center + r * Math.sin(angle);
+              return (
+                <circle
+                  key={idx}
+                  cx={cx}
+                  cy={cy}
+                  r={CIRCLE_SIZE / 2 + 5}
+                  fill="black"
+                />
+              );
+            })}
+          </mask>
+        </defs>
+        <polygon
+          points={hexagonPoints}
+          fill="none"
+          stroke="rgba(255, 255, 255, 0.4)"
+          strokeWidth="2"
+          mask="url(#hexagon-mask)"
+          style={{
+            filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.7))',
+            opacity: 0.8
+          }}
+        />
+      </svg>
+
+      {/* Rotated container for hex grid */}
+      <div ref={containerRef} className="absolute inset-0 -rotate-90 -translate-x-1">
+        {/* Dashboard circles */}
+        {items.map((it, idx) => {
+          const theta = angles[idx];
+          const cx = center + r * Math.cos(theta);
+          const cy = center + r * Math.sin(theta);
+          const left = cx - CIRCLE_SIZE / 2;
+          const top = cy - CIRCLE_SIZE / 2;
+          return (
+            <div key={it.id} className="absolute z-10" style={{ left, top }}>
+              <DashboardCircle {...it} onNavigate={onNavigate} size={CIRCLE_SIZE} />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

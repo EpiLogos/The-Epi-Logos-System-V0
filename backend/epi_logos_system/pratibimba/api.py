@@ -3,26 +3,25 @@ Pratibimba API Endpoints
 Session-based cloud sync for Personal Pratibimba (Redis)
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
-import os
-import json
 from datetime import datetime
 
-# Redis client (to be imported from shared infrastructure)
-try:
-    from redis import Redis
-    redis_client = Redis.from_url(os.getenv("REDIS_CLOUD_URL", "redis://localhost:6379"))
-except Exception as e:
-    print(f"Warning: Redis not available: {e}")
-    redis_client = None
+# Import shared Redis client
+from shared.database import RedisClient
 
 # Auth dependency - use existing auth module
 from backend.epi_logos_system.auth.api import get_current_user
 from backend.epi_logos_system.users.models.user import User
 
 router = APIRouter(prefix="/api/pratibimba", tags=["pratibimba"])
+
+
+# Dependency injection for Redis client
+def get_redis_client(request: Request) -> RedisClient:
+    """Get Redis client from app state (initialized on startup)"""
+    return request.app.state.redis_client
 
 
 class PratibimbaSyncRequest(BaseModel):
@@ -48,20 +47,15 @@ class PratibimbaResponse(BaseModel):
 @router.post("/sync", response_model=PratibimbaResponse)
 async def sync_pratibimba(
     request: PratibimbaSyncRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    redis_client: RedisClient = Depends(get_redis_client)
 ):
     """
     Upload encrypted Pratibimba to Redis for active session
     TTL: 1 hour (session duration)
     """
-    if not redis_client:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Redis service not available"
-        )
-
     # Verify user can only sync their own Pratibimba
-    if current_user.id != request.userId:
+    if str(current_user.id) != request.userId:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot sync other user's Pratibimba"
@@ -72,11 +66,13 @@ async def sync_pratibimba(
         session_ttl = 3600  # 1 hour in seconds
         redis_key = f"pratibimba:{request.userId}"
 
-        redis_client.setex(
-            redis_key,
-            session_ttl,
-            request.data
-        )
+        success = redis_client.setex(redis_key, session_ttl, request.data)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to sync Pratibimba to Redis"
+            )
 
         return PratibimbaResponse(
             status="synced",
@@ -84,6 +80,8 @@ async def sync_pratibimba(
             message="Pratibimba synced to cloud session"
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -94,20 +92,15 @@ async def sync_pratibimba(
 @router.patch("/update", response_model=PratibimbaResponse)
 async def update_pratibimba(
     request: PratibimbaUpdateRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    redis_client: RedisClient = Depends(get_redis_client)
 ):
     """
     Update encrypted Pratibimba in Redis during active session
     Used by sync queue processor for incremental updates
     """
-    if not redis_client:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Redis service not available"
-        )
-
     # Verify user can only update their own Pratibimba
-    if current_user.id != request.userId:
+    if str(current_user.id) != request.userId:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot update other user's Pratibimba"
@@ -117,7 +110,8 @@ async def update_pratibimba(
         redis_key = f"pratibimba:{request.userId}"
 
         # Check if Pratibimba exists in session
-        if not redis_client.exists(redis_key):
+        existing = redis_client.get(redis_key)
+        if not existing:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Pratibimba not in active session. Sync first."
@@ -149,21 +143,16 @@ async def update_pratibimba(
 @router.get("/{userId}", response_model=PratibimbaResponse)
 async def get_pratibimba(
     userId: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    redis_client: RedisClient = Depends(get_redis_client)
 ):
     """
     Fetch encrypted Pratibimba from Redis during active session
     Used by agentic layer for personalization
     """
-    if not redis_client:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Redis service not available"
-        )
-
     # Allow user to access their own OR service accounts (for agentic access)
     is_service_account = getattr(current_user, 'is_service_account', False)
-    if current_user.id != userId and not is_service_account:
+    if str(current_user.id) != userId and not is_service_account:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot access other user's Pratibimba"
@@ -179,8 +168,8 @@ async def get_pratibimba(
                 detail="Pratibimba not in active session"
             )
 
-        # Decode bytes to string
-        pratibimba_data = data.decode('utf-8') if isinstance(data, bytes) else data
+        # RedisClient returns string with decode_responses=True
+        pratibimba_data = data
 
         ttl = redis_client.ttl(redis_key)
 
@@ -203,20 +192,15 @@ async def get_pratibimba(
 @router.delete("/{userId}", response_model=PratibimbaResponse)
 async def purge_pratibimba(
     userId: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    redis_client: RedisClient = Depends(get_redis_client)
 ):
     """
     Manually purge Pratibimba from cloud (normally handled by TTL)
     User-initiated privacy control
     """
-    if not redis_client:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Redis service not available"
-        )
-
     # Verify user can only purge their own Pratibimba
-    if current_user.id != userId:
+    if str(current_user.id) != userId:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot purge other user's Pratibimba"
@@ -226,7 +210,7 @@ async def purge_pratibimba(
         redis_key = f"pratibimba:{userId}"
         deleted = redis_client.delete(redis_key)
 
-        if deleted == 0:
+        if not deleted:
             # Already purged or never existed
             return PratibimbaResponse(
                 status="already_purged",
@@ -248,20 +232,15 @@ async def purge_pratibimba(
 @router.get("/{userId}/status", response_model=PratibimbaResponse)
 async def get_pratibimba_status(
     userId: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    redis_client: RedisClient = Depends(get_redis_client)
 ):
     """
     Check if Pratibimba is in active cloud session (without fetching data)
     Lightweight status check for frontend sync indicator
     """
-    if not redis_client:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Redis service not available"
-        )
-
     # Verify user can only check their own status
-    if current_user.id != userId:
+    if str(current_user.id) != userId:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Cannot check other user's Pratibimba status"
@@ -269,7 +248,7 @@ async def get_pratibimba_status(
 
     try:
         redis_key = f"pratibimba:{userId}"
-        exists = redis_client.exists(redis_key)
+        exists = redis_client.get(redis_key) is not None
         ttl = redis_client.ttl(redis_key) if exists else None
 
         return PratibimbaResponse(

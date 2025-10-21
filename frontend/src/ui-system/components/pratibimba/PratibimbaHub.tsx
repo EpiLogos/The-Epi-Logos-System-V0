@@ -49,29 +49,35 @@ const PratibimbaHubContent: React.FC<PratibimbaHubProps> = ({
     }
   }, [isAuthenticated, user?.id, initializePratibimba]);
 
-  // Start background sync on mount
+  // Start background sync ONCE on mount when user is authenticated
   useEffect(() => {
-    if (isAuthenticated && user?.id && pratibimba) {
-      const authToken = getAuthHeader()?.replace('Bearer ', '') || '';
+    if (!isAuthenticated || !user?.id) return;
 
-      // Initial sync to cloud
-      pratibimbaSync.syncToCloud(user.id, authToken)
-        .then(() => {
-          setSyncStatus('synced');
-          // Start background sync
-          pratibimbaSync.startBackgroundSync(user.id, authToken);
-        })
-        .catch((error) => {
-          console.error('Initial sync failed:', error);
-          setSyncStatus('idle');
-        });
+    const authToken = getAuthHeader()?.replace('Bearer ', '') || '';
 
-      // Cleanup: stop sync on unmount
-      return () => {
-        pratibimbaSync.stopBackgroundSync();
-      };
-    }
-  }, [isAuthenticated, user?.id, pratibimba, getAuthHeader]);
+    console.log('Initializing Pratibimba sync (one-time on mount)');
+    setSyncStatus('syncing');
+
+    // Initial sync to cloud
+    pratibimbaSync.syncToCloud(user.id, authToken)
+      .then(() => {
+        setSyncStatus('synced');
+        // Start background sync (processes queue every 30s)
+        pratibimbaSync.startBackgroundSync(user.id, authToken);
+      })
+      .catch((error) => {
+        console.error('Initial sync failed:', error);
+        setSyncStatus('idle');
+      });
+
+    // Cleanup: stop sync on unmount
+    return () => {
+      console.log('Stopping Pratibimba sync (unmount)');
+      pratibimbaSync.stopBackgroundSync();
+    };
+    // Only run on mount/unmount - not when pratibimba changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Redirect to auth if not authenticated
   useEffect(() => {
