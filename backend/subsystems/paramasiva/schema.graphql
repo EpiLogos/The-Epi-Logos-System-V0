@@ -1,0 +1,39 @@
+"""
+Paramasiva Subsystem (#1) GraphQL Schema
+Coordinate Decomposition Service (Story 04.01)
+"""
+
+type CoordinateComponents {
+  """Original coordinate string"""
+  coordinate: String!
+
+  """Numerical components extracted from coordinate"""
+  components: [Int!]!
+
+  """Number of components (coordinate depth)"""
+  depth: Int!
+
+  """Whether coordinate format is valid"""
+  isValid: Boolean!
+
+  """Whether coordinate exists in Bimba graph (requires MCP validation)"""
+  exists: Boolean!
+}
+
+type Query {
+  """
+  Decompose Bimba coordinate into numerical components for QL processing.
+
+  Examples:
+  - decomposeCoordinate(bimbaCoordinate: "#1") → [1]
+  - decomposeCoordinate(bimbaCoordinate: "#1-2-3") → [1, 2, 3]
+  - decomposeCoordinate(bimbaCoordinate: "#0-5-0/1-4") → [0, 5, 0, 1, 4]
+  """
+  decomposeCoordinate(
+    """Bimba coordinate string to decompose"""
+    bimbaCoordinate: String!
+
+    """Validate coordinate exists in Bimba graph via MCP"""
+    validateExistence: Boolean = false
+  ): CoordinateComponents!
+}

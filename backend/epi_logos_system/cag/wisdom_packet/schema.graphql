@@ -1,0 +1,79 @@
+"""
+GraphQL schema for Wisdom Packet synthesis.
+
+Exposes getWisdomPacket query for canonical Bimba coordinate knowledge synthesis.
+"""
+
+# Synthesis focus lens for WisdomPacket generation
+enum WisdomPacketFocus {
+    STRUCTURAL    # Emphasize logical and architectural patterns
+    PROCESSUAL    # Emphasize dynamic and transformational aspects
+    ARCHETYPAL    # Emphasize symbolic and mythic dimensions
+    PRACTICAL     # Actionable and implementable aspects
+}
+
+# Basic Bimba node information
+type BimbaNodeBasic {
+    coordinate: String!
+    name: String!
+    subsystem: String!
+    description: String
+    operationalEssence: String
+}
+
+# Key concept extracted from subgraph
+type KeyConcept {
+    concept: String!
+    sourceCoordinates: [String!]!
+    relevanceScore: Float!
+    description: String
+}
+
+# Apophatic pointer to missing themes
+type ApophaticPointer {
+    missingTheme: String!
+    expectedCoordinates: [String!]!
+    suggestion: String!
+}
+
+# Pre-synthesized WisdomPacket for a Bimba coordinate
+type WisdomPacket {
+    # Core synthesis components (AC 3)
+    centralNode: BimbaNodeBasic!
+    keyConcepts: [KeyConcept!]!
+    narrativeSummary: String!
+    apophaticPointers: [ApophaticPointer!]!
+    contextualThemes: [String!]!
+
+    # Quality and metadata
+    synthesisScore: Float!
+    generatedAt: String!  # ISO datetime
+    cacheHit: Boolean!
+
+    # Query parameters
+    depth: Int!
+    focus: WisdomPacketFocus
+}
+
+extend type Query {
+    """
+    Generate a Wisdom Packet for a Bimba coordinate.
+
+    Returns pre-synthesized, contextually rich summary with intelligent
+    subgraph traversal, concept extraction, and narrative synthesis.
+
+    AC 1: Query accepts coordinate, depth, and focus parameters.
+    AC 4: Results cached in Redis with 24h TTL.
+
+    SMART FLOW:
+    1. Check Redis cache for existing packet
+    2. If not found (or forceRegenerate=true), generate fresh packet
+    3. Cache result for instant future retrieval
+    """
+    getWisdomPacket(
+        coordinate: String!
+        depth: Int = 2
+        focus: WisdomPacketFocus
+        forceRegenerate: Boolean = false
+    ): WisdomPacket
+}
