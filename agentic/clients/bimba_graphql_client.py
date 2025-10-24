@@ -599,3 +599,99 @@ class BimbaGraphQLClient(BackendHttpClient):
         errors = resp.get("errors", []) if isinstance(resp, dict) else []
         err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
         return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}
+
+    async def get_wisdom_packet(
+        self,
+        coordinate: str,
+        depth: int = 2,
+        focus: Optional[str] = None,
+        force_regenerate: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Execute getWisdomPacket GraphQL query for pre-synthesized canonical knowledge.
+
+        Args:
+            coordinate: Bimba coordinate (e.g., "#1-2", "#3-4-5")
+            depth: Traversal depth (1-5, default 2)
+            focus: Synthesis lens (STRUCTURAL/PROCESSUAL/ARCHETYPAL/PRACTICAL)
+            force_regenerate: Bypass cache and regenerate fresh packet
+
+        Returns:
+            Dict with wisdom packet data or error
+        """
+        query = """
+        query GetWisdomPacket(
+            $coordinate: String!
+            $depth: Int
+            $focus: WisdomPacketFocus
+            $forceRegenerate: Boolean
+        ) {
+            getWisdomPacket(
+                coordinate: $coordinate
+                depth: $depth
+                focus: $focus
+                forceRegenerate: $forceRegenerate
+            ) {
+                centralNode {
+                    coordinate
+                    name
+                    subsystem
+                    description
+                    operationalEssence
+                }
+                keyConcepts {
+                    concept
+                    description
+                    relevanceScore
+                    sourceCoordinates
+                }
+                narrativeSummary
+                apophaticPointers {
+                    missingTheme
+                    suggestion
+                    expectedCoordinates
+                }
+                contextualThemes
+                synthesisScore
+                generatedAt
+                cacheHit
+                depth
+                focus
+            }
+        }
+        """
+
+        variables = {
+            "coordinate": coordinate,
+            "depth": depth,
+            "focus": focus,
+            "forceRegenerate": force_regenerate
+        }
+
+        logger.info(f"Getting wisdom packet for coordinate: {coordinate}")
+        response = await self.post("/graphql", json_data={"query": query, "variables": variables})
+
+        # Extract data from GraphQL response format
+        if "data" in response and response["data"]:
+            wisdom_packet = response["data"].get("getWisdomPacket")
+            if wisdom_packet:
+                return {
+                    "success": True,
+                    "wisdom_packet": wisdom_packet,
+                    "coordinate": coordinate
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Wisdom packet not found or generation failed",
+                    "coordinate": coordinate
+                }
+        else:
+            # Handle GraphQL errors
+            errors = response.get("errors", [])
+            error_msg = "; ".join([err.get("message", "Unknown error") for err in errors])
+            return {
+                "success": False,
+                "error": error_msg or "GraphQL query failed",
+                "coordinate": coordinate
+            }

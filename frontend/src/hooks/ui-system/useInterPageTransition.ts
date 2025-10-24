@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { usePageLoadingState } from './usePageLoadingState';
 
 // Exact transition phases from original CSS methodology
@@ -13,9 +12,19 @@ export type TransitionPhase =
   | 'navigating';            // Phase 4: Page change in progress
 
 // Supported transition directions (matching original)
-export type TransitionDirection = 
-  | 'subsystems-to-paramasiva'    // Grid → Expanded modal layout
-  | 'paramasiva-to-subsystems'    // Expanded modal → Grid layout
+export type TransitionDirection =
+  | 'subsystems-to-paramasiva'    // Grid → Paramasiva expanded modal layout
+  | 'subsystems-to-parashakti'    // Grid → Parashakti expanded modal layout
+  | 'subsystems-to-mahamaya'      // Grid → Mahamaya expanded modal layout
+  | 'subsystems-to-nara'          // Grid → Nara expanded modal layout
+  | 'subsystems-to-epii'          // Grid → Epii expanded modal layout
+  | 'subsystems-to-anuttara'      // Grid → Anuttara ground layout
+  | 'paramasiva-to-subsystems'    // Paramasiva modal → Grid layout
+  | 'parashakti-to-subsystems'    // Parashakti modal → Grid layout
+  | 'mahamaya-to-subsystems'      // Mahamaya modal → Grid layout
+  | 'nara-to-subsystems'          // Nara modal → Grid layout
+  | 'epii-to-subsystems'          // Epii modal → Grid layout
+  | 'anuttara-to-subsystems'      // Anuttara modal → Grid layout
   | 'epilogos-to-subsystems'      // EpiLogos expanded → Grid layout (reverse modal)
   | 'paramasiva-to-quaternal'     // Paramasiva modal → Quaternal Logic layout
   | 'paramasiva-to-epilogos'      // Paramasiva → Epi-Logos (to main)
@@ -68,7 +77,6 @@ const initialState: InterPageTransitionState = {
  * - Pure Tailwind v4 implementation with zero external CSS dependencies
  */
 export const useInterPageTransition = () => {
-  const router = useRouter();
   const { navigateWithLoading } = usePageLoadingState();
   const [state, setState] = useState<InterPageTransitionState>(initialState);
   const timerRefs = useRef<NodeJS.Timeout[]>([]);
@@ -112,7 +120,7 @@ export const useInterPageTransition = () => {
   const transitionToParamasiva = useCallback(() => {
     // STRICTMODE PROTECTION: Prevent double-execution race conditions
     if (state.isTransitioning || state.isExecuting) return;
-    
+
     clearAllTimers();
     
     // PHASE 1: Text fade-out (immediate) + LOCK execution + SET DIRECTION
@@ -147,6 +155,148 @@ export const useInterPageTransition = () => {
     timerRefs.current.push(phase2Timer);
   }, [state.isTransitioning, state.isExecuting, navigateWithLoading, clearAllTimers]);
 
+  const transitionToMahamaya = useCallback(() => {
+    if (state.isTransitioning || state.isExecuting) return;
+
+    clearAllTimers();
+
+    setState(prev => ({
+      ...prev,
+      isTransitioning: true,
+      textFadeStarted: true,
+      isExecuting: true,
+      currentTransitionDirection: 'subsystems-to-mahamaya'
+    }));
+
+    const phase3Timer = setTimeout(() => {
+      setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+      const navigationTimer = setTimeout(() => {
+        navigateWithLoading('/mahamaya');
+      }, 650);
+
+      timerRefs.current.push(navigationTimer);
+    }, 1200);
+
+    timerRefs.current.push(phase3Timer);
+  }, [state.isTransitioning, state.isExecuting, navigateWithLoading, clearAllTimers]);
+
+  const transitionToAnuttara = useCallback(() => {
+    if (state.isTransitioning || state.isExecuting) return;
+
+    clearAllTimers();
+
+    setState(prev => ({
+      ...prev,
+      isTransitioning: true,
+      textFadeStarted: true,
+      isExecuting: true,
+      currentTransitionDirection: 'subsystems-to-anuttara'
+    }));
+
+    const phase2Timer = setTimeout(() => {
+      setState(prev => ({ ...prev, heightMorphStarted: true }));
+
+      const phase3Timer = setTimeout(() => {
+        setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+        const navigationTimer = setTimeout(() => {
+          navigateWithLoading('/anuttara');
+        }, 650);
+
+        timerRefs.current.push(navigationTimer);
+      }, 1200);
+
+      timerRefs.current.push(phase3Timer);
+    }, 200);
+
+    timerRefs.current.push(phase2Timer);
+  }, [state.isTransitioning, state.isExecuting, navigateWithLoading, clearAllTimers]);
+
+  const transitionToParashakti = useCallback(() => {
+    if (state.isTransitioning || state.isExecuting) return;
+
+    clearAllTimers();
+
+    setState(prev => ({
+      ...prev,
+      isTransitioning: true,
+      textFadeStarted: true,
+      isExecuting: true,
+      currentTransitionDirection: 'subsystems-to-parashakti'
+    }));
+
+    const phase2Timer = setTimeout(() => {
+      setState(prev => ({ ...prev, heightMorphStarted: true }));
+
+      const phase3Timer = setTimeout(() => {
+        setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+        const navigationTimer = setTimeout(() => {
+          navigateWithLoading('/parashakti');
+        }, 650);
+
+        timerRefs.current.push(navigationTimer);
+      }, 1200);
+
+      timerRefs.current.push(phase3Timer);
+    }, 200);
+
+    timerRefs.current.push(phase2Timer);
+  }, [state.isTransitioning, state.isExecuting, navigateWithLoading, clearAllTimers]);
+
+  const transitionToNara = useCallback(() => {
+    if (state.isTransitioning || state.isExecuting) return;
+
+    clearAllTimers();
+
+    setState(prev => ({
+      ...prev,
+      isTransitioning: true,
+      textFadeStarted: true,
+      isExecuting: true,
+      currentTransitionDirection: 'subsystems-to-nara'
+    }));
+
+    const phase3Timer = setTimeout(() => {
+      setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+      const navigationTimer = setTimeout(() => {
+        navigateWithLoading('/nara');
+      }, 650);
+
+      timerRefs.current.push(navigationTimer);
+    }, 1200);
+
+    timerRefs.current.push(phase3Timer);
+  }, [state.isTransitioning, state.isExecuting, navigateWithLoading, clearAllTimers]);
+
+  const transitionToEpii = useCallback(() => {
+    if (state.isTransitioning || state.isExecuting) return;
+
+    clearAllTimers();
+
+    setState(prev => ({
+      ...prev,
+      isTransitioning: true,
+      textFadeStarted: true,
+      isExecuting: true,
+      currentTransitionDirection: 'subsystems-to-epii'
+    }));
+
+    const phase3Timer = setTimeout(() => {
+      setState(prev => ({ ...prev, whiteOverlayVisible: true }));
+
+      const navigationTimer = setTimeout(() => {
+        navigateWithLoading('/epii');
+      }, 650);
+
+      timerRefs.current.push(navigationTimer);
+    }, 1200);
+
+    timerRefs.current.push(phase3Timer);
+  }, [state.isTransitioning, state.isExecuting, navigateWithLoading, clearAllTimers]);
+
   /**
    * PARAMASIVA → SUBSYSTEMS TRANSITION
    * 
@@ -158,19 +308,29 @@ export const useInterPageTransition = () => {
    * Key difference: Width changes FIRST (immediate after text), then height
    * This morphs the narrow Paramasiva panel back to full-width grid
    */
-  const transitionToSubsystems = useCallback(() => {
+  const transitionToSubsystems = useCallback((origin: 'paramasiva' | 'parashakti' | 'mahamaya' | 'nara' | 'epii' | 'anuttara' = 'paramasiva') => {
     // STRICTMODE PROTECTION: Prevent double-execution race conditions
     if (state.isTransitioning || state.isExecuting) return;
-    
+
     clearAllTimers();
-    
+
     // PHASE 1: Text fade-out (immediate) + LOCK execution + SET DIRECTION
-    setState(prev => ({ 
-      ...prev, 
-      isTransitioning: true, 
-      textFadeStarted: true, 
+    setState(prev => ({
+      ...prev,
+      isTransitioning: true,
+      textFadeStarted: true,
       isExecuting: true,
-      currentTransitionDirection: 'paramasiva-to-subsystems'
+      currentTransitionDirection: origin === 'parashakti'
+        ? 'parashakti-to-subsystems'
+        : origin === 'mahamaya'
+        ? 'mahamaya-to-subsystems'
+        : origin === 'nara'
+        ? 'nara-to-subsystems'
+        : origin === 'epii'
+        ? 'epii-to-subsystems'
+        : origin === 'anuttara'
+        ? 'anuttara-to-subsystems'
+        : 'paramasiva-to-subsystems'
     }));
     
     // PHASE 2a: Width expansion (immediately after text fade - 167ms)
@@ -346,6 +506,11 @@ export const useInterPageTransition = () => {
     
     // Transition triggers
     transitionToParamasiva,
+    transitionToParashakti,
+    transitionToMahamaya,
+    transitionToNara,
+    transitionToEpii,
+    transitionToAnuttara,
     transitionToSubsystems,
     transitionToSubsystemsFromEpiLogos,
     transitionToQuaternalFromParamasiva,

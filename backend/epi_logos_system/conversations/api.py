@@ -25,6 +25,7 @@ class TurnCreate(BaseModel):
     user_message: str
     assistant_text: str
     timing_ms: Optional[int] = None
+    context: Optional[str] = None  # Coordinate context (e.g., "#5-5" for etymology)
 
 
 @router.post("/turn")
@@ -41,6 +42,9 @@ async def create_turn(turn: TurnCreate) -> Dict[str, Any]:
             "metadata": {"execution_time_ms": turn.timing_ms or 0},
             "created_at": datetime.now(timezone.utc),
         }
+        # Add context tag if provided (for coordinate-based filtering)
+        if turn.context:
+            doc["context"] = turn.context
         res = coll.insert_one(doc)
         return {"success": True, "id": str(res.inserted_id)}
     except Exception as e:
@@ -51,12 +55,63 @@ class ThreadCreate(BaseModel):
     user_id: str
 
 
+class SessionMetadataUpdate(BaseModel):
+    """Metadata to store in Redis session"""
+    context: Optional[str] = None
+    etymology_session_id: Optional[str] = None
+    coordinate_context: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
 @router.post("/threads")
 async def create_thread(payload: ThreadCreate) -> Dict[str, Any]:
     """Create a new thread by returning a new thread_id. No DB write required here."""
     import uuid
     thread_id = f"thread-{uuid.uuid4()}"
     return {"thread_id": thread_id, "created_at": datetime.now(timezone.utc).isoformat()}
+
+
+@router.post("/sessions/{thread_id}/metadata")
+async def set_session_metadata(thread_id: str, payload: SessionMetadataUpdate) -> Dict[str, Any]:
+    """
+    Set metadata for a Redis session.
+
+    This allows the orchestrator to access context information (like Etymology Session context)
+    via RunContext dependencies.
+    """
+    try:
+        from shared.database.redis_client import RedisClient
+        redis_client = RedisClient()
+
+        # Get existing session or create new metadata dict
+        existing = redis_client.get_session(thread_id) or {}
+        metadata_dict = existing.get("metadata", {})
+
+        # Update with new fields
+        if payload.context:
+            metadata_dict["context"] = payload.context
+        if payload.etymology_session_id:
+            metadata_dict["etymology_session_id"] = payload.etymology_session_id
+        if payload.coordinate_context:
+            metadata_dict["coordinate_context"] = payload.coordinate_context
+        if payload.metadata:
+            metadata_dict.update(payload.metadata)
+
+        # Write back to Redis
+        session_data = {
+            "session_id": thread_id,
+            "metadata": metadata_dict,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        redis_client.set_session(thread_id, session_data, ttl=86400)  # 24 hour TTL
+
+        return {
+            "success": True,
+            "thread_id": thread_id,
+            "metadata": metadata_dict
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to set session metadata: {e}")
 
 
 @router.delete("/threads/{thread_id}")
@@ -72,13 +127,18 @@ async def delete_thread(thread_id: str) -> Dict[str, Any]:
 
 
 @router.get("/threads")
-async def list_threads(user_id: str, limit: int = 50, page: int = 1) -> Dict[str, Any]:
+async def list_threads(user_id: str, limit: int = 50, page: int = 1, context: Optional[str] = None) -> Dict[str, Any]:
     try:
         db = MongoDBClient().get_database()
         coll = db.get_collection("conversations")
         skip = max(0, (page - 1) * max(1, limit))
+        # Build match filter with optional context filter
+        match_filter = {"user_id": user_id}
+        if context:
+            match_filter["context"] = context
+
         pipeline = [
-            {"$match": {"user_id": user_id}},
+            {"$match": match_filter},
             {"$sort": {"created_at": -1}},
             {"$group": {
                 "_id": "$session_id",

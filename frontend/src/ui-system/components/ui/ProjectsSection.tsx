@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { cn } from '../../utils/cn';
-import { SubsystemCarousel } from './SubsystemCarousel';
+import { FocusCards } from './FocusCards';
+import { epiiSubnodeCards } from '../../content/epii-focus-cards';
 
 interface ProjectsSectionProps {
   className?: string;
@@ -34,19 +35,24 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({ className }) =
         />
       </div>
 
-      {/* Header + Carousel */}
-      <div className="flex-1 flex flex-col justify-center pt-[60px]">
+      {/* Header + Focus Cards */}
+      <div className="flex-1 flex flex-col justify-center pt-[30px]">
         <div className="projects-carousel-container w-full">
           <div className="flex justify-between items-start mb-12">
             <div className="flex-1">
-              <h2 className="text-4xl font-normal text-gray-800 mb-6 tracking-wide">Subnodes</h2>
-              <p className="text-sm text-gray-600 leading-relaxed tracking-wide max-w-2xl pb-5 border-b border-gray-300">
-                Discover how leading companies and developers are leveraging modern web technologies to build exceptional digital experiences. These case studies showcase real-world applications and success stories.
+              <h2 className="text-3xl font-normal text-gray-800 mb-4 tracking-wide">Subnodes</h2>
+              <p className="text-xs text-gray-600 leading-relaxed tracking-wide max-w-2xl pb-5 border-b border-gray-300">
+                The four core aspects of the Epii synthesis layer, representing the integration of philosophical worldview, processing architecture, experiential design, and agent orchestration.
               </p>
             </div>
           </div>
 
-          <SubsystemCarousel className="w-full" showArrows={true} showDots={true} />
+          {/* 4 FocusCards in horizontal layout - taller, less gap, closer to squares */}
+          <FocusCards
+            cards={epiiSubnodeCards}
+            className="grid grid-cols-4 gap-3 w-full h-[600px]"
+            size="compact"
+          />
         </div>
       </div>
     </section>

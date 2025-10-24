@@ -355,3 +355,186 @@ class UnifiedSearchResponse(BaseModel):
     quaternal_units: List[QuaternalUnit] = Field(default_factory=list, description="Found QuaternalUnits")
     total_count: int = Field(0, description="Total matching results")
     message: Optional[str] = Field(None, description="Search message")
+
+
+# Etymology Archaeology (EA) Extensions - Story 08.07
+
+class Aphorism(BaseModel):
+    """
+    Aphorism: 1-fold distilled wisdom node for capturing fully crystallized insights.
+
+    Extends Graphiti episodic namespace with domain-agnostic aphorism support.
+    Label pattern: :Aphorism:Episodic (domain-agnostic) or :EA_Aphorism:Episodic (etymology-specific).
+    """
+    id: str = Field(..., description="Unique aphorism identifier")
+    group_id: str = Field(..., description="Multi-tenant group identifier")
+
+    # Content
+    text: str = Field(..., description="The aphorism text itself")
+    source_etymology: Optional[str] = Field(None, description="Source word/etymology that inspired this aphorism")
+
+    # Grounding
+    bimba_coordinate: Optional[str] = Field(None, description="Associated Bimba coordinate")
+    domain: str = Field("EA", description="Domain identifier (EA for etymology archaeology)")
+
+    # Temporal Properties
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation time")
+
+    # User Tracking
+    user_id: Optional[str] = Field(None, description="User who created this aphorism")
+    session_id: Optional[str] = Field(None, description="Session context")
+
+    # Relationships
+    community_id: Optional[str] = Field(None, description="Related etymology community ID")
+
+    # Metadata
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
+
+    model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda v: v.isoformat()
+        }
+    )
+
+
+class EtymologyCommunityRequest(BaseModel):
+    """Request model for creating etymology-specific communities with EA labeling."""
+    group_id: str = Field(..., description="Multi-tenant group identifier")
+    name: str = Field(..., description="Community name")
+    description: str = Field(..., description="Community description")
+
+    # QL Structure
+    quaternal_type: QuaternalType = Field(default=QuaternalType.FOUR_PART, description="QL structure type")
+    words: List[str] = Field(..., description="Words in this etymology cluster")
+
+    # Etymology-specific
+    pie_root: Optional[str] = Field(None, description="Proto-Indo-European root")
+    semantic_pattern: Optional[str] = Field(None, description="Semantic shift pattern")
+
+    # Tracking
+    session_id: Optional[str] = Field(None, description="Session context")
+    user_id: Optional[str] = Field(None, description="User who created this community")
+    bimba_coordinate: Optional[str] = Field(None, description="Associated Bimba coordinate")
+
+    # Namespace
+    domain: str = Field("EA", description="Domain identifier for EA namespace")
+
+
+class AphorismRequest(BaseModel):
+    """Request model for creating aphorisms."""
+    group_id: str = Field(..., description="Multi-tenant group identifier")
+    text: str = Field(..., description="The aphorism text")
+    source_etymology: Optional[str] = Field(None, description="Source word/etymology")
+    bimba_coordinate: Optional[str] = Field(None, description="Associated Bimba coordinate")
+    domain: str = Field("EA", description="Domain identifier")
+
+    # Tracking
+    user_id: Optional[str] = Field(None, description="User who created this aphorism")
+    session_id: Optional[str] = Field(None, description="Session context")
+    community_id: Optional[str] = Field(None, description="Related community ID")
+
+
+class AphorismResponse(BaseModel):
+    """Response model for aphorism operations."""
+    success: bool = Field(..., description="Operation success status")
+    aphorism: Optional[Aphorism] = Field(None, description="Created aphorism")
+    message: Optional[str] = Field(None, description="Operation message")
+
+
+# Personal Exploration Tracking - Story 08.07 Enhancement
+
+class EtymologySessionStatus(str, Enum):
+    """Status states for etymology exploration sessions."""
+    ACTIVE = "active"
+    PAUSED = "paused"
+    ARCHIVED = "archived"
+
+
+class EtymologySession(BaseModel):
+    """
+    Etymology Session: Word exploration project spanning multiple chat threads.
+
+    Acts as a "word project" container that can hold data from multiple threads,
+    building on communities/constellations and their associated resonances as an
+    ongoing object for that session.
+
+    Persistence: MongoDB for durable data + Redis for active session cache.
+    """
+    session_id: str = Field(..., description="Unique session identifier (UUID)")
+    user_id: str = Field(..., description="User who owns this session")
+
+    # Session Metadata
+    title: str = Field(..., description="Session title (e.g., 'SIGN→SATIS Investigation')")
+    description: Optional[str] = Field(None, description="Optional session description")
+
+    # Associated Threads (multiple threads per session)
+    thread_ids: List[str] = Field(default_factory=list, description="Chat thread IDs associated with this session")
+
+    # Session Data (persisted across threads)
+    words_explored: List[str] = Field(default_factory=list, description="All words explored in this session")
+    communities_created: List[str] = Field(default_factory=list, description="Etymology community IDs created")
+    resonances_found: List[Dict[str, Any]] = Field(default_factory=list, description="Bimba coordinate resonances detected")
+    aphorisms: List[str] = Field(default_factory=list, description="Aphorism IDs captured")
+
+    # PIE Roots and Patterns
+    pie_roots_discovered: List[str] = Field(default_factory=list, description="Proto-Indo-European roots found")
+    semantic_patterns: List[str] = Field(default_factory=list, description="Semantic shift patterns identified")
+
+    # Session Status
+    status: EtymologySessionStatus = Field(default=EtymologySessionStatus.ACTIVE, description="Current session status")
+    coordinate_context: str = Field(default="#5-5", description="Coordinate context (default: #5-5 Atelier)")
+
+    # Temporal Properties
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Session creation time")
+    last_activity: datetime = Field(default_factory=datetime.utcnow, description="Last activity timestamp")
+
+    # Metadata
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional session metadata")
+
+    model_config = ConfigDict(
+        json_encoders={
+            datetime: lambda v: v.isoformat()
+        }
+    )
+
+
+class EtymologySessionRequest(BaseModel):
+    """Request model for creating etymology sessions."""
+    user_id: str = Field(..., description="User ID")
+    title: str = Field(..., description="Session title")
+    description: Optional[str] = Field(None, description="Optional description")
+    coordinate_context: str = Field(default="#5-5", description="Coordinate context")
+
+
+class EtymologySessionResponse(BaseModel):
+    """Response model for etymology session operations."""
+    success: bool = Field(..., description="Operation success status")
+    session: Optional[EtymologySession] = Field(None, description="Created/updated session")
+    message: Optional[str] = Field(None, description="Operation message")
+
+
+class EtymologySessionUpdateRequest(BaseModel):
+    """Request model for updating etymology sessions."""
+    session_id: str = Field(..., description="Session ID to update")
+    title: Optional[str] = Field(None, description="Updated title")
+    description: Optional[str] = Field(None, description="Updated description")
+    status: Optional[EtymologySessionStatus] = Field(None, description="Updated status")
+
+    # Data to add (append to existing lists)
+    words_to_add: List[str] = Field(default_factory=list, description="Words to add to exploration")
+    communities_to_add: List[str] = Field(default_factory=list, description="Community IDs to add")
+    resonances_to_add: List[Dict[str, Any]] = Field(default_factory=list, description="Resonances to add")
+    aphorisms_to_add: List[str] = Field(default_factory=list, description="Aphorism IDs to add")
+    pie_roots_to_add: List[str] = Field(default_factory=list, description="PIE roots to add")
+    semantic_patterns_to_add: List[str] = Field(default_factory=list, description="Semantic patterns to add")
+
+    # Thread management
+    thread_id_to_add: Optional[str] = Field(None, description="Thread ID to link to session")
+
+
+class EtymologySessionListResponse(BaseModel):
+    """Response model for listing etymology sessions."""
+    success: bool = Field(..., description="Operation success status")
+    sessions: List[EtymologySession] = Field(default_factory=list, description="User's etymology sessions")
+    total_count: int = Field(0, description="Total session count")
+    message: Optional[str] = Field(None, description="Operation message")

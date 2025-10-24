@@ -4,6 +4,7 @@ Core LightRAG Service with Database Dependency
 
 from lightrag import LightRAG, QueryParam
 from .gemini_llm import gemini_llm_complete  # Use async function directly
+from .groq_llm import groq_llm_complete  # Groq fallback for Gemini 2.5 safety bug
 from .gemini_embeddings import gemini_embedding_func
 from .models import BimbaDocument, build_coordinate_kg
 import os
@@ -61,14 +62,22 @@ class LightRAGService:
         # CRITICAL: Override LightRAG chunk collection name to use pre-filled pratibimba_store
         from lightrag.namespace import NameSpace
         NameSpace.VECTOR_STORE_CHUNKS = "pratibimba_store"  # Change chunks → pratibimba_store
-        
+
+        # Determine LLM backend based on LIGHTRAG_LLM_MODEL env var
+        llm_model_name = os.getenv("LIGHTRAG_LLM_MODEL", "gemini-2.5-flash")
+        if llm_model_name.startswith("groq:"):
+            llm_func = groq_llm_complete
+            llm_model_name = llm_model_name.replace("groq:", "")  # Remove prefix for actual model name
+        else:
+            llm_func = gemini_llm_complete
+
         # Initialize LightRAG with database backends (NO FALLBACKS)
         try:
             self.rag = LightRAG(
                 working_dir=self.working_dir,
                 workspace="",  # Empty workspace = no prefixes, collections: entities, relationships, chunks
-                llm_model_func=gemini_llm_complete,  # Use async function
-                llm_model_name=os.getenv("LIGHTRAG_LLM_MODEL", "gemini-2.5-flash"),
+                llm_model_func=llm_func,  # Groq or Gemini based on config
+                llm_model_name=llm_model_name,
                 llm_model_kwargs={
                     "temperature": 0.3,
                     "max_tokens": 8000
@@ -175,23 +184,35 @@ class LightRAGService:
         try:
             # Initialize LightRAG storages (required for v1.4.7+)
             import asyncio
-            
+
+            # Check if there's already a running event loop
+            try:
+                loop = asyncio.get_running_loop()
+                # Already in an async context - skip sync initialization
+                # Storage will be initialized on first async call
+                print(f"⚠️  Skipping sync storage initialization (async context detected)")
+                print(f"   Storage will initialize on first ingestion call")
+                return
+            except RuntimeError:
+                # No running loop - safe to create new one
+                pass
+
             # Initialize storages asynchronously
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            
+
             try:
                 loop.run_until_complete(self.rag.initialize_storages())
                 print(f"✅ LightRAG storages initialized successfully")
-                
+
                 # Initialize pipeline status for operations
                 from lightrag.kg.shared_storage import initialize_pipeline_status
                 loop.run_until_complete(initialize_pipeline_status())
                 print(f"✅ LightRAG pipeline status initialized successfully")
-                
+
             finally:
                 loop.close()
-                
+
         except Exception as e:
             raise RuntimeError(f"LightRAG storage initialization failed: {e}. "
                              f"This is required for Neo4j + Qdrant database integration.") from e
@@ -199,6 +220,13 @@ class LightRAGService:
     async def ingest_document_with_coordinates(self, doc: BimbaDocument) -> Dict[str, Any]:
         """Ingest document preserving Bimba coordinate metadata"""
         try:
+            # Ensure storage is initialized (handles deferred initialization from async context)
+            if not hasattr(self.rag, '_storage_initialized'):
+                await self.rag.initialize_storages()
+                from lightrag.kg.shared_storage import initialize_pipeline_status
+                await initialize_pipeline_status()
+                self.rag._storage_initialized = True
+
             custom_kg = build_coordinate_kg(doc)
             result = await self.rag.ainsert_custom_kg(custom_kg)
             return {"success": True, "result": result, "document_id": doc.source_id}

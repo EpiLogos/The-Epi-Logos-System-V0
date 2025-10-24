@@ -129,19 +129,35 @@ async def run_agent_with_persistence(request: Request):
                         pass
                 # Persist on success via Backend
                 total_ms = int((time.time() - start) * 1000)
+
+                # Get context from Redis metadata if available
+                context = None
+                try:
+                    if deps.redis_client:
+                        session_data = deps.redis_client.get_session(thread_id)
+                        if session_data:
+                            context = session_data.get("metadata", {}).get("context")
+                except Exception:
+                    pass  # Context is optional
+
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:
+                        payload = {
+                            "user_id": user_id,
+                            "thread_id": thread_id,
+                            "persona": persona,
+                            "model": model_config,
+                            "user_message": user_message,
+                            "assistant_text": ''.join(assistant_accum),
+                            "timing_ms": total_ms
+                        }
+                        # Include context if available
+                        if context:
+                            payload["context"] = context
+
                         await client.post(
                             "http://localhost:8000/api/conversations/turn",
-                            json={
-                                "user_id": user_id,
-                                "thread_id": thread_id,
-                                "persona": persona,
-                                "model": model_config,
-                                "user_message": user_message,
-                                "assistant_text": ''.join(assistant_accum),
-                                "timing_ms": total_ms
-                            }
+                            json=payload
                         )
                 except Exception as pe:
                     logger.error(f"Backend persistence failed: {pe}")

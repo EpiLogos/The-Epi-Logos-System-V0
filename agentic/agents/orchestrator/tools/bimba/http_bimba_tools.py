@@ -237,6 +237,66 @@ class HttpBimbaClient:
                 "error": f"HTTP request failed: {str(e)}",
             }
 
+    async def get_wisdom_packet(
+        self,
+        coordinate: str,
+        depth: int = 2,
+        focus: Optional[str] = None,
+        force_regenerate: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Get or generate a Wisdom Packet for a Bimba coordinate.
+
+        Wisdom Packets provide pre-synthesized, contextually rich canonical knowledge summaries
+        including key concepts, narrative synthesis, and apophatic pointers for missing themes.
+
+        Args:
+            coordinate: Bimba coordinate (e.g., "#1-2", "#3-4-5")
+            depth: Traversal depth (1-5, default 2)
+            focus: Synthesis lens (STRUCTURAL/PROCESSUAL/ARCHETYPAL/PRACTICAL)
+            force_regenerate: Bypass cache and regenerate fresh packet
+
+        Returns:
+            Dict containing wisdom packet data or error
+        """
+        try:
+            result = await self.client.get_wisdom_packet(
+                coordinate=coordinate,
+                depth=depth,
+                focus=focus,
+                force_regenerate=force_regenerate
+            )
+
+            if result.get("success"):
+                packet = result.get("wisdom_packet", {})
+                cache_hit = packet.get("cacheHit", False)
+                synthesis_score = packet.get("synthesisScore", 0)
+                logger.info(
+                    f"Retrieved wisdom packet for {coordinate}: "
+                    f"cache_hit={cache_hit}, synthesis_score={synthesis_score:.2f}"
+                )
+                return {
+                    "success": True,
+                    "wisdom_packet": packet,
+                    "coordinate": coordinate
+                }
+            else:
+                error_msg = result.get("error", "Unknown error")
+                logger.warning(f"Failed to get wisdom packet for {coordinate}: {error_msg}")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "coordinate": coordinate
+                }
+
+        except Exception as e:
+            logger.error(f"Exception getting wisdom packet for {coordinate}: {e}")
+            return {
+                "success": False,
+                "error": f"HTTP request failed: {str(e)}",
+                "coordinate": coordinate
+            }
+
     async def get_node_relationships(self, coordinate: str) -> Dict[str, Any]:
         """
         Get all direct relationship connections for a Bimba coordinate.

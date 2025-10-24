@@ -157,6 +157,7 @@ export default {
     },
   },
   plugins: [
+    require('@tailwindcss/typography'),
     function({ addUtilities }) {
       // SCROLLBAR UTILITIES MOVED TO @utility IN INDEX.CSS (TAILWIND V4 APPROACH)
 

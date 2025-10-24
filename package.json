@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:agentic\"",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "source .venv/bin/activate && python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:backend": "docker-compose up -d qdrant && source .venv/bin/activate && python -m uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000",
     "dev:agentic": "source .venv/bin/activate && python -m uvicorn agentic.main:app --reload --host 0.0.0.0 --port 8001",
     "dev:mcp": "source .venv/bin/activate && python -m agentic.mcp_servers.bimba_pratibimba_server --transport sse",
     "stop:mcp": "pkill -f 'agentic.mcp_servers.bimba_pratibimba_server' || echo 'MCP server not running'",
@@ -36,6 +36,10 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
+    "qdrant:start": "docker-compose up -d qdrant",
+    "qdrant:stop": "docker-compose stop qdrant",
+    "qdrant:logs": "docker-compose logs -f qdrant",
+    "qdrant:restart": "docker-compose restart qdrant",
     "docker:prod:build": "docker-compose -f docker-compose.prod.yml build",
     "docker:prod:up": "docker-compose -f docker-compose.prod.yml up -d",
     "docker:prod:down": "docker-compose -f docker-compose.prod.yml down",
@@ -84,6 +88,8 @@
   "license": "MIT",
   "dependencies": {
     "dexie": "^4.2.1",
-    "dexie-react-hooks": "^4.2.0"
+    "dexie-react-hooks": "^4.2.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   }
 }

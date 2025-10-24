@@ -213,11 +213,15 @@ class PrakasaManager:
         Loads workflow-specific prompt template from agent node
         and populates with runtime parameters.
 
+        Special handling for Etymology Archaeology workflow:
+        - Queries f_workflow_etymology_archaeology_{active_version}
+        - Returns versioned EA prompt directly (no template params)
+
         Only called when workflow explicitly engaged.
 
         Args:
             agent_coordinate: Agent coordinate (e.g., "#5-4.5")
-            workflow_name: Workflow to engage (e.g., "etymological_contemplation")
+            workflow_name: Workflow to engage (e.g., "etymology_archaeology")
             **workflow_params: Parameters to populate template
 
         Returns:
@@ -228,6 +232,23 @@ class PrakasaManager:
             f"for {agent_coordinate}"
         )
 
+        # Special handling for Etymology Archaeology workflow
+        if workflow_name == "etymology_archaeology":
+            ea_prompt = await self._get_ea_workflow_prompt(agent_coordinate)
+            if ea_prompt:
+                logger.info(
+                    f"Loaded Etymology Archaeology workflow for {agent_coordinate} "
+                    f"({len(ea_prompt)} chars)"
+                )
+                return ea_prompt
+            else:
+                logger.warning(
+                    f"EA workflow requested but not found for {agent_coordinate}. "
+                    f"Gracefully degrading (no workflow layer)."
+                )
+                return ""
+
+        # Standard workflow handling (template-based)
         # Get workflow templates from agent node
         workflow_prompts = await self.agent_nodes.get_workflow_prompts(agent_coordinate)
 
@@ -534,6 +555,63 @@ Respond with precision, depth, and coordinate-aligned wisdom.
         In future, could check subsystem updatedAt timestamps.
         """
         return metadata.get('last_updated') is not None
+
+    async def _get_ea_workflow_prompt(
+        self,
+        agent_coordinate: str
+    ) -> Optional[str]:
+        """
+        Get active Etymology Archaeology workflow prompt.
+
+        Queries f_workflow_etymology_archaeology_{active_version} from agent node.
+
+        Story 08.07 Enhancement - EA Workflow Versioning System
+
+        Args:
+            agent_coordinate: Agent coordinate (e.g., "#5-4.5")
+
+        Returns:
+            Active EA workflow prompt or None if not found
+        """
+        try:
+            # Get all properties from agent node
+            # Include functional properties to access f_workflow_etymology_archaeology_* fields
+            node_data = await self.bimba_client.get_node_details_complete(
+                agent_coordinate, include_functional_properties=True
+            )
+            all_props = node_data.get('allProperties', {})
+
+            # Get active version pointer
+            active_version = all_props.get('f_workflow_etymology_archaeology_active')
+
+            if not active_version:
+                logger.debug(
+                    f"No active EA workflow version set for {agent_coordinate}"
+                )
+                return None
+
+            # Get prompt for active version
+            prompt_key = f"f_workflow_etymology_archaeology_{active_version}"
+            prompt = all_props.get(prompt_key)
+
+            if not prompt:
+                logger.warning(
+                    f"Active EA version '{active_version}' pointer found but "
+                    f"property '{prompt_key}' missing at {agent_coordinate}"
+                )
+                return None
+
+            logger.debug(
+                f"Retrieved EA workflow prompt (version {active_version}) "
+                f"for {agent_coordinate}: {len(prompt)} chars"
+            )
+            return prompt
+
+        except Exception as e:
+            logger.error(
+                f"Error retrieving EA workflow prompt for {agent_coordinate}: {e}"
+            )
+            return None
 
 
 # Convenience function for backward compatibility

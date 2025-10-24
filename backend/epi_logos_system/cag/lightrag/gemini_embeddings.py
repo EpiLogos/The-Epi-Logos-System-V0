@@ -17,9 +17,9 @@ def gemini_embed_batch(texts: List[str], model_name: str = "gemini-embedding-001
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable is required")
-        
+
         genai.configure(api_key=api_key)
-        
+
         # Generate embeddings
         embeddings = []
         # Resolve target dimension from env (default 1536)
@@ -30,10 +30,14 @@ def gemini_embed_batch(texts: List[str], model_name: str = "gemini-embedding-001
 
         for text in texts:
             try:
+                # SDK requires models/ prefix even though docs don't show it
+                model_with_prefix = model_name if model_name.startswith("models/") else f"models/{model_name}"
+
                 result = genai.embed_content(
-                    model=model_name,
+                    model=model_with_prefix,
                     content=text,
-                    task_type=(task_type or "semantic_similarity")
+                    task_type=(task_type or "semantic_similarity"),
+                    output_dimensionality=target_dim  # Specify dimension explicitly
                 )
                 vec = result['embedding']
                 # Resize to target_dim (truncate/pad) to match index and downstream configs

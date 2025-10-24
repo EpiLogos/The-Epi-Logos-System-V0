@@ -119,7 +119,7 @@ export function useSidebarWidth({
     case 'paramasiva':
       return {
         width: isModalExpanded
-          ? SIDEBAR_WIDTH_SPECS.paramasiva.normal.collapsed.width
+          ? 'w-[420px]'
           : SIDEBAR_WIDTH_SPECS.paramasiva.normal.expanded.width,
         description: isModalExpanded
           ? 'Paramasiva: modal expanded (420px)'

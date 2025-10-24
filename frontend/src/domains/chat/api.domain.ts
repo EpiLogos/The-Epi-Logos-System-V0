@@ -134,8 +134,19 @@ export const buildCLIBridgeURL = (baseEndpoint: string, command?: string): strin
 };
 
 // Threads endpoints (Agentic)
-export const buildThreadsListURL = (backendBase: string, userId: string, limit = 50, page = 1): string =>
-  `${backendBase}/threads?user_id=${encodeURIComponent(userId)}&limit=${limit}&page=${page}`;
+export const buildThreadsListURL = (
+  backendBase: string,
+  userId: string,
+  limit = 50,
+  page = 1,
+  context?: string
+): string => {
+  let url = `${backendBase}/threads?user_id=${encodeURIComponent(userId)}&limit=${limit}&page=${page}`;
+  if (context) {
+    url += `&context=${encodeURIComponent(context)}`;
+  }
+  return url;
+};
 
 export const buildThreadMessagesURL = (backendBase: string, threadId: string, limit = 200): string =>
   `${backendBase}/threads/${encodeURIComponent(threadId)}/messages?limit=${limit}`;

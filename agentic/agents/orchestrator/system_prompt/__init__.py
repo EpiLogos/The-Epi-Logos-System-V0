@@ -1,6 +1,11 @@
 """
 Orchestrator System Prompt Module Imports
 Modular system prompt components for isolated editing and dynamic loading
+
+DEPRECATED: This package is deprecated as of the Neo4j prompt migration.
+All orchestrator prompts are now stored in Neo4j at #5-4 node and loaded
+via PrakasaManager. These modules are kept for fallback only and will be
+removed in a future version.
 """
 
 from agentic.agents.orchestrator.system_prompt.quaternal_logic_foundation import get_quaternal_logic_foundation

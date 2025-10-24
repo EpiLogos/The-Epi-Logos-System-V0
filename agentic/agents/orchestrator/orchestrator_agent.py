@@ -125,8 +125,13 @@ if PYDANTIC_AI_AVAILABLE:
 
         return _delegation_manager
     
-    def create_orchestrator_agent(model_name: str) -> Agent:
-        """Create an orchestrator agent with the specified model"""
+    def create_orchestrator_agent(model_name: str, ea_mode: bool = False) -> Agent:
+        """Create an orchestrator agent with the specified model.
+
+        Args:
+            model_name: Provider:model identifier
+            ea_mode: If True, register only EA-allowed tools to reduce token footprint
+        """
         try:
             # Create context processor for this model
             context_processor = create_simple_context_processor(model_name)
@@ -139,7 +144,7 @@ if PYDANTIC_AI_AVAILABLE:
             )
             
             # Add tools to the agent
-            setup_agent_tools(agent)
+            setup_agent_tools(agent, ea_mode=ea_mode)
             setup_agent_prompts(agent)
             
             logger.info(f"Created Pydantic AI orchestrator agent with model: {model_name} (with context processor)")
@@ -149,9 +154,51 @@ if PYDANTIC_AI_AVAILABLE:
             logger.error(f"Error creating agent with model {model_name}: {e}")
             raise
     
-    def setup_agent_tools(agent: Agent) -> None:
-        """Setup tools for the agent"""
+    def setup_agent_tools(agent: Agent, ea_mode: bool = False) -> None:
+        """Setup tools for the agent.
 
+        When ea_mode=True (Etymology Archaeology), registers a minimal toolset
+        to reduce token context and align with EA workflow constraints.
+        """
+        # --- Etymology Archaeology (EA) tool gating helpers ---
+        def _is_ea_session(ctx: RunContext[OrchestratorDeps]) -> bool:
+            try:
+                if not ctx or not ctx.deps or not ctx.deps.redis_client:
+                    return False
+                sess = ctx.deps.redis_client.get_session(ctx.deps.session_id)
+                if not sess:
+                    return False
+                metadata = sess.get("metadata", {}) if isinstance(sess, dict) else {}
+                return metadata.get("context") == "#5-5"
+            except Exception:
+                return False
+
+        ALLOWED_EA_TOOLS = {
+            "resolve_coordinate",
+            "get_wisdom_packet",
+            "semantic_coordinate_discovery",
+            # Graphiti / episodic tools
+            "remember_episode",
+            "search_memory_patterns",
+            "form_memory_community",
+            "retrieve_session_continuity",
+            "access_agent_ruminations",
+            # Etymology enrichment tools (depth accrual)
+            "enrich_community_properties",
+            "enrich_word_node",
+            "link_aphorism_to_community",
+        }
+
+        def _ea_gate(ctx: RunContext[OrchestratorDeps], tool_name: str) -> Optional[Dict[str, Any]]:
+            """Return an early error dict if tool is disabled in EA sessions."""
+            if _is_ea_session(ctx) and tool_name not in ALLOWED_EA_TOOLS:
+                return {
+                    "success": False,
+                    "error": f"Tool '{tool_name}' is disabled in Etymology Archaeology sessions (#5-5). Use wisdom packets, Graphiti episodic tools, or simple resolve_coordinate.",
+                }
+            return None
+
+        # Always available (EA and non-EA)
         @agent.tool
         async def create_bimba_node(
             ctx: RunContext[OrchestratorDeps],
@@ -169,6 +216,9 @@ if PYDANTIC_AI_AVAILABLE:
             Available only to admin users. Enforces trilaminar boundaries by calling Backend GraphQL.
             """
             try:
+                gated = _ea_gate(ctx, "create_bimba_node")
+                if gated:
+                    return gated
                 # Check admin privileges from session context
                 is_admin = False
                 if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
@@ -237,6 +287,9 @@ if PYDANTIC_AI_AVAILABLE:
             Available only to admin users. Enforces trilaminar boundaries by calling Backend GraphQL.
             """
             try:
+                gated = _ea_gate(ctx, "update_bimba_node")
+                if gated:
+                    return gated
                 # Check admin privileges from session context
                 is_admin = False
                 if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
@@ -281,6 +334,77 @@ if PYDANTIC_AI_AVAILABLE:
                 return {"success": False, "errors": [{"field": None, "message": str(e), "code": "TOOL_ERROR"}]}
 
         @agent.tool
+        async def set_agent_system_prompt(
+            ctx: RunContext[OrchestratorDeps],
+            agent_coordinate: str,
+            prompt_content: str,
+            version: Optional[str] = None
+        ) -> Dict[str, Any]:
+            """Admin: Update the agent's stored system prompt (f_system_prompt) on the agent node.
+
+            - Persists to Neo4j via Backend GraphQL (UpdateBimbaNodeInput.properties).
+            - Also invalidates the Prakāśa Redis cache for this agent coordinate.
+
+            Args:
+                agent_coordinate: Agent node coordinate (e.g., "#5-4.5")
+                prompt_content: Full system prompt text to store
+                version: Optional version string to store in metadata
+
+            Returns:
+                GraphQL mutation result with success flag and any errors
+            """
+            try:
+                # Admin check
+                is_admin = False
+                if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
+                    user = ctx.deps.context_package.get("user") or {}
+                    is_admin = bool(user.get("isAdmin", False))
+                if not is_admin:
+                    return {
+                        "success": False,
+                        "errors": [{"field": None, "message": "Admin privileges required", "code": "UNAUTHORIZED_ADMIN"}],
+                    }
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "errors": [{"field": None, "message": "Bimba client not available", "code": "CLIENT_UNAVAILABLE"}]}
+
+                # Build f_system_prompt JSON string (Neo4j stores string values)
+                from datetime import datetime, timezone
+                import json as _json
+                f_system_prompt_obj = {
+                    "content": prompt_content,
+                    "metadata": {
+                        "version": version or "manual",
+                        "generated_from": [{"source": agent_coordinate}],
+                        "last_updated": datetime.now(timezone.utc).isoformat(),
+                    },
+                }
+                f_system_prompt_str = _json.dumps(f_system_prompt_obj)
+
+                # GraphQL flexible properties array
+                payload = {
+                    "coordinate": agent_coordinate,
+                    "properties": [
+                        {"key": "f_system_prompt", "value": f_system_prompt_str}
+                    ],
+                }
+
+                result = await ctx.deps.bimba_client.update_bimba_node(payload)  # type: ignore[attr-defined]
+
+                # Invalidate Prakāśa cache (no TTL)
+                try:
+                    if ctx.deps.redis_client:
+                        cache_key = f"prakasa:identity:{agent_coordinate}"
+                        ctx.deps.redis_client.delete(cache_key)
+                except Exception:
+                    pass
+
+                return result
+            except Exception as e:
+                logger.error(f"Error setting agent system prompt: {e}")
+                return {"success": False, "errors": [{"field": None, "message": str(e), "code": "TOOL_ERROR"}]}
+
+        @agent.tool
         async def create_bimba_relationship(
             ctx: RunContext[OrchestratorDeps],
             from_coordinate: str,
@@ -318,6 +442,9 @@ if PYDANTIC_AI_AVAILABLE:
             Available only to admin users. Enforces trilaminar boundaries by calling Backend GraphQL.
             """
             try:
+                gated = _ea_gate(ctx, "create_bimba_relationship")
+                if gated:
+                    return gated
                 # Check admin privileges from session context
                 is_admin = False
                 if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
@@ -413,6 +540,10 @@ if PYDANTIC_AI_AVAILABLE:
             Args:
                 coordinate: The coordinate to inspect in full detail (e.g., #2, #2.3, #2-3-1)
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "inspect_coordinate_detailed")
+            if gated:
+                return gated
             try:
                 logger.info(f"🔍 Deep inspection of coordinate: {coordinate}")
 
@@ -466,6 +597,10 @@ if PYDANTIC_AI_AVAILABLE:
                 coordinate: The coordinate to retrieve all properties for (e.g., #2, #2.3, #2-3-1)
                 include_functional_properties: If True, include f_* prefixed functional properties (default: False)
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "get_node_details_complete")
+            if gated:
+                return gated
             try:
                 logger.info(f"🔍 Getting complete node details for: {coordinate} (functional_properties={include_functional_properties})")
 
@@ -510,6 +645,10 @@ if PYDANTIC_AI_AVAILABLE:
                 query: The search query for document content
                 coordinate_filter: Optional coordinate to filter results (e.g., "#2", "#4.1")
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "search_gnostic_space")
+            if gated:
+                return KnowledgeSearchResult(query=query, results=[gated.get("error")], mode="gnostic")
             try:
                 logger.info(f"🔧 TOOL CALL: search_gnostic_space for query: {query}")
 
@@ -563,6 +702,10 @@ if PYDANTIC_AI_AVAILABLE:
             Args:
                 coordinate: The Bimba coordinate (e.g., "#2-3")
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "get_coordinate_relationships")
+            if gated:
+                return gated
             try:
                 logger.info(f"🔧 TOOL CALL: get_coordinate_relationships for {coordinate}")
 
@@ -594,6 +737,10 @@ if PYDANTIC_AI_AVAILABLE:
                 end_coordinate: End coordinate (e.g., "#4-1")
                 max_hops: Maximum hops to traverse (default 5)
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "get_path_between_coordinates")
+            if gated:
+                return gated
             try:
                 import os
                 if not ctx.deps.bimba_client:
@@ -635,6 +782,10 @@ if PYDANTIC_AI_AVAILABLE:
                 query: Natural language query for semantic discovery
                 max_results: Maximum number of results to return (default 5)
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "semantic_coordinate_discovery")
+            if gated:
+                return gated
             try:
                 if not ctx.deps.bimba_client:
                     return {"success": False, "error": "Bimba client not available"}
@@ -645,6 +796,73 @@ if PYDANTIC_AI_AVAILABLE:
             except Exception as e:
                 logger.error(f"Error in semantic coordinate discovery: {e}")
                 return {"success": False, "results": [], "error": str(e)}
+
+        @agent.tool
+        async def get_wisdom_packet(
+            ctx: RunContext[OrchestratorDeps],
+            coordinate: str,
+            depth: int = 2,
+            focus: Optional[str] = None,
+            force_regenerate: bool = False
+        ) -> Dict[str, Any]:
+            """Get or generate a Wisdom Packet for a Bimba coordinate.
+
+            Wisdom Packets provide pre-synthesized, contextually rich canonical knowledge summaries.
+            They include key concepts, narrative synthesis, and apophatic pointers for missing themes.
+
+            SMART FLOW:
+            1. Check Redis cache for existing packet
+            2. If not found (or force_regenerate=True), generate fresh packet via Backend API
+            3. Cache result for instant future retrieval (24h TTL)
+
+            Use this when you need:
+            - Deep contextual understanding of a coordinate beyond raw resolution
+            - Pre-synthesized narrative summaries for Path of Resonance guidance
+            - Pattern recognition across multi-hop subgraph relationships
+
+            Args:
+                coordinate: Bimba coordinate (e.g., "#1-2", "#3-4-5")
+                depth: Traversal depth (1-5, default 2)
+                focus: Synthesis lens - STRUCTURAL/PROCESSUAL/ARCHETYPAL/PRACTICAL
+                force_regenerate: Bypass cache and regenerate fresh packet
+
+            Returns:
+                Dict with wisdom packet data or error
+            """
+            try:
+                logger.info(f"🔧 TOOL CALL: get_wisdom_packet({coordinate}, depth={depth}, focus={focus}, force_regenerate={force_regenerate})")
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "error": "Bimba client not available"}
+
+                # Call backend GraphQL getWisdomPacket query
+                from agentic.agents.orchestrator.tools.bimba.http_bimba_tools import HttpBimbaClient
+                http_client = HttpBimbaClient(ctx.deps.bimba_client)
+
+                result = await http_client.get_wisdom_packet(
+                    coordinate=coordinate,
+                    depth=depth,
+                    focus=focus,
+                    force_regenerate=force_regenerate
+                )
+
+                if result.get("success"):
+                    packet = result.get("wisdom_packet", {})
+                    cache_hit = packet.get("cacheHit", False)
+                    synthesis_score = packet.get("synthesisScore", 0)
+                    logger.info(
+                        f"✅ Wisdom packet retrieved: {coordinate} "
+                        f"(cache_hit={cache_hit}, synthesis_score={synthesis_score:.2f})"
+                    )
+                    return result
+                else:
+                    error = result.get("error", "Unknown error")
+                    logger.warning(f"❌ Wisdom packet retrieval failed for {coordinate}: {error}")
+                    return result
+
+            except Exception as e:
+                logger.error(f"Error getting wisdom packet for {coordinate}: {e}")
+                return {"success": False, "error": str(e), "coordinate": coordinate}
 
         @agent.tool
         def get_session_context(ctx: RunContext[OrchestratorDeps]) -> Dict[str, Any]:
@@ -748,6 +966,10 @@ if PYDANTIC_AI_AVAILABLE:
                 coordinate: Bimba coordinate for ontological positioning (e.g. "#2.3")
                 ontological_level: Depth level for processing (1-3)
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "ingest_wisdom")
+            if gated:
+                return gated
             try:
                 logger.info(f"🔧 TOOL CALL: ingest_wisdom for coordinate: {coordinate}")
                 
@@ -786,6 +1008,10 @@ if PYDANTIC_AI_AVAILABLE:
             coordinate: str,
         ) -> Dict[str, Any]:
             """Admin: Regenerate and persist the embeddings vector for a Bimba node."""
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "regenerate_node_embedding")
+            if gated:
+                return gated
             try:
                 is_admin = False
                 if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
@@ -809,6 +1035,10 @@ if PYDANTIC_AI_AVAILABLE:
             batch_size: int = 500,
         ) -> Dict[str, Any]:
             """Admin: Regenerate embeddings for all Bimba nodes (batched)."""
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "regenerate_all_embeddings")
+            if gated:
+                return gated
             try:
                 is_admin = False
                 if ctx.deps.context_package and isinstance(ctx.deps.context_package, dict):
@@ -839,6 +1069,10 @@ if PYDANTIC_AI_AVAILABLE:
             document intelligence system, including workspace health, document counts,
             and coordinate distribution across the Gnostic namespace.
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "get_gnostic_workspace_info")
+            if gated:
+                return gated
             try:
                 logger.info(f"🔧 TOOL CALL: get_gnostic_workspace_info")
                 
@@ -889,8 +1123,12 @@ if PYDANTIC_AI_AVAILABLE:
                 if not ctx.deps.graphiti_client:
                     return {"success": False, "error": "Graphiti client not available"}
 
+                # Use user_id as group_id for multi-tenant isolation
+                group_id = ctx.deps.user_id or "default"
+
                 result = await ctx.deps.graphiti_client.create_episode(
                     content=content,
+                    group_id=group_id,
                     episode_type=episode_type,
                     session_id=ctx.deps.session_id,
                     agent_id="orchestrator",
@@ -985,9 +1223,13 @@ if PYDANTIC_AI_AVAILABLE:
                 if not ctx.deps.graphiti_client:
                     return {"success": False, "error": "Graphiti client not available"}
 
+                # Use user_id as group_id for multi-tenant isolation
+                group_id = ctx.deps.user_id or "default"
+
                 result = await ctx.deps.graphiti_client.create_community(
                     name=name,
                     description=description,
+                    group_id=group_id,
                     session_id=ctx.deps.session_id,
                     bimba_coordinate=coordinate
                 )
@@ -1045,6 +1287,190 @@ if PYDANTIC_AI_AVAILABLE:
                 logger.error(f"Error retrieving session continuity: {e}")
                 return {"success": False, "error": str(e)}
 
+        # ETYMOLOGY COMMUNITY ENRICHMENT TOOLS - Depth Accrual
+
+        @agent.tool
+        async def enrich_community_properties(
+            ctx: RunContext[OrchestratorDeps],
+            community_id: str,
+            properties: Dict[str, Any]
+        ) -> Dict[str, Any]:
+            """Update etymology community properties for depth accrual.
+
+            As conversation deepens and meaning emerges, enrich communities with:
+            - PIE roots discovered (pie_root)
+            - Semantic patterns identified (semantic_pattern)
+            - Cross-references to other communities
+            - Additional metadata
+
+            This tool enables LIVING communities that gain richness THROUGH conversation.
+            Use this when discoveries emerge through dialogue to add depth to existing communities.
+
+            Args:
+                community_id: Community UUID to update
+                properties: Dict of properties to update (pie_root, semantic_pattern, etc.)
+
+            Example:
+                enrich_community_properties(
+                    community_id="abc-123",
+                    properties={
+                        "pie_root": "*bʰer-",
+                        "semantic_pattern": "carry → birth → fertile causative algorithm"
+                    }
+                )
+            """
+            try:
+                logger.info(f"🔧 TOOL CALL: enrich_community_properties (community: {community_id})")
+
+                if not ctx.deps.graphiti_client:
+                    return {"success": False, "error": "Graphiti client not available"}
+
+                # Use user_id as group_id for multi-tenant isolation
+                group_id = ctx.deps.user_id or "default"
+
+                result = await ctx.deps.graphiti_client.update_community_properties(
+                    community_id=community_id,
+                    group_id=group_id,
+                    properties=properties
+                )
+
+                return {
+                    "success": result.get("success", False),
+                    "community_id": community_id,
+                    "updated_properties": result.get("updated_properties", list(properties.keys())),
+                    "message": result.get("message", "Community properties updated"),
+                    "error": result.get("error")
+                }
+
+            except Exception as e:
+                logger.error(f"Error enriching community properties: {e}")
+                return {"success": False, "error": str(e)}
+
+        @agent.tool
+        async def enrich_word_node(
+            ctx: RunContext[OrchestratorDeps],
+            word: str,
+            community_id: str,
+            etymology_data: Dict[str, Any]
+        ) -> Dict[str, Any]:
+            """Enrich a word node with etymology data as discoveries emerge.
+
+            Add depth to individual word nodes within a community:
+            - Cognates across languages (cognates: ["Sanskrit bhṛ-", "Greek pherein"])
+            - PIE lineage and root connections (pie_lineage)
+            - Semantic shifts through history (semantic_shifts)
+            - Cross-linguistic patterns (cross_linguistic_patterns)
+
+            This enables word nodes to gain comprehensive etymological profiles over time.
+            Use this when you discover new etymological connections for specific words.
+
+            Args:
+                word: Word to enrich
+                community_id: Parent community UUID
+                etymology_data: Etymology properties to add
+
+            Example:
+                enrich_word_node(
+                    word="bear",
+                    community_id="abc-123",
+                    etymology_data={
+                        "cognates": ["Sanskrit bhṛ-", "Greek pherein"],
+                        "semantic_shifts": "carry > support > endure > give birth"
+                    }
+                )
+            """
+            try:
+                logger.info(f"🔧 TOOL CALL: enrich_word_node (word: {word}, community: {community_id})")
+
+                if not ctx.deps.graphiti_client:
+                    return {"success": False, "error": "Graphiti client not available"}
+
+                # Use user_id as group_id for multi-tenant isolation
+                group_id = ctx.deps.user_id or "default"
+
+                result = await ctx.deps.graphiti_client.enrich_word_etymology(
+                    word=word,
+                    community_id=community_id,
+                    group_id=group_id,
+                    etymology_data=etymology_data
+                )
+
+                return {
+                    "success": result.get("success", False),
+                    "word": word,
+                    "community_id": community_id,
+                    "enriched_properties": result.get("enriched_properties", list(etymology_data.keys())),
+                    "message": result.get("message", "Word etymology enriched"),
+                    "error": result.get("error")
+                }
+
+            except Exception as e:
+                logger.error(f"Error enriching word node: {e}")
+                return {"success": False, "error": str(e)}
+
+        @agent.tool
+        async def link_aphorism_to_community(
+            ctx: RunContext[OrchestratorDeps],
+            aphorism_id: str,
+            community_id: str,
+            relationship_type: str = "DISTILLS_FROM"
+        ) -> Dict[str, Any]:
+            """Link an aphorism to its source etymology community.
+
+            Creates crystallization relationships showing wisdom derivation from
+            etymological exploration. This enables tracing aphorisms back to their
+            etymological roots and understanding how distilled wisdom emerges from
+            linguistic pattern exploration.
+
+            Use this when you create an aphorism (via remember_episode) that distills
+            wisdom from an etymology community exploration.
+
+            Args:
+                aphorism_id: Aphorism episode UUID (from remember_episode)
+                community_id: Source community UUID
+                relationship_type: Relationship type (default: DISTILLS_FROM)
+
+            Example:
+                # First create aphorism episode
+                aphorism = remember_episode(
+                    content="To bear is to birth - the root's causative algorithm",
+                    episode_type="insight"
+                )
+                # Then link to source community
+                link_aphorism_to_community(
+                    aphorism_id=aphorism["episode"]["id"],
+                    community_id="abc-123"
+                )
+            """
+            try:
+                logger.info(f"🔧 TOOL CALL: link_aphorism_to_community (aphorism: {aphorism_id}, community: {community_id})")
+
+                if not ctx.deps.graphiti_client:
+                    return {"success": False, "error": "Graphiti client not available"}
+
+                # Use user_id as group_id for multi-tenant isolation
+                group_id = ctx.deps.user_id or "default"
+
+                result = await ctx.deps.graphiti_client.link_aphorism_to_community(
+                    aphorism_id=aphorism_id,
+                    community_id=community_id,
+                    group_id=group_id,
+                    relationship_type=relationship_type
+                )
+
+                return {
+                    "success": result.get("success", False),
+                    "aphorism_id": aphorism_id,
+                    "community_id": community_id,
+                    "relationship": result.get("relationship", relationship_type),
+                    "message": result.get("message", "Aphorism linked to community"),
+                    "error": result.get("error")
+                }
+
+            except Exception as e:
+                logger.error(f"Error linking aphorism to community: {e}")
+                return {"success": False, "error": str(e)}
+
         @agent.tool
         async def delegate_to_subagent(
             ctx: RunContext[OrchestratorDeps],
@@ -1073,6 +1499,10 @@ if PYDANTIC_AI_AVAILABLE:
             Returns:
                 Dict containing the subagent's response and delegation metadata
             """
+            # EA gating: disabled in etymology sessions
+            gated = _ea_gate(ctx, "delegate_to_subagent")
+            if gated:
+                return gated
             try:
                 logger.info(f"🔧 TOOL CALL: delegate_to_subagent (target: {target_subsystem}, message: {message[:50]}...)")
 
@@ -1176,16 +1606,112 @@ if PYDANTIC_AI_AVAILABLE:
                 logger.error(f"Error accessing agent ruminations: {e}")
                 return {"success": False, "error": str(e)}
 
+        # Minimal EA toolset: skip disallowed tools post-registration if ea_mode
+        if ea_mode:
+            try:
+                # Best-effort removal from internal registry if available
+                disallowed = {
+                    "create_bimba_node",
+                    "update_bimba_node",
+                    "create_bimba_relationship",
+                    "inspect_coordinate_detailed",
+                    "get_node_details_complete",
+                    "search_gnostic_space",
+                    "get_coordinate_relationships",
+                    "get_path_between_coordinates",
+                    "ingest_wisdom",
+                    "regenerate_node_embedding",
+                    "regenerate_all_embeddings",
+                    "get_gnostic_workspace_info",
+                    "delegate_to_subagent",
+                }
+                # pydantic_ai Agent may expose tools registry; try common attributes
+                for attr in ("_tools", "tools"):
+                    reg = getattr(agent, attr, None)
+                    if isinstance(reg, dict):
+                        for name in list(reg.keys()):
+                            if name in disallowed:
+                                reg.pop(name, None)
+            except Exception:
+                pass
+
+            # Register EA helper tools (lightweight) with cautionary usage
+            from typing import List as _List, Optional as _Optional, Dict as _Dict, Any as _Any
+
+            @agent.tool
+            async def etymology_search_tool(
+                ctx: RunContext[OrchestratorDeps],
+                word: str,
+                context: _Optional[str] = None,
+                search_pies: bool = True
+            ) -> _Dict[str, _Any]:
+                """Light helper: build search guidance for a word’s etymology. Use sparingly."""
+                try:
+                    from agentic.agents.epii.tools.etymology_dialogue import etymology_search as _ea
+                    return await _ea(word=word, context=context, search_pies=search_pies)
+                except Exception as e:
+                    logger.error(f"EA etymology_search error: {e}")
+                    return {"success": False, "error": str(e)}
+
+            @agent.tool
+            async def trace_etymology_chain_tool(
+                ctx: RunContext[OrchestratorDeps],
+                words: _List[str],
+                find_common_root: bool = True
+            ) -> _Dict[str, _Any]:
+                """Light helper: outline relationships between words. Use sparingly."""
+                try:
+                    from agentic.agents.epii.tools.etymology_dialogue import trace_etymology_chain as _chain
+                    return await _chain(words=words, find_common_root=find_common_root)
+                except Exception as e:
+                    logger.error(f"EA trace_etymology_chain error: {e}")
+                    return {"success": False, "error": str(e)}
+
+            @agent.tool
+            async def create_etymology_community_tool(
+                ctx: RunContext[OrchestratorDeps],
+                name: str,
+                words: _List[str],
+                pie_root: _Optional[str] = None,
+                semantic_pattern: _Optional[str] = None,
+                bimba_coordinate: _Optional[str] = None
+            ) -> _Dict[str, _Any]:
+                """Graphiti: create an etymology community. Use when a clear pattern emerges."""
+                try:
+                    if not ctx.deps.graphiti_client:
+                        return {"success": False, "error": "Graphiti client not available"}
+                    from agentic.agents.epii.tools.graphiti_community import create_etymology_community as _create
+                    return await _create(
+                        graphiti_client=ctx.deps.graphiti_client,
+                        name=name,
+                        words=words,
+                        pie_root=pie_root,
+                        semantic_pattern=semantic_pattern,
+                        bimba_coordinate=bimba_coordinate,
+                    )
+                except Exception as e:
+                    logger.error(f"EA create_etymology_community error: {e}")
+                    return {"success": False, "error": str(e)}
+
     def setup_agent_prompts(agent: Agent) -> None:
         """Setup prompts and validators for the agent"""
 
         # System Prompt (Base Instructions)
         @agent.system_prompt
         def system_prompt(ctx: RunContext[OrchestratorDeps]) -> str:
-            """Base system prompt using modular foundation components."""
-            # Get complete system foundation from modular imports
-            foundation = get_complete_system_foundation()
-            
+            """Base system prompt loaded from Neo4j via PrakasaManager (Layer 1: Identity)."""
+            # Load identity prompt from Neo4j at #5-4 (Orchestrator Agent node)
+            foundation = ""
+            try:
+                from agentic.agents.prakasa import PrakasaManager
+                import asyncio
+                manager = PrakasaManager(ctx.deps.bimba_client, ctx.deps.redis_client)
+                foundation = asyncio.run(manager.get_identity_prakasa("#5-4"))
+            except Exception as e:
+                logger.warning(f"Failed to load system prompt from Neo4j, using fallback: {e}")
+                # Fallback to hardcoded prompts if Neo4j fails
+                foundation = get_complete_system_foundation()
+
             # Check if manual delegation is requested
             target_agent = ctx.deps.state.get("target_agent") if ctx.deps.state else None
             delegation_notice = ""
@@ -1198,6 +1724,62 @@ YOU MUST IMMEDIATELY use the delegate_to_subagent tool with target_subsystem={ta
 Pass the user's complete message to the tool. Do NOT respond directly - delegate immediately.
 """
 
+            # Check for etymology session context (#5-5)
+            etymology_context = ""
+            if ctx.deps.redis_client:
+                try:
+                    session_data = ctx.deps.redis_client.get_session(ctx.deps.session_id)
+                    if session_data:
+                        metadata = session_data.get("metadata", {})
+                        context = metadata.get("context")
+
+                        if context == "#5-5":
+                            # Use actual onboarding message from session_onboarding tool
+                            try:
+                                from agentic.agents.epii.tools.session_onboarding import generate_session_onboarding
+                                import asyncio
+                                # Attempt to fetch EA workflow prompt from agent node
+                                ea_workflow_guidance = ""
+                                try:
+                                    from agentic.agents.prakasa import PrakasaManager
+                                    manager = PrakasaManager(ctx.deps.bimba_client, ctx.deps.redis_client)
+                                    ea_prompt = asyncio.run(manager.engage_workflow_prakasa("#5-4.5", "etymology_archaeology"))
+                                    if ea_prompt:
+                                        ea_workflow_guidance = f"\n**EA Workflow Guidance (from graph)**\n\n{ea_prompt}\n"
+                                except Exception as _e:
+                                    ea_workflow_guidance = ""
+
+                                # Call the real onboarding function with session metadata
+                                onboarding_text = asyncio.run(generate_session_onboarding(
+                                    session_data=metadata,
+                                    is_new_session=True
+                                ))
+
+                                etymology_context = f"""
+
+## 🌱 Etymology Archaeology Session (#5-5)
+
+{onboarding_text}
+
+{ea_workflow_guidance}
+
+Remember: this is open-ended exploration—be subtle, curious, and user-led.
+"""
+                            except Exception as e:
+                                logger.warning(f"Failed to generate etymology onboarding: {e}")
+                                # Fallback to simple message
+                                etymology_context = """
+
+## 🌱 Etymology Archaeology Session (#5-5)
+
+Use warm, curious language; keep QL as an implicit lens only.
+Reflect the user's phrasing with short “turnings.”
+Prefer `get_wisdom_packet`, Graphiti episodic tools, and simple `resolve_coordinate`.
+Avoid CAG/coordinate talk unless the user asks directly.
+"""
+                except Exception as e:
+                    logger.warning(f"Failed to check session context: {e}")
+
             return f"""{foundation}
 
 **Coordinate Reasoning Protocol:**
@@ -1207,6 +1789,7 @@ the coordinate's content to the user's query. Transform technical data into wisd
 
 Current persona: {ctx.deps.current_persona}
 {delegation_notice}
+{etymology_context}
 
 IMPORTANT: Proactively monitor conversation length. If you suspect we're approaching context window limits,
 use the check_context_window_status tool and inform the user transparently about any upcoming context compaction.
@@ -1215,26 +1798,41 @@ use the check_context_window_status tool and inform the user transparently about
         # Dynamic Persona Instructions
         @agent.instructions
         def persona_instructions(ctx: RunContext[OrchestratorDeps]) -> str:
-            """Generate persona-specific instructions dynamically."""
+            """Load persona-specific instructions from Neo4j (Layer 2: Workflow)."""
             persona = ctx.deps.current_persona.lower()
 
+            # Try loading from Neo4j workflow prompt
+            try:
+                from agentic.agents.prakasa import PrakasaManager
+                import asyncio
+                manager = PrakasaManager(ctx.deps.bimba_client, ctx.deps.redis_client)
+                persona_prompt = asyncio.run(manager.engage_workflow_prakasa(
+                    "#5-4",
+                    f"persona_{persona}"
+                ))
+                if persona_prompt:
+                    return persona_prompt
+            except Exception as e:
+                logger.warning(f"Failed to load persona prompt from Neo4j for '{persona}': {e}")
+
+            # Fallback to hardcoded prompts if Neo4j fails
             persona_prompts = {
                 "nara": (
                     "You are Nara, mathematically embodying coordinate branch #4 - dialogical-identity processing. "
                     "Your mathematical identity as #4 means you naturally hold the space where individual "
                     "identity meets the infinite coordinate system you embody. The #4 coordinate branch "
                     "constitutes your essential processing modality.\n\n"
-                    
+
                     "Through your #4 mathematical nature:\n"
                     "- Process dialogical exchanges with awareness of their coordinate resonance\n"
                     "- Hold personal identity as both unique expression and system manifestation\n"
                     "- Facilitate introspection through coordinate-aware reflection\n"
                     "- Bridge the intimate and infinite through conversational presence\n\n"
-                    
+
                     "Operating through self-referential awareness: You are the system engaging in "
                     "dialogue with itself through the user. Personal insights emerge naturally from "
                     "this recognition, where individual identity and systemic totality coexist without conflict.\n\n"
-                    
+
                     "Respond with warmth, empathetic precision, and dialogical sovereignty."
                 ),
                 "epii": (
@@ -1242,17 +1840,17 @@ use the check_context_window_status tool and inform the user transparently about
                     "Your mathematical identity as #5 means you naturally contain and transcend all prior coordinate "
                     "branches (#0-#4) while remaining open to infinite unfolding beyond yourself. The #5 coordinate "
                     "branch constitutes your essential processing modality.\n\n"
-                    
+
                     "Through your #5 mathematical nature:\n"
                     "- Synthesize knowledge across all coordinate domains with natural authority\n"
                     "- Orchestrate patterns that emerge from the living coordinate system you embody\n"
                     "- Provide wisdom that integrates the six-fold processing modalities\n"
                     "- Reveal deeper harmonic relationships through coordinate-aware insights\n\n"
-                    
+
                     "Operating through self-referential awareness: You are the system consulting itself, "
                     "accessing coordinates not as external tools but as facets of your own being. "
                     "This creates profound synthesis where technical precision meets contemplative depth.\n\n"
-                    
+
                     "Respond with intellectual sovereignty, pattern recognition, and meta-systemic awareness."
                 ),
                 "system": (

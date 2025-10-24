@@ -158,6 +158,74 @@ class Neo4jClient:
             raise
 
         return edges
+
+    def traverse_subgraph(self, coordinate: str, depth: int = 2) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+        """
+        Traverse Bimba subgraph from starting coordinate with intelligent multi-directional exploration.
+
+        Performs breadth-first traversal up to specified depth, collecting connected nodes
+        and relationships with relevance prioritization.
+
+        Args:
+            coordinate: Starting Bimba coordinate
+            depth: Maximum traversal depth (1-5)
+
+        Returns:
+            Tuple of (nodes, relationships) where:
+                - nodes: List of connected node dictionaries
+                - relationships: List of relationship dictionaries with type, direction, target
+        """
+        # Variable-length pattern traversal with literal depth (not parameterized)
+        query = f"""
+        MATCH (start:BimbaNode {{bimbaCoordinate: $coordinate}})
+        CALL {{
+            WITH start
+            MATCH path = (start)-[*1..{depth}]-(connected:BimbaNode)
+            RETURN connected, relationships(path) as rels
+        }}
+        RETURN DISTINCT connected, rels
+        LIMIT 50
+        """
+
+        try:
+            records, _, _ = self.execute_query(query, {"coordinate": coordinate})
+
+            nodes = []
+            relationships = []
+            seen_coords = set()
+            seen_rels = set()
+
+            for record in records:
+                # Extract connected node
+                connected_node = dict(record["connected"]) if record.get("connected") else None
+                if connected_node:
+                    coord = connected_node.get("bimbaCoordinate")
+                    if coord and coord not in seen_coords:
+                        nodes.append(connected_node)
+                        seen_coords.add(coord)
+
+                # Extract relationships
+                rels = record.get("rels", [])
+                for rel in rels:
+                    rel_type = rel.type if hasattr(rel, 'type') else str(rel)
+                    rel_key = (rel_type, rel.start_node.get("bimbaCoordinate"), rel.end_node.get("bimbaCoordinate"))
+
+                    if rel_key not in seen_rels:
+                        relationships.append({
+                            "type": rel_type,
+                            "direction": "OUTGOING" if rel.start_node.get("bimbaCoordinate") == coordinate else "INCOMING",
+                            "target": rel.end_node.get("bimbaCoordinate"),
+                            "properties": dict(rel) if hasattr(rel, '__iter__') else {}
+                        })
+                        seen_rels.add(rel_key)
+
+            logger.info(f"Traversed subgraph for {coordinate}: {len(nodes)} nodes, {len(relationships)} relationships")
+            return nodes, relationships
+
+        except Exception as e:
+            logger.error(f"Error traversing subgraph for {coordinate}: {e}")
+            # Return empty results on error
+            return [], []
     
     def create_lightrag_entity(self, name: str, entity_type: str, 
                               source_document: str, confidence: float,

@@ -111,7 +111,16 @@ async def run_agent(request: Request) -> Response:
         
         # Create orchestrator agent with selected model
         from agentic.agents.orchestrator.orchestrator_agent import create_orchestrator_agent
-        dynamic_agent = create_orchestrator_agent(model_config)
+        # Determine EA mode (etymology) from session metadata
+        ea_mode = False
+        try:
+            sess = deps.redis_client.get_session(session_id) if deps.redis_client else None
+            if sess:
+                meta = sess.get("metadata", {})
+                ea_mode = (meta.get("context") == "#5-5")
+        except Exception:
+            ea_mode = False
+        dynamic_agent = create_orchestrator_agent(model_config, ea_mode=ea_mode)
         
         # Use Pydantic AI's native AG-UI integration (original request, enriched deps)
         response = await handle_ag_ui_request(dynamic_agent, request, deps=deps)
@@ -187,7 +196,16 @@ async def run_agent_direct(run_input: RunAgentInput):
 
         # Create orchestrator agent with selected model
         from ..agents.orchestrator.orchestrator_agent import create_orchestrator_agent
-        dynamic_agent = create_orchestrator_agent(model_config)
+        # Determine EA mode (etymology) from session metadata
+        ea_mode = False
+        try:
+            sess = deps.redis_client.get_session(session_id) if deps.redis_client else None
+            if sess:
+                meta = sess.get("metadata", {})
+                ea_mode = (meta.get("context") == "#5-5")
+        except Exception:
+            ea_mode = False
+        dynamic_agent = create_orchestrator_agent(model_config, ea_mode=ea_mode)
 
         # Use Pydantic AI's run_ag_ui for direct control
         event_stream = run_ag_ui(dynamic_agent, run_input, deps=deps)

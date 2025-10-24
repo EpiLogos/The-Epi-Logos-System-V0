@@ -67,9 +67,13 @@ const SubsystemPanel: React.FC<SubsystemPanelProps> = ({
         className={cn(
           // Image styling - 100% Tailwind v4
           "max-w-[60%] max-h-[60%] object-contain transition-all duration-300",
-          scaled && "scale-[1.3]",  // Scaled images for panels 3,4,5
-          onClick && "cursor-pointer hover:scale-105 transition-transform duration-200",  // Clickable styling
-          shouldBlurImage 
+          // Base scale for panels 3,4,5 - with hover that maintains the scale ratio
+          scaled && !shouldBlurImage && "scale-[1.3] hover:scale-[1.365]",  // 1.3 * 1.05 = 1.365
+          scaled && shouldBlurImage && "scale-[1.3]",
+          // Base scale for panels 0,1,2 - with standard hover
+          !scaled && !shouldBlurImage && "hover:scale-105",
+          onClick && "cursor-pointer transition-transform duration-200",  // Clickable styling
+          shouldBlurImage
             ? "opacity-10 blur-[12px] brightness-[0.3] transition-[opacity,filter] duration-[1800ms] delay-phase-2a ease-gentle"
             : "opacity-80 hover:opacity-100"
         )}
@@ -98,6 +102,11 @@ export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate =
     widthMorphStarted,
     whiteOverlayVisible,
     transitionToParamasiva,
+    transitionToParashakti,
+    transitionToMahamaya,
+    transitionToNara,
+    transitionToEpii,
+    transitionToAnuttara,
     transitionToEpiLogosFromSubsystems
   } = useInterPageTransition();
 
@@ -114,8 +123,28 @@ export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate =
     return () => clearTimeout(coordTimer);
   }, []);
 
+  const handleAnuttaraClick = () => {
+    transitionToAnuttara();
+  };
+
   const handleParamasivaClick = () => {
     transitionToParamasiva();
+  };
+
+  const handleParashaktiClick = () => {
+    transitionToParashakti();
+  };
+
+  const handleMahamayaClick = () => {
+    transitionToMahamaya();
+  };
+
+  const handleNaraClick = () => {
+    transitionToNara();
+  };
+
+  const handleEpiiClick = () => {
+    transitionToEpii();
   };
 
   const subsystemPanels: Array<{
@@ -125,12 +154,12 @@ export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate =
     scaled: boolean;
     onClick?: () => void;
   }> = [
-    { id: '0', image: image0, alt: 'Anuttara Icon', scaled: false },
+    { id: '0', image: image0, alt: 'Anuttara Icon', scaled: false, onClick: handleAnuttaraClick },
     { id: '1', image: image1, alt: 'Paramasiva Icon', scaled: false, onClick: handleParamasivaClick },
-    { id: '2', image: image2, alt: 'Parashakti Icon', scaled: false },
-    { id: '3', image: image3, alt: 'Mahamaya Icon', scaled: true },
-    { id: '4', image: image4, alt: 'Nara Icon', scaled: true },
-    { id: '5', image: image5, alt: 'Epii Icon', scaled: true },
+    { id: '2', image: image2, alt: 'Parashakti Icon', scaled: false, onClick: handleParashaktiClick },
+    { id: '3', image: image3, alt: 'Mahamaya Icon', scaled: true, onClick: handleMahamayaClick },
+    { id: '4', image: image4, alt: 'Nara Icon', scaled: true, onClick: handleNaraClick },
+    { id: '5', image: image5, alt: 'Epii Icon', scaled: true, onClick: handleEpiiClick },
   ];
 
   return (
@@ -146,8 +175,23 @@ export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate =
       <PageFadeIn>
         <div className={cn(
           "flex h-screen bg-[#f5f5f5]",
-          // Only center for subsystems → paramasiva; keep normal flow for epi-logos
-          isTransitioning && currentTransitionDirection === 'subsystems-to-paramasiva' && "justify-center items-center"
+          // Only center for focus transitions (all subsystem transitions); keep normal flow for epi-logos
+          isTransitioning &&
+            (
+              currentTransitionDirection === 'subsystems-to-paramasiva' ||
+              currentTransitionDirection === 'paramasiva-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-parashakti' ||
+              currentTransitionDirection === 'parashakti-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-mahamaya' ||
+              currentTransitionDirection === 'mahamaya-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-nara' ||
+              currentTransitionDirection === 'nara-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-epii' ||
+              currentTransitionDirection === 'epii-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-anuttara' ||
+              currentTransitionDirection === 'anuttara-to-subsystems'
+            ) &&
+            "justify-center items-center"
         )}>
       {/* Sidebar - PURE TAILWIND like ContentPanel */}
       <div 
@@ -159,11 +203,39 @@ export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate =
             ? (heightMorphStarted ? "w-[420px]" : "w-[300px]")
             : (!isTransitioning
                 ? "w-[300px]"
-                : currentTransitionDirection === 'subsystems-to-paramasiva'
+                : (
+                    currentTransitionDirection === 'subsystems-to-paramasiva' ||
+                    currentTransitionDirection === 'paramasiva-to-subsystems' ||
+                    currentTransitionDirection === 'subsystems-to-parashakti' ||
+                    currentTransitionDirection === 'parashakti-to-subsystems' ||
+                    currentTransitionDirection === 'subsystems-to-mahamaya' ||
+                    currentTransitionDirection === 'mahamaya-to-subsystems' ||
+                    currentTransitionDirection === 'subsystems-to-nara' ||
+                    currentTransitionDirection === 'nara-to-subsystems' ||
+                    currentTransitionDirection === 'subsystems-to-epii' ||
+                    currentTransitionDirection === 'epii-to-subsystems' ||
+                    currentTransitionDirection === 'subsystems-to-anuttara' ||
+                    currentTransitionDirection === 'anuttara-to-subsystems'
+                  )
                 ? "w-[calc(100vw-420px)]"
                 : "w-[300px]"),
-          // Restore smooth width animation for subsystems → paramasiva via utility
-          (isTransitioning && currentTransitionDirection === 'subsystems-to-paramasiva' && 'transition-subsys-paramasiva-sidebar')
+          // Restore smooth width animation for subsystems → subsystem transitions via utility
+          (isTransitioning &&
+            (
+              currentTransitionDirection === 'subsystems-to-paramasiva' ||
+              currentTransitionDirection === 'paramasiva-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-parashakti' ||
+              currentTransitionDirection === 'parashakti-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-mahamaya' ||
+              currentTransitionDirection === 'mahamaya-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-nara' ||
+              currentTransitionDirection === 'nara-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-epii' ||
+              currentTransitionDirection === 'epii-to-subsystems' ||
+              currentTransitionDirection === 'subsystems-to-anuttara' ||
+              currentTransitionDirection === 'anuttara-to-subsystems'
+            ) &&
+            'transition-subsys-paramasiva-sidebar')
         )}>
         {/* Logo */}
         <TextAnimate 
@@ -260,9 +332,32 @@ export const SubsystemsPage: React.FC<{ coordinate?: string }> = ({ coordinate =
               ]
             : (!isTransitioning
                 ? 'w-[calc(100vw-300px)] h-screen'
-                : 'w-[420px] h-[calc(73vh+20.75vh)] mt-5 mr-5 mb-0 ml-0'),
+                : [
+                    // Width changes immediately when transitioning starts
+                    'w-[420px]',
+                    // Height only changes when heightMorphStarted is true (200ms delay)
+                    heightMorphStarted ? 'h-[calc(73vh+20.75vh)]' : 'h-screen',
+                    // Margins only apply when heightMorphStarted
+                    heightMorphStarted && 'mt-5 mr-5 mb-0 ml-0'
+                  ]),
           // Restore smooth grid transition for non-epi-logos transitions via utility
-          (currentTransitionDirection !== 'subsystems-to-epilogos' && isTransitioning && 'transition-subsys-default-grid')
+          (currentTransitionDirection !== 'subsystems-to-epilogos' && isTransitioning && 'transition-subsys-default-grid'),
+          // Apply focus translate for Mahamaya transitions
+          (isTransitioning &&
+            (currentTransitionDirection === 'subsystems-to-mahamaya' || currentTransitionDirection === 'mahamaya-to-subsystems') &&
+            'focus-mahamaya-translate'),
+          // Apply focus translate for Parashakti transitions (panel 2)
+          (isTransitioning &&
+            (currentTransitionDirection === 'subsystems-to-parashakti' || currentTransitionDirection === 'parashakti-to-subsystems') &&
+            'focus-parashakti-translate'),
+          // Apply focus translate for Nara transitions (panel 4)
+          (isTransitioning &&
+            (currentTransitionDirection === 'subsystems-to-nara' || currentTransitionDirection === 'nara-to-subsystems') &&
+            'focus-nara-translate'),
+          // Apply focus translate for Epii transitions (panel 5)
+          (isTransitioning &&
+            (currentTransitionDirection === 'subsystems-to-epii' || currentTransitionDirection === 'epii-to-subsystems') &&
+            'focus-epii-translate')
         )}
       >
         {subsystemPanels.map((panel) => (

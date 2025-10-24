@@ -12,19 +12,27 @@ export const HorizontalTracingBeam: React.FC<HorizontalTracingBeamProps> = ({
   endPoint = 1.3,
   className
 }) => {
-  const [svgWidth, setSvgWidth] = useState<number>(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [svgWidth, setSvgWidth] = useState<number>(1200); // Fixed initial value for SSR/hydration match
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const beamRef = useRef<SVGLineElement>(null);
   const gradientRef = useRef<SVGLinearGradientElement>(null);
 
   const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
+  // Set mounted and initial width after hydration
+  useEffect(() => {
+    setMounted(true);
+    setSvgWidth(window.innerWidth);
+  }, []);
+
   // Handle resize
   useEffect(() => {
+    if (!mounted) return;
     const handleResize = () => setSvgWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [mounted]);
 
   // Handle scroll with rAF throttle
   useEffect(() => {

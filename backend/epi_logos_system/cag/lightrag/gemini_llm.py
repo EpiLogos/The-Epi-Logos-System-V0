@@ -28,18 +28,41 @@ class GeminiLLMService:
                 content = messages[-1].get("content", "")
             else:
                 content = str(messages)
-                
-            response = await self.model.generate_content_async(
+
+            # WORKAROUND: Use sync API via asyncio.to_thread() instead of async API
+            # Reason: generate_content_async() blocks content with finish_reason: 2 (SAFETY)
+            #         while generate_content() (sync) works fine with identical content
+            # This wraps the working sync call in an async context
+            response = await asyncio.to_thread(
+                self.model.generate_content,
                 content,
                 generation_config=genai.types.GenerationConfig(
                     temperature=kwargs.get("temperature", 0.3),
                     max_output_tokens=kwargs.get("max_tokens", 8000)
                 )
+                # Using default safety settings - no explicit safety_settings parameter
             )
+
+            # Check for safety filter blocking or other issues
+            if not response.candidates:
+                raise ValueError("Gemini blocked content - no candidates returned (likely safety filter)")
+
+            candidate = response.candidates[0]
+            if candidate.finish_reason != 1:  # 1 = STOP (normal completion)
+                finish_reasons = {
+                    0: "UNSPECIFIED",
+                    1: "STOP (normal completion)",
+                    2: "SAFETY (content filtered by safety filters)",
+                    3: "RECITATION (content blocked due to recitation)",
+                    4: "OTHER (unknown reason)"
+                }
+                reason = finish_reasons.get(candidate.finish_reason, f"UNKNOWN ({candidate.finish_reason})")
+                raise ValueError(f"Gemini finish_reason: {reason}")
+
             return response.text
         except Exception as e:
             print(f"Gemini API error: {e}")
-            return ""
+            raise  # Re-raise instead of returning empty string
 
 
 # Global service instance

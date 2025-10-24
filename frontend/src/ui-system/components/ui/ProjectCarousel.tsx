@@ -1,5 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '../../utils/cn';
+
+export interface CarouselCard {
+  id: number;
+  title: string;
+  description: string;
+  link?: string; // Optional navigation link
+}
 
 interface ProjectCarouselProps {
   className?: string;
@@ -8,9 +16,11 @@ interface ProjectCarouselProps {
   showDots?: boolean;
   variant?: 'modal' | 'projects'; // Differentiate between modal and projects page usage
   onNavigationRender?: (navigation: React.ReactNode) => void;
+  cardLimit?: number; // Limit number of cards displayed (e.g., 2 for Epii page)
+  customCards?: CarouselCard[]; // Custom card data (overrides default carouselData)
 }
 
-const carouselData = [
+const carouselData: CarouselCard[] = [
   {
     id: 1,
     title: "SPATIAL DESIGN",
@@ -55,12 +65,21 @@ export const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
   showArrows = true,
   showDots = true,
   variant = 'modal',
-  onNavigationRender
+  onNavigationRender,
+  cardLimit,
+  customCards
 }) => {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
   const itemWidth = 340; // Width of each item including margin
   const visibleItems = 3.5; // Show ~4 cards
+
+  // Use custom cards if provided, otherwise use default carousel data
+  const sourceData = customCards || carouselData;
+
+  // Use limited card data if cardLimit is specified
+  const displayData = cardLimit ? sourceData.slice(0, cardLimit) : sourceData;
 
   const updateCarousel = () => {
     if (trackRef.current) {
@@ -70,7 +89,7 @@ export const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
   };
 
   const nextSlide = () => {
-    if (currentIndex < carouselData.length - visibleItems) {
+    if (currentIndex < displayData.length - visibleItems) {
       setCurrentIndex(prev => prev + 1);
     }
   };
@@ -113,7 +132,7 @@ export const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
   };
 
   const isPrevDisabled = currentIndex === 0;
-  const isNextDisabled = currentIndex >= carouselData.length - visibleItems;
+  const isNextDisabled = currentIndex >= displayData.length - visibleItems;
 
   // Create navigation component
   const NavigationComponent = (
@@ -167,42 +186,57 @@ export const ProjectCarousel: React.FC<ProjectCarouselProps> = ({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           style={{
-            width: `${carouselData.length * itemWidth}px`
+            width: `${displayData.length * itemWidth}px`
           }}
         >
-          {carouselData.map((project) => (
-            <div
-              key={project.id}
-              className={cn(
-                variant === 'projects' ? 'projects-carousel-item' : 'modal-carousel-item'
-              )}
-              style={{ width: `${itemWidth}px` }}
-            >
-              <div className={cn(
-                "relative border border-gray-400/[0.05] rounded p-6 h-[400px] flex flex-col justify-between",
-                "carousel-card-transition",
-                getCardBackgroundClass((project.id - 1))
-              )}>
-                {/* No additional background layers */}
+          {displayData.map((project) => {
+            const handleCardClick = project.link ? () => router.push(project.link!) : undefined;
 
-                {/* Card Content */}
-                <div className="relative z-10 flex flex-col justify-between h-full">
-                  <div>
-                    <h3 className="text-gray-100 text-sm font-medium tracking-wider mb-3">
-                      {project.title}
-                    </h3>
-                    <p className="text-gray-300 text-xs leading-relaxed">
-                      {project.description}
-                    </p>
-                  </div>
+            return (
+              <div
+                key={project.id}
+                className={cn(
+                  variant === 'projects' ? 'projects-carousel-item' : 'modal-carousel-item'
+                )}
+                style={{ width: `${itemWidth}px` }}
+              >
+                <div
+                  className={cn(
+                    "relative border border-gray-400/[0.05] rounded p-6 h-[400px] flex flex-col justify-between",
+                    "carousel-card-transition",
+                    getCardBackgroundClass((project.id - 1)),
+                    project.link && "cursor-pointer hover:border-gray-400/[0.15] transition-all duration-200"
+                  )}
+                  onClick={handleCardClick}
+                >
+                  {/* No additional background layers */}
 
-                  <div className="text-gray-400 text-xs tracking-wider cursor-pointer hover:text-gray-200 transition-colors duration-200">
-                    Read more →
+                  {/* Card Content */}
+                  <div className="relative z-10 flex flex-col justify-between h-full">
+                    <div>
+                      <h3 className="text-gray-100 text-sm font-medium tracking-wider mb-3">
+                        {project.title}
+                      </h3>
+                      <p className="text-gray-300 text-xs leading-relaxed">
+                        {project.description}
+                      </p>
+                    </div>
+
+                    {project.link && (
+                      <div className="text-gray-400 text-xs tracking-wider hover:text-gray-200 transition-colors duration-200">
+                        Explore →
+                      </div>
+                    )}
+                    {!project.link && (
+                      <div className="text-gray-400 text-xs tracking-wider cursor-pointer hover:text-gray-200 transition-colors duration-200">
+                        Read more →
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

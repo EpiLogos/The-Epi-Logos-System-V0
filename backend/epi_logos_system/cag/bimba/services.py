@@ -2,12 +2,13 @@ from pydantic import BaseModel
 from typing import Optional
 
 # Import from shared database package
-from shared.database import Neo4jClient
+from shared.database import Neo4jClient, RedisClient
 import os
 import math
 import re
 from typing import List, Dict, Any
 import logging
+import json
 
 from backend.epi_logos_system.shared.embeddings import get_text_embedding
 import hashlib
@@ -359,6 +360,7 @@ class NodeRepository:
 class NodeService:
     def __init__(self, repo: NodeRepository):
         self._repo = repo
+        self._redis = RedisClient()
 
     def get_node(self, coordinate: str) -> BimbaNode | None:
         return self._repo.find_by_coordinate(coordinate=coordinate)
@@ -930,6 +932,69 @@ class NodeService:
         except Exception as e:
             logger.error(f"Failed to get direct children for '{bimba_coordinate}': {e}")
             return []
+
+    def get_all_coordinates(self) -> list[dict]:
+        """Fetch all Bimba coordinates from Neo4j with Redis caching.
+
+        Cache is only invalidated when total node count changes.
+        This ensures fresh data when nodes are added/deleted while avoiding
+        unnecessary queries for read-heavy operations.
+
+        Returns:
+            List of dicts with coordinate, name, subsystem
+        """
+        cache_key = "bimba:all_coordinates"
+        count_key = "bimba:node_count"
+
+        try:
+            # Get current node count from Neo4j
+            count_query = "MATCH (n:BimbaNode) RETURN count(n) AS total"
+            count_records, _, _ = self._repo.neo4j_client.execute_query(count_query)
+            current_count = count_records[0].get("total", 0) if count_records else 0
+
+            # Check cached count
+            cached_count = self._redis.get(count_key)
+            cached_data = self._redis.get(cache_key)
+
+            # Use cache if count matches
+            if cached_count and cached_data and int(cached_count) == current_count:
+                logger.debug(f"Cache hit for all coordinates (count: {current_count})")
+                return json.loads(cached_data)
+
+            logger.info(f"Cache miss or node count changed. Refreshing coordinates (count: {current_count})")
+
+            # Query ONLY coordinate and name
+            query = """
+            MATCH (n:BimbaNode)
+            RETURN n.bimbaCoordinate AS coordinate,
+                   n.name AS name
+            ORDER BY n.bimbaCoordinate
+            """
+
+            records, _, _ = self._repo.neo4j_client.execute_query(query)
+
+            result = []
+            for record in records:
+                coord = record.get("coordinate")
+                name = record.get("name")
+
+                # Only require coordinate - name can be null/empty
+                if coord:
+                    result.append({
+                        "coordinate": coord,
+                        "name": name or coord  # Fallback to coordinate if no name
+                    })
+
+            # Cache results
+            self._redis.setex(cache_key, 3600, json.dumps(result))
+            self._redis.setex(count_key, 3600, str(current_count))
+
+            logger.info(f"Cached {len(result)} coordinates")
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to fetch all coordinates: {e}")
+            raise  # Fail properly, don't hide errors
 
     def _fetch_node_props_and_labels(self, coordinate: str) -> tuple[dict, list[str]]:
         query = """

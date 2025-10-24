@@ -123,7 +123,10 @@ class AgentNodeManager:
             f_system_prompt dict with 'content' and 'metadata', or None if not found
         """
         try:
-            result = await self.bimba.get_node_details_complete(agent_coordinate)
+            # Include functional properties to access f_system_prompt on the agent node
+            result = await self.bimba.get_node_details_complete(
+                agent_coordinate, include_functional_properties=True
+            )
 
             if not result or result.get("success") is False:
                 logger.warning(f"Failed to get agent node: {agent_coordinate}")
@@ -205,7 +208,10 @@ class AgentNodeManager:
             Dict of workflow prompts, or empty dict if not found
         """
         try:
-            result = await self.bimba.get_node_details_complete(agent_coordinate)
+            # Include functional properties to access f_workflow_* templates
+            result = await self.bimba.get_node_details_complete(
+                agent_coordinate, include_functional_properties=True
+            )
 
             if not result or result.get("success") is False:
                 logger.warning(f"Failed to get agent node: {agent_coordinate}")
@@ -269,7 +275,10 @@ class AgentNodeManager:
             Dict of f_* properties (excluding f_system_prompt and f_workflow_prompts)
         """
         try:
-            result = await self.bimba.get_node_details_complete(agent_coordinate)
+            # Include functional properties to enumerate f_* capability fields
+            result = await self.bimba.get_node_details_complete(
+                agent_coordinate, include_functional_properties=True
+            )
 
             if not result or result.get("success") is False:
                 return {}

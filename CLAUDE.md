@@ -6,6 +6,51 @@ ESSENTIAL - WHEN WORKING FROM A PLAN, FOLLOW IT. BUILD YOUR TODO LIST TO MATCH T
 
 IMPORTANT - DON'T ASSUME TASKS ARE FINISHED UNTIL USER VALIDATES FUNCTIONALITY. YOUR ENTHUSIASM IS BOTH ANNOYING AND CONSTRAINS YOU IN DOING A COMPREHENSIVE JOB.
 
+<skill_activation_protocol>
+## Skill Activation Protocol (MANDATORY)
+
+**CRITICAL**: These skills MUST be activated in their respective contexts:
+
+### 1. Stories System Mindset
+**Skill**: `/.claude/skills/stories-system-mindset/SKILL.md`
+
+**ACTIVATE WHEN:**
+- User loads, creates, reviews, or discusses story files
+- Working with files in `/docs/stories/`
+- Planning or executing story implementation
+- Decomposing complex stories into sub-stories
+- Reviewing story acceptance criteria
+
+**PURPOSE**: Ensures proper story comprehension, BMAD process alignment, and systematic decomposition
+
+### 2. Sprint Tracking Discipline
+**Skill**: `/.claude/skills/sprint-tracking-discipline/SKILL.md`
+
+**ACTIVATE WHEN:**
+- User validates story completion ("Great work!" / "Let's move to next story")
+- Story implementation reaches completion milestone
+- User approves fix or feature implementation
+- Moving between stories or features
+
+**PURPOSE**: Executes THREE-LAYER tracking (dev notes, tracking doc, architecture updates) to preserve institutional memory and compound system intelligence
+
+### 3. Epi-Logos Translator
+**Skill**: `/.claude/skills/epi-logos-translator/SKILL.md`
+
+**ACTIVATE WHEN:**
+- Writing user-facing content or copy for the application
+- Creating UI text, messages, or descriptions
+- Documenting features for end-users
+- Crafting error messages or help text
+- Developing marketing or explanatory content
+
+**PURPOSE**: Ensures content aligns with Epi-Logos philosophical framework and consciousness-first principles
+
+---
+
+**ENFORCEMENT**: Failure to activate these skills in their designated contexts violates development protocol. The skills are not optional suggestions - they are mandatory workflow components that ensure systematic quality and philosophical alignment.
+</skill_activation_protocol>
+
 <critical_constraints>
 ## Development Partnership Approach
 

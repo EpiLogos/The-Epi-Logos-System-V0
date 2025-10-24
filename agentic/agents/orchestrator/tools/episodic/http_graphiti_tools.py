@@ -27,7 +27,8 @@ class HttpGraphitiClient:
     async def create_episode(
         self,
         content: str,
-        episode_type: str = "conversation",
+        group_id: str,
+        episode_type: str = "agent_rumination",
         session_id: str = None,
         agent_id: str = None,
         bimba_coordinate: str = None,
@@ -35,21 +36,23 @@ class HttpGraphitiClient:
     ) -> Dict[str, Any]:
         """
         Create a new episodic memory episode.
-        
+
         Args:
             content: The content of the episode
-            episode_type: Type of episode (conversation, reflection, etc.)
+            group_id: Multi-tenant group identifier (typically user_id)
+            episode_type: Type of episode (user_session, agent_rumination, etc.)
             session_id: Associated session ID
             agent_id: Associated agent ID
             bimba_coordinate: Associated Bimba coordinate
             metadata: Additional metadata
-            
+
         Returns:
             Dict containing episode creation results
         """
         try:
             result = await self.client.create_episode(
                 content=content,
+                group_id=group_id,
                 episode_type=episode_type,
                 session_id=session_id,
                 agent_id=agent_id,
@@ -306,6 +309,165 @@ class HttpGraphitiClient:
             logger.error(f"Exception checking Graphiti health: {e}")
             return {"success": False, "error": f"HTTP request failed: {str(e)}"}
     
+    # ==============================================================================
+    # Etymology Community Enrichment Methods - Depth Accrual
+    # ==============================================================================
+
+    async def update_community_properties(
+        self,
+        community_id: str,
+        group_id: str,
+        properties: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Update etymology community properties for depth accrual.
+
+        Args:
+            community_id: Community UUID
+            group_id: Multi-tenant group identifier
+            properties: Dict of properties to update
+
+        Returns:
+            Dict with update result
+        """
+        try:
+            result = await self.client.update_community_properties(
+                community_id=community_id,
+                group_id=group_id,
+                properties=properties
+            )
+
+            if result.get("success", True):
+                logger.info(f"Updated community {community_id} properties: {list(properties.keys())}")
+                return {
+                    "success": True,
+                    "community_id": community_id,
+                    "updated_properties": result.get("updated_properties", list(properties.keys())),
+                    "message": "Community enriched successfully"
+                }
+            else:
+                error_msg = result.get("error", "Unknown update error")
+                logger.warning(f"Failed to update community {community_id}: {error_msg}")
+                return {
+                    "success": False,
+                    "community_id": community_id,
+                    "error": error_msg
+                }
+
+        except Exception as e:
+            logger.error(f"Exception updating community properties: {e}")
+            return {
+                "success": False,
+                "community_id": community_id,
+                "error": f"HTTP request failed: {str(e)}"
+            }
+
+    async def enrich_word_etymology(
+        self,
+        word: str,
+        community_id: str,
+        group_id: str,
+        etymology_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Enrich a word node with etymology data.
+
+        Args:
+            word: Word to enrich
+            community_id: Parent community UUID
+            group_id: Multi-tenant group identifier
+            etymology_data: Etymology properties to add
+
+        Returns:
+            Dict with enrichment result
+        """
+        try:
+            result = await self.client.enrich_word_etymology(
+                word=word,
+                community_id=community_id,
+                group_id=group_id,
+                etymology_data=etymology_data
+            )
+
+            if result.get("success", True):
+                logger.info(f"Enriched word '{word}' in community {community_id}")
+                return {
+                    "success": True,
+                    "word": word,
+                    "community_id": community_id,
+                    "enriched_properties": result.get("enriched_properties", list(etymology_data.keys())),
+                    "message": "Word etymology enriched successfully"
+                }
+            else:
+                error_msg = result.get("error", "Unknown enrichment error")
+                logger.warning(f"Failed to enrich word '{word}': {error_msg}")
+                return {
+                    "success": False,
+                    "word": word,
+                    "error": error_msg
+                }
+
+        except Exception as e:
+            logger.error(f"Exception enriching word etymology: {e}")
+            return {
+                "success": False,
+                "word": word,
+                "error": f"HTTP request failed: {str(e)}"
+            }
+
+    async def link_aphorism_to_community(
+        self,
+        aphorism_id: str,
+        community_id: str,
+        group_id: str,
+        relationship_type: str = "DISTILLS_FROM"
+    ) -> Dict[str, Any]:
+        """
+        Link an aphorism to its source etymology community.
+
+        Args:
+            aphorism_id: Aphorism episode UUID
+            community_id: Source community UUID
+            group_id: Multi-tenant group identifier
+            relationship_type: Relationship type (default: DISTILLS_FROM)
+
+        Returns:
+            Dict with linking result
+        """
+        try:
+            result = await self.client.link_aphorism_to_community(
+                aphorism_id=aphorism_id,
+                community_id=community_id,
+                group_id=group_id,
+                relationship_type=relationship_type
+            )
+
+            if result.get("success", True):
+                logger.info(f"Linked aphorism {aphorism_id} to community {community_id}")
+                return {
+                    "success": True,
+                    "aphorism_id": aphorism_id,
+                    "community_id": community_id,
+                    "relationship": result.get("relationship", relationship_type),
+                    "message": "Aphorism linked to community successfully"
+                }
+            else:
+                error_msg = result.get("error", "Unknown linking error")
+                logger.warning(f"Failed to link aphorism {aphorism_id}: {error_msg}")
+                return {
+                    "success": False,
+                    "aphorism_id": aphorism_id,
+                    "error": error_msg
+                }
+
+        except Exception as e:
+            logger.error(f"Exception linking aphorism to community: {e}")
+            return {
+                "success": False,
+                "aphorism_id": aphorism_id,
+                "error": f"HTTP request failed: {str(e)}"
+            }
+
     async def close(self):
         """Close the HTTP client connection"""
         if self.client:

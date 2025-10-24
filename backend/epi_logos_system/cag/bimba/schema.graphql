@@ -93,6 +93,13 @@ type SubsystemCoordinatesResponse {
     error: String
 }
 
+"""Simple coordinate metadata for tree display"""
+type BimbaCoordinate {
+    coordinate: String!
+    name: String!
+    subsystem: Int
+}
+
 type Query {
     getNodeByCoordinate(coordinate: String!): BimbaNode
     getNodeDetailsComplete(coordinate: String!, includeFunctionalProperties: Boolean): BimbaNodeComplete
@@ -104,6 +111,8 @@ type Query {
     semanticCoordinateDiscovery(queryText: String!, maxResults: Int, alpha: Float): [BimbaCoordinateMatch!]!
     lexicalCoordinateSearch(searchString: String!, limit: Int): LexicalSearchResponse
     directChildren(bimbaCoordinate: String!): DirectChildrenResponse
+    getAllCoordinates: [BimbaCoordinate!]!
+    getWisdomPacket(coordinate: String!, depth: Int, focus: WisdomPacketFocus, forceRegenerate: Boolean): WisdomPacket
 }
 
 """Structured mutation error with code taxonomy"""
@@ -318,4 +327,54 @@ type RegenerateAllEmbeddingsPayload {
     updated: Int!
     skipped: Int!
     error: String
+}
+
+# ============================================================================
+# Wisdom Packet Types (Story 03.01)
+# ============================================================================
+
+"""Synthesis focus lens for WisdomPacket generation"""
+enum WisdomPacketFocus {
+    STRUCTURAL
+    PROCESSUAL
+    ARCHETYPAL
+    PRACTICAL
+}
+
+"""Basic Bimba node information for wisdom packet"""
+type BimbaNodeBasic {
+    coordinate: String!
+    name: String!
+    subsystem: String!
+    description: String
+    operationalEssence: String
+}
+
+"""Key concept extracted from subgraph"""
+type KeyConcept {
+    concept: String!
+    sourceCoordinates: [String!]!
+    relevanceScore: Float!
+    description: String
+}
+
+"""Apophatic pointer to missing themes"""
+type ApophaticPointer {
+    missingTheme: String!
+    expectedCoordinates: [String!]!
+    suggestion: String!
+}
+
+"""Pre-synthesized WisdomPacket for a Bimba coordinate"""
+type WisdomPacket {
+    centralNode: BimbaNodeBasic!
+    keyConcepts: [KeyConcept!]!
+    narrativeSummary: String!
+    apophaticPointers: [ApophaticPointer!]!
+    contextualThemes: [String!]!
+    synthesisScore: Float!
+    generatedAt: String!
+    cacheHit: Boolean!
+    depth: Int!
+    focus: WisdomPacketFocus
 }

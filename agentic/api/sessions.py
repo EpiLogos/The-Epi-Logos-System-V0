@@ -124,6 +124,7 @@ class CreateThreadRequest(BaseModel):
     user_id: str
     persona: Optional[str] = None
     model: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None  # Etymology context tags, coordinate metadata
 
 
 class CreateThreadResponse(BaseModel):
@@ -132,10 +133,13 @@ class CreateThreadResponse(BaseModel):
 
 
 @router.get("/threads")
-async def list_user_threads(user_id: str, limit: int = 50, page: int = 1) -> Dict[str, Any]:
+async def list_user_threads(user_id: str, limit: int = 50, page: int = 1, context: Optional[str] = None) -> Dict[str, Any]:
     """List recent threads (conversations) for a user.
 
     This aggregates Mongo conversation turns by session_id (which aligns with thread_id in AG-UI usage).
+
+    Args:
+        context: Optional coordinate filter (e.g., "#5-5" for etymology, "#1" for Paramasiva)
     """
     try:
         deps = await create_enhanced_orchestrator_deps(
@@ -149,8 +153,13 @@ async def list_user_threads(user_id: str, limit: int = 50, page: int = 1) -> Dic
         coll = deps.mongodb_client._coll  # conversations collection
 
         skip = max(0, (page - 1) * max(1, limit))
+        # Build match filter with optional context filter
+        match_filter = {"user_id": user_id}
+        if context:
+            match_filter["context"] = context
+
         pipeline = [
-            {"$match": {"user_id": user_id}},
+            {"$match": match_filter},
             {"$sort": {"created_at": -1}},
             {"$group": {
                 "_id": "$session_id",
@@ -222,14 +231,19 @@ async def create_thread(req: CreateThreadRequest) -> CreateThreadResponse:
         thread_id = f"thread-{uuid.uuid4()}"
         now = datetime.utcnow().isoformat()
         # Create session payload with mapping so metadata exists for the thread
+        session_data = {
+            "source": "rest-api",
+            "thread_id": thread_id,
+            "persona": req.persona or "system",
+            "model": req.model or ""
+        }
+        # Add metadata if provided (e.g., {"context": "#5-5", "type": "etymology"})
+        if req.metadata:
+            session_data["metadata"] = req.metadata
+
         await deps.redis_client.create_session(
             user_id=req.user_id or "web-user",
-            session_data={
-                "source": "rest-api",
-                "thread_id": thread_id,
-                "persona": req.persona or "system",
-                "model": req.model or ""
-            },
+            session_data=session_data,
             thread_id=thread_id
         )
         return CreateThreadResponse(thread_id=thread_id, created_at=now)

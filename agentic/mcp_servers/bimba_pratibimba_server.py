@@ -382,6 +382,45 @@ The tool returns comprehensive node information including name, subsystem, conte
                 )
                 ,
                 Tool(
+                    name="get_wisdom_packet",
+                    description=(
+                        "Get or generate a Wisdom Packet for a Bimba coordinate.\n\n"
+                        "Wisdom Packets provide pre-synthesized, contextually rich canonical knowledge "
+                        "summaries with key concepts, narrative synthesis, and apophatic pointers.\n\n"
+                        "SMART FLOW: Check cache → generate if missing → cache for instant future access (24h TTL).\n\n"
+                        "Use when you need deep contextual understanding beyond raw coordinate resolution."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {
+                                "type": "string",
+                                "description": "Bimba coordinate (e.g., '#1-2', '#3-4-5')",
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
+                            },
+                            "depth": {
+                                "type": "integer",
+                                "description": "Traversal depth (1-5, default 2)",
+                                "default": 2,
+                                "minimum": 1,
+                                "maximum": 5
+                            },
+                            "focus": {
+                                "type": "string",
+                                "description": "Synthesis lens",
+                                "enum": ["STRUCTURAL", "PROCESSUAL", "ARCHETYPAL", "PRACTICAL"]
+                            },
+                            "forceRegenerate": {
+                                "type": "boolean",
+                                "description": "Bypass cache and regenerate",
+                                "default": False
+                            }
+                        },
+                        "required": ["bimbaCoordinate"]
+                    }
+                )
+                ,
+                Tool(
                     name="lexical_coordinate_search",
                     description=(
                         "Lexical substring search across all Bimba node properties. "
@@ -453,6 +492,8 @@ The tool returns comprehensive node information including name, subsystem, conte
                     return await self._handle_regenerate_all_embeddings(arguments)
                 elif name == "create_bimba_relationship":
                     return await self._handle_create_bimba_relationship(arguments)
+                elif name == "get_wisdom_packet":
+                    return await self._handle_get_wisdom_packet(arguments)
                 elif name == "lexical_coordinate_search":
                     return await self._handle_lexical_coordinate_search(arguments)
                 elif name == "get_direct_children":
@@ -1007,6 +1048,98 @@ The tool returns comprehensive node information including name, subsystem, conte
             return [TextContent(type="text", text=f"Relationship creation failed: {resp}")]
         except Exception as e:
             logger.error(f"Error in create_bimba_relationship: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    async def _handle_get_wisdom_packet(self, arguments: dict) -> list[TextContent]:
+        """Handle wisdom packet generation/retrieval via GraphQL.
+
+        Provides pre-synthesized, contextually rich canonical knowledge summaries.
+        """
+        try:
+            coordinate = arguments.get("bimbaCoordinate")
+            if not coordinate:
+                return [TextContent(type="text", text="Error: bimbaCoordinate parameter is required")]
+
+            depth = arguments.get("depth", 2)
+            focus = arguments.get("focus")
+            force_regenerate = arguments.get("forceRegenerate", False)
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Wisdom packet client not initialized")]
+
+            result = await self.bimba_client.get_wisdom_packet(
+                coordinate=coordinate,
+                depth=depth,
+                focus=focus,
+                force_regenerate=force_regenerate
+            )
+
+            if result.get("success"):
+                packet = result.get("wisdom_packet", {})
+
+                # Format wisdom packet for MCP display
+                lines: list[str] = []
+                lines.append(f"=== Wisdom Packet: {coordinate} ===")
+                lines.append(f"Cache Hit: {packet.get('cacheHit', False)}")
+                lines.append(f"Synthesis Score: {packet.get('synthesisScore', 0):.2f}")
+                lines.append(f"Depth: {packet.get('depth', 2)}")
+
+                if packet.get("focus"):
+                    lines.append(f"Focus: {packet['focus']}")
+
+                lines.append("")
+
+                # Central node
+                central = packet.get("centralNode", {})
+                lines.append(f"Central Node: {central.get('name', 'Unknown')}")
+                if central.get("operationalEssence"):
+                    lines.append(f"  Essence: {central['operationalEssence']}")
+                lines.append("")
+
+                # Narrative summary
+                lines.append("Narrative Summary:")
+                lines.append(f"  {packet.get('narrativeSummary', 'N/A')}")
+                lines.append("")
+
+                # Key concepts
+                key_concepts = packet.get("keyConcepts", [])
+                if key_concepts:
+                    lines.append(f"Key Concepts ({len(key_concepts)}):")
+                    for kc in key_concepts:
+                        concept = kc.get("concept", "Unknown")
+                        relevance = kc.get("relevanceScore", 0)
+                        lines.append(f"  • {concept} (relevance: {relevance:.2f})")
+                        if kc.get("description"):
+                            lines.append(f"    {kc['description']}")
+                    lines.append("")
+
+                # Contextual themes
+                themes = packet.get("contextualThemes", [])
+                if themes:
+                    lines.append(f"Contextual Themes: {', '.join(themes)}")
+                    lines.append("")
+
+                # Apophatic pointers
+                pointers = packet.get("apophaticPointers", [])
+                if pointers:
+                    lines.append(f"Apophatic Pointers ({len(pointers)}):")
+                    for ap in pointers:
+                        theme = ap.get("missingTheme", "Unknown")
+                        suggestion = ap.get("suggestion", "")
+                        lines.append(f"  ⚠ Missing: {theme}")
+                        if suggestion:
+                            lines.append(f"    → {suggestion}")
+                    lines.append("")
+
+                lines.append(f"Generated: {packet.get('generatedAt', 'Unknown')}")
+
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                error = result.get("error", "Unknown error")
+                return [TextContent(type="text", text=f"Wisdom packet error: {error}")]
+
+        except Exception as e:
+            logger.error(f"Error in get_wisdom_packet: {e}")
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
     async def _handle_lexical_coordinate_search(self, arguments: dict) -> list[TextContent]:

@@ -88,7 +88,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       // Spacing: use centralized spacing utility (replaces px-10 py-8 hardcoding)
       spacingClass,
       // Only hide overflow when NOT in modal expanded state (to allow scrollable content)
-      !isModalExpanded && "overflow-hidden",
+      // Exception: epi-logos variant needs scroll at Sidebar level
+      !isModalExpanded && variant !== 'epi-logos' && "overflow-hidden",
+      variant === 'epi-logos' && "overflow-y-auto",
 
       // Width based on variant and state (from useSidebarWidth hook)
       sidebarWidth,
@@ -127,7 +129,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     )}>
       {/* Sidebar Toggle - only visible in expanded state for Paramasiva */}
       {(variant !== 'paramasiva' || isModalExpanded) && (
-        <div className="absolute top-4 right-2 z-10">
+        <div className="absolute top-4 right-4 z-10">
           <SidebarToggle
             isCollapsed={isCollapsed}
             onToggle={toggle}

@@ -2,6 +2,13 @@
 from ariadne import QueryType, UnionType, MutationType
 from typing import Any, Optional
 
+# Import Wisdom Packet service for wisdom packet resolution
+from backend.epi_logos_system.cag.wisdom_packet.service import (
+    WisdomPacketService,
+    WisdomPacketFocus as ServiceFocus
+)
+from shared.database import Neo4jClient, RedisClient
+
 query = QueryType()
 path_component = UnionType("PathComponent")
 mutation = MutationType()
@@ -251,6 +258,125 @@ def resolve_direct_children(_: Any, info: Any, bimbaCoordinate: str) -> dict:
             "children": [],
             "error": str(e)
         }
+
+
+@query.field("getAllCoordinates")
+def resolve_get_all_coordinates(_: Any, info: Any) -> list[dict]:
+    """Fetch all Bimba coordinates from Neo4j with Redis caching.
+
+    Cache invalidates only when node count changes, ensuring efficient
+    performance for read-heavy operations while staying fresh on writes.
+
+    Returns:
+        List of BimbaCoordinate with coordinate, name, subsystem
+    """
+    service = info.context["service"]
+    try:
+        return service.get_all_coordinates()
+    except Exception:
+        # On error, return empty list (frontend has fallback cache)
+        return []
+
+
+@query.field("getWisdomPacket")
+def resolve_get_wisdom_packet(
+    _: Any,
+    info: Any,
+    coordinate: str,
+    depth: int = 2,
+    focus: Optional[str] = None,
+    forceRegenerate: bool = False
+) -> dict | None:
+    """
+    Generate or retrieve a Wisdom Packet for a Bimba coordinate.
+
+    Provides pre-synthesized, contextually rich canonical knowledge summaries
+    with intelligent subgraph traversal, concept extraction, and narrative synthesis.
+
+    SMART FLOW:
+    1. Check Redis cache for existing packet
+    2. If not found (or forceRegenerate=True), generate fresh packet
+    3. Cache result for instant future retrieval (24h TTL)
+
+    Args:
+        coordinate: Bimba coordinate to synthesize
+        depth: Traversal depth (1-5, default 2)
+        focus: Synthesis lens (STRUCTURAL/PROCESSUAL/ARCHETYPAL/PRACTICAL)
+        forceRegenerate: Bypass cache and regenerate fresh packet
+
+    Returns:
+        WisdomPacket dict or None if coordinate not found
+    """
+    # Initialize WisdomPacketService with Neo4j and Redis clients
+    neo4j_client = Neo4jClient()
+    redis_client = RedisClient()
+    service = WisdomPacketService(neo4j_client, redis_client)
+
+    # Convert focus string to enum
+    service_focus = None
+    if focus:
+        try:
+            service_focus = ServiceFocus[focus]
+        except KeyError:
+            # Invalid focus value, ignore and proceed without focus
+            pass
+
+    # Invalidate cache if force regeneration requested
+    if forceRegenerate:
+        service.invalidate_cache(coordinate)
+
+    # Generate WisdomPacket
+    try:
+        wisdom_packet = service.generate_wisdom_packet(
+            coordinate,
+            depth=depth,
+            focus=service_focus
+        )
+
+        # Convert Pydantic models to dict for GraphQL
+        return {
+            "centralNode": {
+                "coordinate": wisdom_packet.central_node.coordinate,
+                "name": wisdom_packet.central_node.name,
+                "subsystem": wisdom_packet.central_node.subsystem,
+                "description": wisdom_packet.central_node.description,
+                "operationalEssence": wisdom_packet.central_node.operational_essence
+            },
+            "keyConcepts": [
+                {
+                    "concept": kc.concept,
+                    "sourceCoordinates": kc.source_coordinates,
+                    "relevanceScore": kc.relevance_score,
+                    "description": kc.description
+                }
+                for kc in wisdom_packet.key_concepts
+            ],
+            "narrativeSummary": wisdom_packet.narrative_summary,
+            "apophaticPointers": [
+                {
+                    "missingTheme": ap.missing_theme,
+                    "expectedCoordinates": ap.expected_coordinates,
+                    "suggestion": ap.suggestion
+                }
+                for ap in wisdom_packet.apophatic_pointers
+            ],
+            "contextualThemes": wisdom_packet.contextual_themes,
+            "synthesisScore": wisdom_packet.synthesis_score,
+            "generatedAt": wisdom_packet.generated_at.isoformat(),
+            "cacheHit": wisdom_packet.cache_hit,
+            "depth": wisdom_packet.depth,
+            "focus": wisdom_packet.focus.value if wisdom_packet.focus else None
+        }
+
+    except ValueError:
+        # Coordinate not found
+        return None
+    except Exception as e:
+        # Log error and return None
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error generating WisdomPacket for {coordinate}: {e}")
+        return None
 
 
 @mutation.field("regenerateNodeEmbedding")

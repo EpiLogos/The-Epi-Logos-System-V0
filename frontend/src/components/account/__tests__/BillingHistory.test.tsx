@@ -53,8 +53,17 @@ const mockProps = {
 global.fetch = jest.fn();
 
 describe('BillingHistory Component', () => {
+  const openMock = jest.fn();
+  const originalWindowOpen = window.open;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    openMock.mockReset();
+    Object.defineProperty(window, 'open', {
+      configurable: true,
+      writable: true,
+      value: openMock,
+    });
     (fetch as any).mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -310,9 +319,17 @@ describe('BillingHistory Component', () => {
       render(<BillingHistory {...mockProps} />);
       
       await waitFor(() => {
-        expect(screen.getByText('Jan 1, 2025')).toBeInTheDocument();
-        expect(screen.getByText('Dec 1, 2024')).toBeInTheDocument();
+        expect(screen.getAllByText('Jan 1, 2025').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('Dec 1, 2024').length).toBeGreaterThan(0);
       });
+    });
+  });
+
+  afterAll(() => {
+    Object.defineProperty(window, 'open', {
+      configurable: true,
+      writable: true,
+      value: originalWindowOpen,
     });
   });
 });

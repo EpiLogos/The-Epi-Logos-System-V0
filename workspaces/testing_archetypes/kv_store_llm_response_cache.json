@@ -86,5 +86,45 @@
     "create_time": 1758662469,
     "update_time": 1758662469,
     "_id": "global:keywords:a52be63516e565f128e41fb942379ab4"
+  },
+  "global:keywords:a87d16fe9930ff07850ca985f6b69be2": {
+    "return": "{\"high_level_keywords\": [\"Etymology\", \"Love\", \"Passion\", \"Worship\", \"Fire symbolism\"], \"low_level_keywords\": [\"Adore\", \"Ardour\", \"Burning\", \"Fire\", \"Linguistic roots\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "etymology adore ardour love passion fire worship burning",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1761328217,
+    "update_time": 1761328217,
+    "_id": "global:keywords:a87d16fe9930ff07850ca985f6b69be2"
+  },
+  "global:keywords:dfab6c3c88e5513421a3d3c8d6d70a94": {
+    "return": "{\"high_level_keywords\": [\"Etymology\", \"Passion\", \"Fire\"], \"low_level_keywords\": [\"Ardour\", \"Ardor\", \"Burning\", \"Flame\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "ardour ardor etymology fire passion burning flame",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1761328827,
+    "update_time": 1761328827,
+    "_id": "global:keywords:dfab6c3c88e5513421a3d3c8d6d70a94"
   }
 }

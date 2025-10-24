@@ -22,25 +22,26 @@ export interface UseChatIntegrationReturn {
   // Chat functionality
   session: ReturnType<typeof useChat>['session'];
   sendMessage: (content: string) => Promise<void>;
+  injectMessage: (role: 'user' | 'assistant' | 'system', content: string) => void;
   clearChat: () => void;
   loadThread: (threadId: string) => Promise<void>;
-  
+
   // Model functionality
   models: ReturnType<typeof useModels>['models'];
   availableModels: ReturnType<typeof useModels>['availableModels'];
   modelsLoading: boolean;
   reloadModels: () => Promise<void>;
-  
+
   // Current selections
   currentModel: string;
   currentPersona: string;
   streamingEnabled: boolean;
-  
+
   // Setters
   setCurrentModel: (modelId: string) => void;
   setCurrentPersona: (persona: string) => void;
   setStreamingEnabled: (enabled: boolean) => void;
-  
+
   // State
   isLoading: boolean;
   error: string | null;
@@ -108,6 +109,16 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
 
   const { executeCommand } = useCLICommands(enableCLI ? cliConfig : {});
 
+  // Inject a message directly into the chat (no API call)
+  const injectMessage = useCallback((role: 'user' | 'assistant' | 'system', content: string) => {
+    // Get current messages and add the new one
+    const currentMessages = session.messages.map(m => ({ role: m.role, content: m.content }));
+    currentMessages.push({ role, content });
+
+    // Use hydrateThread to update the session with new messages
+    hydrateThread(session.threadId || `thread-${Date.now()}`, currentMessages);
+  }, [session, hydrateThread]);
+
   // Enhanced send message that handles CLI commands
   const sendMessage = useCallback(async (content: string) => {
     if (enableCLI && isCLICommand(content)) {
@@ -160,25 +171,26 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
     // Chat functionality
     session,
     sendMessage,
+    injectMessage,
     clearChat,
     loadThread,
-    
+
     // Model functionality
     models,
     availableModels,
     modelsLoading,
     reloadModels,
-    
+
     // Current state
     currentModel,
     currentPersona: session.config.persona,
     streamingEnabled: session.config.streamingEnabled,
-    
+
     // Setters
     setCurrentModel,
     setCurrentPersona,
     setStreamingEnabled: setStreamingEnabledHandler,
-    
+
     // Status
     isLoading,
     error,

@@ -30,7 +30,7 @@ qdrant-client==1.15.1
 
 # LightRAG and Graphiti integration
 lightrag-hku>=1.4.9
-graphiti-core==0.3.6
+graphiti-core>=0.20.2
 
 # HTTP client and utilities
 httpx==0.28.1

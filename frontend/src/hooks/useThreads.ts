@@ -23,6 +23,7 @@ export interface ThreadSummary {
 export interface UseThreadsConfig {
   userId: string;
   endpoints?: Partial<typeof DEFAULT_ENDPOINTS>;
+  context?: string;  // Optional coordinate context filter (e.g., "#5-5" for etymology)
 }
 
 export interface UseThreadsReturn {
@@ -48,7 +49,10 @@ export function useThreads(config: UseThreadsConfig): UseThreadsReturn {
     setLoading(true);
     setError(null);
     try {
-      const resp = await fetch(buildThreadsListURL(endpoints.backendConversations, config.userId), createGetRequestConfig());
+      const resp = await fetch(
+        buildThreadsListURL(endpoints.backendConversations, config.userId, 50, 1, config.context),
+        createGetRequestConfig()
+      );
       const data = await parseAPIResponse(resp);
       if (!data.success) throw new Error(data.error || 'Failed to load threads');
       const list = (data.threads || []) as ThreadSummary[];
@@ -59,7 +63,7 @@ export function useThreads(config: UseThreadsConfig): UseThreadsReturn {
     } finally {
       setLoading(false);
     }
-  }, [config.userId, endpoints.backendConversations, activeThreadId]);
+  }, [config.userId, config.context, endpoints.backendConversations, activeThreadId]);
 
   const createThread = useCallback(async (): Promise<string | null> => {
     try {

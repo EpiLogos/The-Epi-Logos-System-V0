@@ -216,6 +216,14 @@ app.include_router(conversations_router)
 from backend.epi_logos_system.pratibimba.api import router as pratibimba_router
 app.include_router(pratibimba_router)
 
+# Documents (File upload and management for Archive/Atelier)
+from backend.epi_logos_system.cag.documents.api import router as documents_router
+app.include_router(documents_router)
+
+# Paramasiva Subsystem (Coordinate Decomposition & QL Processing)
+from backend.subsystems.paramasiva.api import router as paramasiva_router
+app.include_router(paramasiva_router, prefix="/api")
+
 # AG-UI Protocol has been moved to Agentic layer (Trilaminar Architecture compliance)
 # Frontend should communicate with Agentic layer at http://localhost:8001/api/v1/ag-ui/*
 

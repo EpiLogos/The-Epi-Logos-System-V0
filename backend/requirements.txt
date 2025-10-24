@@ -20,7 +20,7 @@ qdrant-client==1.15.1
 
 # RAG and Knowledge Graph
 lightrag-hku>=1.4.9
-graphiti-core==0.3.6
+graphiti-core>=0.20.2
 
 # Authentication and security
 python-jose[cryptography]==3.3.0
@@ -60,3 +60,4 @@ ruff==0.8.6
 
 # Environment and configuration
 python-dotenv==1.0.1
+docling==2.57.0

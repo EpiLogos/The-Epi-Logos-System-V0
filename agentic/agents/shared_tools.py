@@ -536,8 +536,12 @@ def setup_all_cag_tools(agent: Agent[OrchestratorDeps]) -> None:
         if not ctx.deps.graphiti_client:
             return {"success": False, "error": "Graphiti client not available"}
 
+        # Use user_id as group_id for multi-tenant isolation
+        group_id = ctx.deps.user_id or "default"
+
         result = await ctx.deps.graphiti_client.create_episode(
             content=content,
+            group_id=group_id,
             episode_type=episode_type,
             session_id=ctx.deps.session_id,
             agent_id="constellation_agent",
@@ -620,9 +624,13 @@ def setup_all_cag_tools(agent: Agent[OrchestratorDeps]) -> None:
         if not ctx.deps.graphiti_client:
             return {"success": False, "error": "Graphiti client not available"}
 
+        # Use user_id as group_id for multi-tenant isolation
+        group_id = ctx.deps.user_id or "default"
+
         result = await ctx.deps.graphiti_client.create_community(
             name=name,
             description=description,
+            group_id=group_id,
             session_id=ctx.deps.session_id,
             bimba_coordinate=coordinate
         )

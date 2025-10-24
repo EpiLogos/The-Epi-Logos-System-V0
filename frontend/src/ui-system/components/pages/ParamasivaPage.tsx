@@ -15,14 +15,19 @@ import { TextAnimate } from '../ui/TextAnimate';
 import { TextSwitch } from '../ui/TextSwitch';
 import { WaveBackground } from '../ui/WaveBackground';
 import { GlowParticles } from '../ui/GlowParticles';
-import { ProjectCarousel } from '../ui/ProjectCarousel';
+import { FocusCards } from '../ui/FocusCards';
 import { HorizontalTracingBeam } from '../ui/HorizontalTracingBeam';
-import { ProjectsSection } from '../ui/ProjectsSection';
+import { SubnodesSection } from '../ui/SubnodesSection';
 
 import { useModalTransition } from '@/hooks/ui-system/useModalTransition';
 import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
 import { useSidebar } from '@/contexts/SidebarContext';
 import { HexagonButton } from '../navigation/HexagonButton';
+import { paramasivaContent } from '../../content/paramasiva-content';
+import { coordinate1_0Summary } from '../../content/coordinates/1-0-summary';
+import { coordinate1_5Summary } from '../../content/coordinates/1-5-summary';
+import { paramasivaModalCards, paramasivaSubnodeCards } from '../../content/paramasiva-focus-cards';
+import { paramasivaViewContent } from '@/content/paramasiva-view-on-epi-logos';
 
 export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate = '#1' }) => {
   // Use custom hooks for state management
@@ -47,6 +52,7 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
 
     switch (currentTransitionDirection) {
       case 'paramasiva-to-subsystems':
+      case 'mahamaya-to-subsystems':
         return 'to-subsystems';
       case 'paramasiva-to-quaternal':
         return 'to-quaternal';
@@ -72,10 +78,7 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
   const [wavesVisible, setWavesVisible] = useState(false);
   const [wavesFadeState, setWavesFadeState] = useState<'hidden' | 'visible' | 'modal-hiding' | 'quick-fade-out'>('hidden');
 
-  // Carousel navigation state
-  const [carouselNavigation, setCarouselNavigation] = useState<React.ReactNode>(null);
-
-  // Carousel visibility - only show after modal expansion animation completes
+  // FocusCards visibility - only show after modal expansion animation completes
   const [carouselVisible, setCarouselVisible] = useState(false);
 
   // Particles state - EXACT SAME PATTERN AS WAVES
@@ -85,7 +88,7 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
 
   // Update logo text based on modal state
   useEffect(() => {
-    setLogoText(modalState.isModalExpanded ? "PARAMASIVA" : "EPI : LOGOS");
+    setLogoText(modalState.isModalExpanded ? paramasivaContent.expandedLogoText : paramasivaContent.collapsedLogoText);
   }, [modalState.isModalExpanded]);
 
   // Initial panel height animation - lifts panel after 1.5 seconds (like HTML)
@@ -185,17 +188,17 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
     }
   }, [modalState.isModalExpanded]);
 
-  // Carousel timing control - show after PNG animation completes
+  // FocusCards timing control - show after PNG animation completes
   useEffect(() => {
     if (modalState.isModalExpanded) {
-      // CAROUSEL APPEARS: After text-fade(200ms) + height(800ms) + width(1000ms) + PNG animation + 600ms delay
+      // FOCUS CARDS APPEAR: After text-fade(200ms) + height(800ms) + width(1000ms) + PNG animation + 600ms delay
       const showCarouselTimer = setTimeout(() => {
         setCarouselVisible(true);
       }, 1800); // 1200ms modal + 600ms delay for smooth fade-in
 
       return () => clearTimeout(showCarouselTimer);
     } else {
-      // CAROUSEL FADE-OUT: Give time for fade-out animation before hiding
+      // FOCUS CARDS FADE-OUT: Give time for fade-out animation before hiding
       const hideCarouselTimer = setTimeout(() => {
         setCarouselVisible(false);
       }, 500); // 500ms to complete fade-out animation (300ms earlier)
@@ -255,6 +258,44 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
   return (
     <div data-coordinate={coordinate}>
       <PageFadeIn>
+        {/* Paramasiva's View Content - Behind sidebar when collapsed and modal is collapsed */}
+        <div
+          className={cn(
+            "absolute top-[20px] left-[80px] w-[900px] h-[calc(100vh-140px)] z-0",
+            "transition-opacity duration-300",
+            !modalState.isModalExpanded && isCollapsed ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}
+        >
+          <div className="w-full h-full border border-gray-800 p-[20px] flex flex-col">
+            <div className="mb-5">
+              <h2 className="text-[18px] font-normal tracking-[2px] text-[#333] mb-1">
+                {paramasivaViewContent.title}
+              </h2>
+              <p className="text-[10px] text-[#333]/60 tracking-[1px] italic mb-4">
+                {paramasivaViewContent.subtitle}
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin-custom">
+              <div className="space-y-4 text-[#333]">
+                {paramasivaViewContent.sections.map((section, index) => (
+                  <div key={index} className={index === 0 ? "" : "pl-4 border-l border-[#333]/30"}>
+                    <p className="text-[11px] font-normal mb-1 tracking-[0.5px]">{section.heading}</p>
+                    <p
+                      className="text-[11px] leading-[1.7]"
+                      dangerouslySetInnerHTML={{
+                        __html: section.content
+                          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                          .replace(/\n\n/g, '<br/><br/>')
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
         <PortfolioContainer
           pageType="paramasiva"
           isModalExpanded={modalState.isModalExpanded}
@@ -275,11 +316,11 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
             visible={!textFadeStarted}
             delay={200}
             duration="slow"
-            className="text-[18px] font-normal tracking-[2px] text-[#333] mb-10 text-center"
+            className="text-[18px] font-normal tracking-[2px] text-[#333] mb-6 text-center"
           />
 
           {/* Content Section */}
-          <div className={`flex flex-col ${!modalState.isModalExpanded ? "flex-1 justify-center" : ""}`}>
+          <div className={`flex flex-col flex-1 ${!modalState.isModalExpanded ? "justify-center" : ""}`}>
             {!modalState.isModalExpanded && (
               <>
                 <TextAnimate
@@ -288,36 +329,50 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
                   duration="slow"
                   className="text-[18px] font-normal text-[#333] leading-[1.3] mb-[2px] text-center"
                 >
-                  PARAMASIVA TRANSFORMATION
+                  {paramasivaContent.title}
                 </TextAnimate>
                 <TextAnimate
                   visible={!textFadeStarted}
                   delay={1000}
                   className="text-[11px] text-[#666] mt-[20px] tracking-[1px] text-center"
                 >
-                  MODAL EXPERIENCE
+                  {paramasivaContent.subtitle}
                 </TextAnimate>
               </>
             )}
 
             {modalState.isModalExpanded && (
-              <div className="flex flex-col">
-                <ScrollableContent
-                  visible={modalState.modalTextVisible}
-                  className="flex-1"
-                >
-                  <p>Paramasiva represents the absolute, formless aspect of consciousness—the primordial awareness that underlies all manifestation. In the Shaivite tradition, Paramasiva is the transcendent dimension of Shiva, beyond all attributes, qualities, and limitations.</p>
+              <div
+                className={cn(
+                  "flex flex-col gap-4 h-full transition-opacity duration-500",
+                  modalState.modalTextVisible ? "opacity-100" : "opacity-0"
+                )}
+              >
+                {/* Quaternal Logic Box - #1-0 */}
+                <div className="flex-1 border border-gray-300 rounded-sm bg-white/50 p-6 flex flex-col">
+                  <div className="mb-3">
+                    <div className="text-xs font-mono text-gray-500 mb-1">{coordinate1_0Summary.coordinate}</div>
+                    <h3 className="text-xs font-semibold text-gray-800 tracking-wide">
+                      {coordinate1_0Summary.name.toUpperCase()}
+                    </h3>
+                  </div>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    {coordinate1_0Summary.summary}
+                  </p>
+                </div>
 
-                  <p>This state of pure consciousness is characterized by perfect stillness, infinite potential, and absolute freedom. It is the source from which all creation emerges and to which it returns—the eternal witness that remains unchanged throughout the cosmic dance of manifestation and dissolution.</p>
-
-                  <p>In the context of Quaternal Logic, Paramasiva corresponds to the implicate order—the unmanifest dimension that contains all possibilities in potential form. It is the zero-point consciousness that precedes the emergence of the four fundamental positions of logical-causal relationship.</p>
-
-                  <p>The geometric patterns surrounding this visualization represent the mathematical and topological structures that emerge from this primordial awareness. Each circle, triangle, and intersection point signifies a node of consciousness where infinite potential crystallizes into specific manifestations of being.</p>
-
-                  <p>Through contemplation of these sacred geometries, one can glimpse the underlying order that governs both consciousness and cosmos—the eternal dance between the unmanifest and the manifest, between Paramasiva and Parashakti, between pure awareness and dynamic creativity.</p>
-
-                  <p>This is the foundation of true knowledge: to recognize that all apparent multiplicity arises from and returns to the singular source of unlimited consciousness—the Paramasiva that is both the essence of all being and the witness of all becoming.</p>
-                </ScrollableContent>
+                {/* Subsystems Box - #1-5 */}
+                <div className="flex-1 border border-gray-300 rounded-sm bg-white/50 p-6 flex flex-col">
+                  <div className="mb-3">
+                    <div className="text-xs font-mono text-gray-500 mb-1">{coordinate1_5Summary.coordinate}</div>
+                    <h3 className="text-xs font-semibold text-gray-800 tracking-wide">
+                      {coordinate1_5Summary.name.toUpperCase()}
+                    </h3>
+                  </div>
+                  <p className="text-[10px] text-gray-600 leading-relaxed">
+                    {coordinate1_5Summary.summary}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -367,21 +422,23 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
                 </TextAnimate>
               </div>
 
-              {/* Hexagon Button - Centered */}
-              <div className="mt-6 flex justify-center w-full">
-                <TextAnimate
-                  visible={!textFadeStarted}
-                  delay={2500}
-                  duration="normal"
-                >
-                  <div className="translate-y-[3px]">
-                    <HexagonButton
-                      onClick={openHexagonPanel}
-                      isOpen={panelMode === 'hexagon-panel'}
-                    />
-                  </div>
-                </TextAnimate>
-              </div>
+              {/* Hexagon Button - Centered, only visible when modal is expanded */}
+              {modalState.isModalExpanded && (
+                <div className="mt-6 flex justify-center w-full">
+                  <TextAnimate
+                    visible={!textFadeStarted}
+                    delay={2500}
+                    duration="normal"
+                  >
+                    <div className="translate-y-[3px]">
+                      <HexagonButton
+                        onClick={openHexagonPanel}
+                        isOpen={panelMode === 'hexagon-panel'}
+                      />
+                    </div>
+                  </TextAnimate>
+                </div>
+              )}
             </div>
           )}
           </Sidebar>
@@ -429,23 +486,20 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
               fadeState={particlesFadeState}
             />
 
-            {/* Carousel - Stay in DOM during modal state for proper fade-out */}
+            {/* Focus Cards - Stay in DOM during modal state for proper fade-out */}
             {(modalState.isModalExpanded || carouselVisible) && (
               <div
                 className={cn(
-                  "absolute inset-4 flex items-center justify-center z-50",
+                  "absolute inset-0 flex items-center justify-center z-50",
                   // COORDINATED TRANSITION: Apply transition and state together with 400ms delay
                   modalState.isModalExpanded && carouselVisible
                     ? "carousel-fade-in-delayed"
                     : "carousel-fade-out"
                 )}
               >
-                <ProjectCarousel
-                  visible={modalState.modalTextVisible && carouselVisible}
-                  className="w-full max-w-full"
-                  showArrows={false}
-                  showDots={false}
-                  onNavigationRender={setCarouselNavigation}
+                <FocusCards
+                  cards={paramasivaModalCards}
+                  className="w-full h-full"
                 />
               </div>
             )}
@@ -468,16 +522,6 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
 
           </ContentPanel>
 
-          {/* Carousel Navigation - Centered relative to modal area, responsive to sidebar state */}
-          {modalState.isModalExpanded && carouselNavigation && carouselVisible && (
-            <div className={cn(
-              "absolute bottom-8 right-8 flex justify-center z-20 carousel-nav-transition",
-              isCollapsed ? "left-[74px]" : "left-[420px]" // Account for sidebar width + 20px margin
-            )}>
-              {carouselNavigation}
-            </div>
-          )}
-
           {/* Coordinate Text - Page-bound, scrolls with content */}
           <CoordinateText
             coordinate={coordinate}
@@ -491,8 +535,14 @@ export const ParamasivaPage: React.FC<{ coordinate?: string }> = ({ coordinate =
       {/* Horizontal Tracing Beam - Between Pages */}
       <HorizontalTracingBeam startPoint={0.3} endPoint={1.0} />
 
-      {/* Second Page - Projects Section */}
-      <ProjectsSection />
+      {/* Second Page - Subnodes Section */}
+      <SubnodesSection
+        cards={paramasivaSubnodeCards}
+        title="Subnodes"
+        description="The four architectural expressions of Paramasiva’s field: unity as graph, topology as continuity, attention without partition, and axioms that keep complexity humane."
+        logoSrc="/ui-system/paramasiva-hex.png"
+        logoAlt="Paramasiva Hexagon"
+      />
 
       {/* White Fade Overlay for Page Transitions */}
       <WhiteFadeOverlay
