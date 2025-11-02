@@ -90,5 +90,10 @@
     "dexie-react-hooks": "^4.2.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
+  },
+  "optionalDependencies": {
+    "lightningcss-darwin-arm64": "^1.30.2",
+    "lightningcss-linux-x64-gnu": "^1.30.2",
+    "lightningcss-linux-x64-musl": "^1.30.2"
   }
 }
