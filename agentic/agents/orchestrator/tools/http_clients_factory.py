@@ -128,18 +128,18 @@ class HttpClientsContainer:
                 self.failed_services.add('redis')
                 results['redis'] = False
         
-        # Initialize MongoDB conversation client (direct connection within agentic layer)
+        # Initialize MongoDB conversation service (direct connection within agentic layer)
         if 'mongo' in required_services:
             try:
-                from ..conversation.conversation import ConversationManager
-                self.mongo_client = ConversationManager()
-                # Test underlying MongoDB connection via the conversation manager
+                from shared.database.conversation_service import ConversationService
+                self.mongo_client = ConversationService()
+                # Test underlying MongoDB connection via the conversation service
                 if self.mongo_client._mongo.test_connection():
                     self.connected_services.add('mongo')
                     results['mongo'] = True
-                    logger.info("✅ MongoDB conversation manager connected")
+                    logger.info("✅ MongoDB conversation service connected")
                 else:
-                    raise Exception("MongoDB conversation manager connection test failed")
+                    raise Exception("MongoDB conversation service connection test failed")
             except Exception as e:
                 logger.warning(f"❌ MongoDB client failed: {e}")
                 self.failed_services.add('mongo')
@@ -259,7 +259,7 @@ async def create_enhanced_orchestrator_deps(
         session_id=session_id,
         user_id=user_id,
         redis_client=container.redis_client,
-        mongodb_client=container.mongo_client,
+        conversation_service=container.mongo_client,
         bimba_client=container.bimba_client,
         lightrag_client=container.lightrag_client,
         graphiti_client=container.graphiti_client,

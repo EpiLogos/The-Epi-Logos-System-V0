@@ -22,6 +22,8 @@ export interface UseEtymologySessionsListReturn {
   loadSessions: () => Promise<void>;
   selectSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => Promise<boolean>;
+  archiveSession: (sessionId: string) => Promise<boolean>;
+  deleteSessionPermanent: (sessionId: string) => Promise<boolean>;
 }
 
 export function useEtymologySessionsList(config: UseEtymologySessionsListConfig): UseEtymologySessionsListReturn {
@@ -66,7 +68,7 @@ export function useEtymologySessionsList(config: UseEtymologySessionsListConfig)
     setActiveSessionId(sessionId);
   }, []);
 
-  const deleteSession = useCallback(async (sessionId: string): Promise<boolean> => {
+  const archiveSession = useCallback(async (sessionId: string): Promise<boolean> => {
     try {
       const resp = await fetch(
         `http://localhost:8000/api/graphiti/etymology/sessions/${sessionId}`,
@@ -76,10 +78,40 @@ export function useEtymologySessionsList(config: UseEtymologySessionsListConfig)
       const data = await resp.json();
 
       if (!resp.ok || !data.success) {
-        throw new Error(data.message || 'Failed to delete session');
+        throw new Error(data.message || 'Failed to archive session');
       }
 
-      console.log('✅ Session deleted:', sessionId);
+      console.log('✅ Session archived (soft delete):', sessionId);
+
+      // Remove from list (archived sessions are hidden by default)
+      setSessions(prev => prev.filter(s => s.session_id !== sessionId));
+
+      // Clear active if this was the active session
+      if (activeSessionId === sessionId) {
+        setActiveSessionId(null);
+      }
+
+      return true;
+    } catch (e: any) {
+      console.error('[useEtymologySessionsList] Error archiving session:', e);
+      return false;
+    }
+  }, [activeSessionId]);
+
+  const deleteSessionPermanent = useCallback(async (sessionId: string): Promise<boolean> => {
+    try {
+      const resp = await fetch(
+        `http://localhost:8000/api/graphiti/etymology/sessions/${sessionId}/permanent`,
+        { method: 'DELETE' }
+      );
+
+      const data = await resp.json();
+
+      if (!resp.ok || !data.success) {
+        throw new Error(data.message || 'Failed to permanently delete session');
+      }
+
+      console.log('✅ Session permanently deleted with CASCADE:', sessionId);
 
       // Remove from list
       setSessions(prev => prev.filter(s => s.session_id !== sessionId));
@@ -91,10 +123,13 @@ export function useEtymologySessionsList(config: UseEtymologySessionsListConfig)
 
       return true;
     } catch (e: any) {
-      console.error('[useEtymologySessionsList] Error deleting session:', e);
+      console.error('[useEtymologySessionsList] Error permanently deleting session:', e);
       return false;
     }
   }, [activeSessionId]);
+
+  // Legacy deleteSession maps to archive for backwards compatibility
+  const deleteSession = archiveSession;
 
   // Load sessions on mount and when userId changes
   useEffect(() => {
@@ -108,6 +143,8 @@ export function useEtymologySessionsList(config: UseEtymologySessionsListConfig)
     activeSessionId,
     loadSessions,
     selectSession,
-    deleteSession
+    deleteSession,
+    archiveSession,
+    deleteSessionPermanent
   };
 }

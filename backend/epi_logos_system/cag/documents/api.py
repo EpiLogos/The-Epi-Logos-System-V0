@@ -7,6 +7,7 @@ Supports preprocessing pipeline trigger for Story 08.03.
 
 import logging
 import os
+import shutil
 from typing import Optional, Literal, List
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends
 from pydantic import BaseModel
@@ -22,8 +23,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 
 # File upload directory (configurable via env)
-UPLOAD_DIR = os.getenv("DOCUMENT_UPLOAD_DIR", "/tmp/epi_logos_uploads")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+# Default: persistent local storage instead of /tmp
+UPLOAD_DIR = os.getenv("DOCUMENT_UPLOAD_DIR", "./storage/uploads")
 
 
 class UploadResponse(BaseModel):
@@ -44,6 +45,16 @@ class DocumentListResponse(BaseModel):
     bimba_documents: List[dict]
     pratibimba_documents: List[dict]
     error: Optional[str] = None
+
+
+class HealthCheckResponse(BaseModel):
+    """Response model for upload health check"""
+    upload_dir: str
+    exists: bool
+    writable: bool
+    disk_space_total: Optional[int] = None
+    disk_space_free: Optional[int] = None
+    disk_space_used: Optional[int] = None
 
 
 @router.post("/upload", response_model=UploadResponse)
@@ -95,6 +106,9 @@ async def upload_document(
         # Read file content
         content = await file.read()
         file_size = len(content)
+
+        # Ensure upload directory exists (defensive creation)
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
 
         # Save file to disk for preprocessing
         file_path = os.path.join(UPLOAD_DIR, f"{coordinate.replace('#', '')}_{file.filename}")
@@ -357,4 +371,46 @@ async def delete_document(
         raise
     except Exception as e:
         logger.error(f"Document deletion failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/health", response_model=HealthCheckResponse)
+async def upload_health_check():
+    """
+    Check upload directory health status.
+
+    Returns:
+        Health status including directory existence, permissions, and disk space.
+
+    Public endpoint - used for monitoring and debugging.
+    """
+    try:
+        exists = os.path.exists(UPLOAD_DIR)
+        writable = os.access(UPLOAD_DIR, os.W_OK) if exists else False
+
+        disk_space = None
+        disk_total = None
+        disk_free = None
+        disk_used = None
+
+        if exists:
+            try:
+                disk_space = shutil.disk_usage(UPLOAD_DIR)
+                disk_total = disk_space.total
+                disk_free = disk_space.free
+                disk_used = disk_space.used
+            except Exception as disk_error:
+                logger.warning(f"Failed to get disk usage: {disk_error}")
+
+        return HealthCheckResponse(
+            upload_dir=UPLOAD_DIR,
+            exists=exists,
+            writable=writable,
+            disk_space_total=disk_total,
+            disk_space_free=disk_free,
+            disk_space_used=disk_used
+        )
+
+    except Exception as e:
+        logger.error(f"Health check failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

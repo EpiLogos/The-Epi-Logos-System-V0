@@ -50,6 +50,12 @@ export default function EpiiAtelier() {
     enabled: !!expandedSessionId
   });
 
+  // Threads for the currently active session (for compact selector bar under header)
+  const currentSessionThreads = useSessionThreads({
+    sessionId: threads.currentSessionId,
+    enabled: !!threads.currentSessionId
+  });
+
   // Chat integration
   const chat = useChatIntegration({
     persona: 'epii',
@@ -145,8 +151,11 @@ export default function EpiiAtelier() {
     isCreatingRef.current = true;
 
     try {
-      const threadId = await threads.createThread();
+      // FIXED: Pass expandedSessionId to add thread to existing session
+      const threadId = await threads.createThread(expandedSessionId);
       if (threadId) {
+        // Reload session threads to show new thread
+        await sessionThreads.refetch();
         await handleSelectThread(threadId);
       }
     } finally {
@@ -163,15 +172,26 @@ export default function EpiiAtelier() {
     }
   };
 
-  // Wrapper for delete that also clears expanded state
+  // Wrapper for archive that also clears expanded state
+  const handleArchiveSession = async (sessionId: string): Promise<boolean> => {
+    // If archiving the expanded session, collapse back to sessions list
+    if (expandedSessionId === sessionId) {
+      setExpandedSessionId(null);
+    }
+
+    // Delegate to hook's archive function
+    return await sessions.archiveSession(sessionId);
+  };
+
+  // Wrapper for permanent delete that also clears expanded state
   const handleDeleteSession = async (sessionId: string): Promise<boolean> => {
     // If deleting the expanded session, collapse back to sessions list
     if (expandedSessionId === sessionId) {
       setExpandedSessionId(null);
     }
 
-    // Delegate to hook's delete function
-    return await sessions.deleteSession(sessionId);
+    // Delegate to hook's permanent delete function
+    return await sessions.deleteSessionPermanent(sessionId);
   };
 
   return (
@@ -195,6 +215,7 @@ export default function EpiiAtelier() {
               onSessionSelect={handleExpandSession}
               onNewSession={handleCreateSession}
               onDeleteSession={handleDeleteSession}
+              onArchiveSession={handleArchiveSession}
               loading={sessions.loading}
               error={sessions.error}
             />
@@ -220,9 +241,13 @@ export default function EpiiAtelier() {
           chat={chat}
           activeThreadId={threads.activeThreadId}
           activeSessionId={threads.currentSessionId}
+          userId={userId}
           onCreateSession={handleCreateSession}
           onSelectSession={handleOpenSessionHistory}
           isSidebarCollapsed={isCollapsed}
+          // Thread selector options for in-explorer UI spacing/buffer
+          threadOptions={currentSessionThreads.threads.map(t => ({ id: t.thread_id, title: t.title }))}
+          onSelectThread={handleSelectThread}
         />
       </div>
     </div>

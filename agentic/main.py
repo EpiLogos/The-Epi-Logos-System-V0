@@ -242,7 +242,8 @@ from fastapi import Request
 @app.get("/api/v1/orchestrator/capabilities")
 async def get_orchestrator_capabilities(request: Request):
     """Get orchestrator capabilities by dynamically inspecting registered tools."""
-    from .agents.orchestrator.orchestrator_agent import get_agent_info, orchestrator_agent
+    from .agents.orchestrator.orchestrator_agent import get_agent_info
+    from .agents.agent_router import AgentRouter
     from pydantic_ai.toolsets.function import FunctionToolset
 
     agent_info = get_agent_info()
@@ -262,10 +263,11 @@ async def get_orchestrator_capabilities(request: Request):
     except Exception:
         is_admin = False
 
-    # Collect tool names dynamically from function toolsets
+    # Collect tool names dynamically from factory-created orchestrator
     tools_set = set()
     try:
-        agent = orchestrator_agent  # Global default agent
+        router = AgentRouter()
+        agent = await router.get_orchestrator_agent()
         for toolset in getattr(agent, 'toolsets', []):
             if isinstance(toolset, FunctionToolset):
                 tools_set.update(toolset.tools.keys())
@@ -313,6 +315,7 @@ async def get_available_models():
         # },
         "anthropic": {
             "claude-3-5-sonnet-20241022": {"name": "Claude 3.5 Sonnet", "provider": "Anthropic"},
+            "claude-haiku-4-5": {"name": "Claude Haiku 4.5", "provider": "Anthropic"},
             "claude-3-haiku-20240307": {"name": "Claude 3 Haiku", "provider": "Anthropic"},
             "claude-3-opus-20240229": {"name": "Claude 3 Opus", "provider": "Anthropic"},
         },

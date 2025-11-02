@@ -126,5 +126,105 @@
     "create_time": 1761328827,
     "update_time": 1761328827,
     "_id": "global:keywords:dfab6c3c88e5513421a3d3c8d6d70a94"
+  },
+  "global:keywords:c1b42224ee3ea1f4053baa376c1b4584": {
+    "return": "{\"high_level_keywords\": [\"Etymology\", \"PIE roots\", \"Sound symbolism\", \"Historical linguistics\"], \"low_level_keywords\": [\"hum\", \"humble\", \"humility\", \"hump\", \"hamper\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "hum humble humility hump hamper etymology PIE roots sound symbolism",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1761348340,
+    "update_time": 1761348340,
+    "_id": "global:keywords:c1b42224ee3ea1f4053baa376c1b4584"
+  },
+  "global:keywords:1a318cad6304d2ca7f61274da8b930a8": {
+    "return": "{\"high_level_keywords\": [\"Proto-Indo-European roots\", \"Proto-Germanic\", \"Etymology\"], \"low_level_keywords\": [\"*ken-\", \"*sker-\", \"hunting\", \"honey\", \"hint\", \"honest\", \"hund-\", \"hinter\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "PIE root *ken- *sker- hunting honey hint honest Proto-Germanic hund- hinter",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1761590320,
+    "update_time": 1761590320,
+    "_id": "global:keywords:1a318cad6304d2ca7f61274da8b930a8"
+  },
+  "global:keywords:d7314b8218e377f74f0ab24f41050cf8": {
+    "return": "{\"high_level_keywords\": [\"Etymology\", \"Word origins\", \"Linguistic patterns\", \"Historical language development\"], \"low_level_keywords\": [\"Proto-Indo-European\", \"Cognates\", \"Morphology\", \"Phonetic shifts\", \"Semantic change\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "etymology word origins linguistic patterns historical language development",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1761596707,
+    "update_time": 1761596707,
+    "_id": "global:keywords:d7314b8218e377f74f0ab24f41050cf8"
+  },
+  "global:keywords:97237157d09e8488edfa908c11701874": {
+    "return": "{\"high_level_keywords\": [\"Indo-European philology\", \"Etymology\", \"Historical linguistics\", \"Comparative philology\"], \"low_level_keywords\": [\"Sanskrit\", \"Greek\", \"Latin\", \"Word roots\", \"Proto-Indo-European\", \"Cognates\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "Indo-European philology etymology Sanskrit Greek Latin word roots",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1761596708,
+    "update_time": 1761596708,
+    "_id": "global:keywords:97237157d09e8488edfa908c11701874"
+  },
+  "global:keywords:227434947415c3d2fa53105d760565d1": {
+    "return": "{\"high_level_keywords\": [\"Punning\", \"Wordplay\", \"Etymology\", \"Linguistic play\", \"Double meaning\"], \"low_level_keywords\": [\"Pun\", \"Etymology\", \"Double entendre\", \"Homophones\", \"Semantic ambiguity\"]}",
+    "cache_type": "keywords",
+    "chunk_id": null,
+    "original_prompt": "punning wordplay pun etymology linguistic play double meaning",
+    "queryparam": {
+      "mode": "global",
+      "response_type": "Multiple Paragraphs",
+      "top_k": 10,
+      "chunk_top_k": 20,
+      "max_entity_tokens": 6000,
+      "max_relation_tokens": 8000,
+      "max_total_tokens": 30000,
+      "user_prompt": "",
+      "enable_rerank": true
+    },
+    "create_time": 1761597021,
+    "update_time": 1761597021,
+    "_id": "global:keywords:227434947415c3d2fa53105d760565d1"
   }
 }

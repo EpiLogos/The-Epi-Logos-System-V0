@@ -25,6 +25,12 @@ from .models import (
     QuaternalEntity, SourceReference, CrossCoordinateLink
 )
 
+# Apply Graphiti Gemini JSON parsing patch for markdown-wrapped responses
+try:
+    from .gemini_patch import apply_gemini_patch
+    apply_gemini_patch()
+except Exception as e:
+    logging.warning(f"Failed to apply Graphiti Gemini patch (non-critical): {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -86,12 +92,35 @@ class GraphitiService:
             embedder=embedder,
             cross_encoder=cross_encoder
         )
-        
-        logger.info(f"Initialized Graphiti service with workspace: {workspace_id}")
-    
+
+        # CRITICAL: Build Neo4j indexes and constraints (one-time setup)
+        # This creates the required fulltext index 'node_name_and_summary'
+        self._ensure_indices_initialized = False
+
+        logger.info(f"🔧 Initialized NEW GraphitiService instance with workspace: {workspace_id} (id: {id(self)})")
+
+    async def _ensure_indices(self):
+        """Ensure Graphiti Neo4j indices and constraints are built (lazy initialization)."""
+        logger.info(f"📊 _ensure_indices check: initialized={self._ensure_indices_initialized}, instance_id={id(self)}")
+        if not self._ensure_indices_initialized:
+            try:
+                logger.info("⏳ Building Graphiti Neo4j indices and constraints (THIS TAKES 48+ SECONDS)...")
+                await self.graphiti.build_indices_and_constraints()
+                self._ensure_indices_initialized = True
+                logger.info("✅ Graphiti indices and constraints built successfully")
+            except Exception as e:
+                logger.error(f"Failed to build Graphiti indices: {e}")
+                # Don't fail - indices might already exist
+                self._ensure_indices_initialized = True  # Mark as attempted to avoid retry spam
+        else:
+            logger.info("✨ Skipping index build - already initialized")
+
     async def create_episode(self, request: EpisodeRequest) -> EpisodeResponse:
         """Create a new episode in the temporal graph."""
         try:
+            # Ensure Neo4j indices are built (lazy initialization on first use)
+            await self._ensure_indices()
+
             # Generate unique episode ID
             episode_id = str(uuid.uuid4())
             
@@ -141,6 +170,12 @@ class GraphitiService:
     
     async def _store_episode_metadata(self, episode: Episode) -> None:
         """Store enhanced episode metadata in Neo4j with proper namespace labeling."""
+        # Neo4j rejects nested Map{} objects - JSON-serialize context dict
+        context_json = None
+        if episode.context:
+            import json
+            context_json = json.dumps(episode.context)
+
         query = """
         CREATE (ep:Episode:Graphiti {
             id: $id,
@@ -157,13 +192,13 @@ class GraphitiService:
         })
         RETURN ep
         """
-        
-        await self.neo4j_client.execute_query(query, {
+
+        self.neo4j_client.execute_query(query, {
             "id": episode.id,
             "group_id": episode.group_id,
             "episode_type": episode.episode_type.value,
             "content": episode.content,
-            "context": episode.context,
+            "context": context_json,  # JSON string, not dict
             "occurred_at": episode.occurred_at.isoformat(),
             "ingested_at": episode.ingested_at.isoformat(),
             "user_id": episode.user_id,
@@ -175,18 +210,28 @@ class GraphitiService:
     async def search_episodes(self, request: SearchRequest) -> SearchResponse:
         """Search episodes using hybrid search (semantic + BM25 + graph traversal)."""
         try:
+            # Ensure Neo4j indices are built (lazy initialization on first use)
+            await self._ensure_indices()
+
             episodes = []
             communities = []
             
             if request.query:
                 # Use Graphiti's search capabilities
                 try:
+                    logger.info(f"🔍 Searching Graphiti: query='{request.query}', group_id={request.group_id}, limit={request.limit}")
+
+                    # Fixed: Use correct Graphiti.search() parameters
+                    # - group_ids (not search_type)
+                    # - num_results (not limit)
                     search_results = await self.graphiti.search(
                         query=request.query,
-                        search_type="episodes",
-                        limit=request.limit
+                        group_ids=[request.group_id] if request.group_id else None,
+                        num_results=request.limit
                     )
-                    
+
+                    logger.info(f"✅ Graphiti search returned {len(search_results)} results")
+
                     # Convert results to our Episode models
                     for result in search_results:
                         episode_data = await self._convert_search_result_to_episode(
@@ -194,8 +239,11 @@ class GraphitiService:
                         )
                         if episode_data:
                             episodes.append(episode_data)
+
+                    logger.info(f"📊 Converted {len(episodes)} search results to Episode models")
+
                 except Exception as e:
-                    logger.warning(f"Search failed, falling back to direct query: {e}")
+                    logger.warning(f"⚠️ Search failed, falling back to direct query: {e}", exc_info=True)
                     # Fall back to direct Neo4j query if search fails
                     episodes = []
             
@@ -285,7 +333,7 @@ class GraphitiService:
         params["limit"] = request.limit
         
         try:
-            records, _, _ = await self.neo4j_client.execute_query(query, params)
+            records, _, _ = self.neo4j_client.execute_query(query, params)
             
             # Convert Neo4j records back to Episode models
             filtered_episodes = []
@@ -296,7 +344,7 @@ class GraphitiService:
                     group_id=ep_data["group_id"],
                     episode_type=EpisodeType(ep_data["episode_type"]),
                     content=ep_data["content"],
-                    context=ep_data.get("context", {}),
+                    context=json.loads(ep_data["context"]) if ep_data.get("context") else {},
                     occurred_at=datetime.fromisoformat(ep_data["occurred_at"]),
                     ingested_at=datetime.fromisoformat(ep_data["ingested_at"]),
                     user_id=ep_data.get("user_id"),
@@ -311,147 +359,12 @@ class GraphitiService:
             logger.error(f"Error filtering episodes: {e}")
             return episodes  # Return original episodes if filtering fails
     
-    async def create_community(self, request: CommunityRequest) -> CommunityResponse:
-        """Create a temporal community of related episodes."""
-        try:
-            community_id = str(uuid.uuid4())
-            
-            community = Community(
-                id=community_id,
-                group_id=request.group_id,
-                name=request.name,
-                episode_ids=request.episode_ids,
-                quaternary_position=request.quaternary_position,
-                context_frame_type=request.context_frame_type,
-                formed_at=datetime.now(timezone.utc),
-                last_activity=datetime.now(timezone.utc)
-            )
-            
-            # Store community in Neo4j
-            await self._store_community(community)
-            
-            # Create relationships between community and episodes
-            await self._link_community_episodes(community_id, request.episode_ids)
+    # DEPRECATED METHODS REMOVED (2025-10-27):
+    # - create_community() - bypassed Graphiti native functionality, had sync/async mismatch
+    # - _store_community() - only used by deprecated create_community()
+    # - _link_community_episodes() - only used by deprecated create_community()
+    # Use create_etymology_community() instead, which properly uses Graphiti's build_communities()
 
-            logger.info(f"Created community {community_id} with {len(request.episode_ids)} episodes")
-
-            # Story 08.07 Enhancement: Trigger background services for EA communities
-            # Check if this is an Etymology Archaeology community (has :EA label via context)
-            is_ea_community = request.context_frame_type == "etymology_archaeology"
-
-            if is_ea_community:
-                # Trigger background services asynchronously (fire-and-forget)
-                await self._trigger_ea_background_services(
-                    community_id=community_id,
-                    community_data={
-                        "name": request.name,
-                        "episode_ids": request.episode_ids,
-                        "group_id": request.group_id,
-                        "metadata": community.metadata
-                    },
-                    user_id=request.group_id,  # Assuming group_id represents user
-                    session_id=community.metadata.get("session_id") if community.metadata else None
-                )
-                logger.info(
-                    f"Triggered EA background services for community {community_id} "
-                    f"(Bimba resonance + MEF analysis)"
-                )
-
-            return CommunityResponse(
-                success=True,
-                community=community,
-                message=f"Community created successfully with ID: {community_id}"
-            )
-            
-        except Exception as e:
-            logger.error(f"Error creating community: {e}")
-            return CommunityResponse(
-                success=False,
-                message=f"Failed to create community: {str(e)}"
-            )
-    
-    async def _store_community(self, community: Community) -> None:
-        """Store community in Neo4j with proper namespace labeling."""
-        # Neo4j rejects empty dict/map objects - convert to JSON string if present, omit if empty
-        metadata_value = None
-        if community.metadata:
-            import json
-            metadata_value = json.dumps(community.metadata)
-
-        # Build query dynamically to exclude metadata if empty
-        if metadata_value:
-            query = """
-            CREATE (c:Community:Graphiti {
-                id: $id,
-                group_id: $group_id,
-                name: $name,
-                quaternary_position: $quaternary_position,
-                context_frame_type: $context_frame_type,
-                formed_at: $formed_at,
-                last_activity: $last_activity,
-                metadata: $metadata,
-                workspace_id: $workspace_id
-            })
-            RETURN c
-            """
-            params = {
-                "id": community.id,
-                "group_id": community.group_id,
-                "name": community.name,
-                "quaternary_position": community.quaternary_position,
-                "context_frame_type": community.context_frame_type,
-                "formed_at": community.formed_at.isoformat(),
-                "last_activity": community.last_activity.isoformat(),
-                "metadata": metadata_value,
-                "workspace_id": self.workspace_id
-            }
-        else:
-            # Omit metadata field entirely if empty
-            query = """
-            CREATE (c:Community:Graphiti {
-                id: $id,
-                group_id: $group_id,
-                name: $name,
-                quaternary_position: $quaternary_position,
-                context_frame_type: $context_frame_type,
-                formed_at: $formed_at,
-                last_activity: $last_activity,
-                workspace_id: $workspace_id
-            })
-            RETURN c
-            """
-            params = {
-                "id": community.id,
-                "group_id": community.group_id,
-                "name": community.name,
-                "quaternary_position": community.quaternary_position,
-                "context_frame_type": community.context_frame_type,
-                "formed_at": community.formed_at.isoformat(),
-                "last_activity": community.last_activity.isoformat(),
-                "workspace_id": self.workspace_id
-            }
-
-        await self.neo4j_client.execute_query(query, params)
-    
-    async def _link_community_episodes(self, community_id: str, episode_ids: List[str]) -> None:
-        """Create relationships between community and episodes."""
-        if not episode_ids:
-            return
-            
-        query = """
-        MATCH (c:Community:Graphiti {id: $community_id})
-        MATCH (ep:Episode:Graphiti)
-        WHERE ep.id IN $episode_ids
-        CREATE (c)-[r:CONTAINS_EPISODE]->(ep)
-        SET r.created_at = datetime()
-        RETURN count(r) as relationships_created
-        """
-        
-        await self.neo4j_client.execute_query(query, {
-            "community_id": community_id,
-            "episode_ids": episode_ids
-        })
-    
     async def get_session_continuity(self, group_id: str, session_id: str) -> List[Episode]:
         """Get episodes for session continuity tracking."""
         try:
@@ -462,7 +375,7 @@ class GraphitiService:
             ORDER BY ep.occurred_at ASC
             """
             
-            records, _, _ = await self.neo4j_client.execute_query(query, {
+            records, _, _ = self.neo4j_client.execute_query(query, {
                 "group_id": group_id,
                 "session_id": session_id
             })
@@ -475,7 +388,7 @@ class GraphitiService:
                     group_id=ep_data["group_id"],
                     episode_type=EpisodeType(ep_data["episode_type"]),
                     content=ep_data["content"],
-                    context=ep_data.get("context", {}),
+                    context=json.loads(ep_data["context"]) if ep_data.get("context") else {},
                     occurred_at=datetime.fromisoformat(ep_data["occurred_at"]),
                     ingested_at=datetime.fromisoformat(ep_data["ingested_at"]),
                     user_id=ep_data.get("user_id"),
@@ -503,7 +416,7 @@ class GraphitiService:
             LIMIT $limit
             """
             
-            records, _, _ = await self.neo4j_client.execute_query(query, {
+            records, _, _ = self.neo4j_client.execute_query(query, {
                 "group_id": group_id,
                 "agent_id": agent_id,
                 "episode_type": EpisodeType.AGENT_RUMINATION.value,
@@ -518,7 +431,7 @@ class GraphitiService:
                     group_id=ep_data["group_id"],
                     episode_type=EpisodeType(ep_data["episode_type"]),
                     content=ep_data["content"],
-                    context=ep_data.get("context", {}),
+                    context=json.loads(ep_data["context"]) if ep_data.get("context") else {},
                     occurred_at=datetime.fromisoformat(ep_data["occurred_at"]),
                     ingested_at=datetime.fromisoformat(ep_data["ingested_at"]),
                     user_id=ep_data.get("user_id"),
@@ -621,7 +534,7 @@ class GraphitiService:
                    collect(DISTINCT ccl) AS cross_links
             """
             
-            records, _, _ = await self.neo4j_client.execute_query(query, {
+            records, _, _ = self.neo4j_client.execute_query(query, {
                 "qu_id": qu_id,
                 "group_id": group_id
             })
@@ -729,7 +642,7 @@ class GraphitiService:
                 RETURN qu
                 """
                 
-                await self.neo4j_client.execute_query(query, params)
+                self.neo4j_client.execute_query(query, params)
             
             # Update entities if provided
             if entities is not None:
@@ -786,7 +699,7 @@ class GraphitiService:
             LIMIT $limit
             """
             
-            records, _, _ = await self.neo4j_client.execute_query(query, params)
+            records, _, _ = self.neo4j_client.execute_query(query, params)
             
             results = []
             for record in records:
@@ -818,7 +731,7 @@ class GraphitiService:
             RETURN count(qu) as deleted
             """
             
-            records, _, _ = await self.neo4j_client.execute_query(query, {
+            records, _, _ = self.neo4j_client.execute_query(query, {
                 "qu_id": qu_id,
                 "group_id": group_id
             })
@@ -847,7 +760,7 @@ class GraphitiService:
                 CREATE (qu)-[:HAS_ENTITY]->(e)
                 """
                 
-                await self.neo4j_client.execute_query(entity_query, {
+                self.neo4j_client.execute_query(entity_query, {
                     "qu_id": qu_id,
                     "name": entity.name,
                     "summary": entity.summary,
@@ -877,7 +790,7 @@ class GraphitiService:
                 CREATE (qu)-[:HAS_SOURCE]->(sr)
                 """
                 
-                await self.neo4j_client.execute_query(source_query, {
+                self.neo4j_client.execute_query(source_query, {
                     "qu_id": qu_id,
                     "source_type": source_ref.source_type,
                     "source_id": source_ref.source_id,
@@ -899,7 +812,7 @@ class GraphitiService:
             MATCH (qu:QuaternalUnit:Graphiti {id: $qu_id})-[r:HAS_ENTITY]->(e:QuaternalEntity:Graphiti)
             DELETE r, e
             """
-            await self.neo4j_client.execute_query(delete_query, {"qu_id": qu_id})
+            self.neo4j_client.execute_query(delete_query, {"qu_id": qu_id})
             
             # Create new entities
             return await self._create_quaternal_entities(qu_id, entities)
@@ -935,7 +848,7 @@ class GraphitiService:
             RETURN ccl
             """
             
-            records, _, _ = await self.neo4j_client.execute_query(query, {
+            records, _, _ = self.neo4j_client.execute_query(query, {
                 "source_qu_id": source_qu_id,
                 "target_qu_id": target_qu_id,
                 "target_coordinate": target_coordinate,
@@ -1062,111 +975,144 @@ class GraphitiService:
     # Etymology Archaeology (EA) Extensions - Story 08.07
 
     async def create_etymology_community(
-        self, request: 'EtymologyCommunityRequest'
+        self,
+        request: 'EtymologyCommunityRequest',
+        etymology_session_id: Optional[str] = None
     ) -> 'CommunityResponse':
         """
-        Create an etymology-specific community with proper QL node structure.
+        Create an etymology-specific community using Graphiti's EntityNode.
 
-        Implements AC: 2 - Graphiti QL Community Creation with :EA:Episodic labeling.
+        CORRECT ARCHITECTURE (EntityNode supports custom labels):
+        1. Create EntityNode for each word with :EA:Word:Entity labels
+        2. Create EntityNode for community with :EA:Community:Entity labels
+        3. Link words to community via :CONTAINS relationships with qlPosition
 
-        **Correct QL Architecture:**
-        - Community node (container for QL constellation)
-        - Individual Word nodes with qlPosition (0-N based on quaternal_type mod)
-        - CONTAINS relationships linking community to words
-        - NO bimba_coordinate as property (resonances added later via relationships)
+        EntityNode is the ONLY Graphiti node type that supports custom labels.
+        Words ARE entities, so this is semantically correct.
 
         Args:
             request: Etymology community creation request
+            etymology_session_id: Optional Etymology Session UUID (looked up from thread_id)
 
         Returns:
             CommunityResponse with created community
         """
         try:
-            # Import models here to avoid circular dependency
+            from graphiti_core.nodes import EntityNode
             from .models import Community, CommunityResponse
 
-            # Generate unique community ID
-            community_id = str(uuid.uuid4())
+            # Auto-infer quaternal_type from word count if not specified or mismatched
+            word_count = len(request.words)
+            inferred_type = self._infer_quaternal_type(word_count)
 
-            # Determine modulus from quaternal_type (e.g., THREE_PART = mod3, FOUR_PART = mod4)
-            quaternal_mod = self._get_quaternal_mod(request.quaternal_type.value)
+            # Use inferred type if request type is None or doesn't match word count
+            if request.quaternal_type is None:
+                actual_type = inferred_type
+                logger.info(f"Auto-inferred quaternal_type from {word_count} words: {actual_type}")
+            else:
+                requested_mod = self._get_quaternal_mod(request.quaternal_type.value)
+                if word_count != requested_mod:
+                    actual_type = inferred_type
+                    logger.warning(
+                        f"Word count ({word_count}) doesn't match requested type "
+                        f"({request.quaternal_type.value} = mod{requested_mod}). "
+                        f"Using inferred type: {actual_type}"
+                    )
+                else:
+                    actual_type = request.quaternal_type.value
 
-            # Create community container node + individual word nodes with qlPosition
-            # bimba_coordinate stored as suggestion_resonance (agent hint, not truth)
-            query = """
-            // Create community container
-            CREATE (c:EA:Episodic:Community {
-                id: $id,
-                group_id: $group_id,
-                name: $name,
-                description: $description,
-                ns: 'episodic',
-                domain: $domain,
-                quaternal_type: $quaternal_type,
-                quaternal_mod: $quaternal_mod,
-                pie_root: $pie_root,
-                semantic_pattern: $semantic_pattern,
-                suggestion_resonance: $suggestion_resonance,
-                formed_at: $formed_at,
-                last_activity: $last_activity,
-                user_id: $user_id,
-                session_id: $session_id,
-                workspace_id: $workspace_id
-            })
+            quaternal_mod = self._get_quaternal_mod(actual_type)
 
-            // Create word nodes with qlPosition
-            WITH c
-            UNWIND $words_with_positions AS word_data
-            CREATE (w:EA:Word:Episodic {
-                id: randomUUID(),
-                word: word_data.word,
-                qlPosition: word_data.position,
-                community_id: $id,
-                group_id: $group_id,
-                created_at: $formed_at
-            })
+            # Step 1: Create EntityNode for each word with EA:Word labels
+            word_entities = []
+            for idx, word in enumerate(request.words):
+                ql_position = idx % quaternal_mod
 
-            // Link words to community
-            CREATE (c)-[:CONTAINS {created_at: $formed_at}]->(w)
+                word_entity = EntityNode(
+                    name=word,  # Just the word itself as the name
+                    group_id=request.group_id,
+                    summary=f"Word from {request.domain} domain: {word}. PIE root: {request.pie_root or 'unknown'}",
+                    labels=["EA", "Word"],  # EntityNode DOES support custom labels!
+                    attributes={
+                        "word": word,
+                        "qlPosition": ql_position,
+                        "domain": request.domain,
+                        "pie_root": request.pie_root,
+                        "semantic_pattern": request.semantic_pattern,
+                        "quaternal_mod": quaternal_mod
+                    }
+                )
 
-            RETURN c, collect(w) as words
-            """
+                # Generate embedding and save via Graphiti's native methods
+                await word_entity.generate_name_embedding(self.graphiti.embedder)
+                await word_entity.save(self.graphiti.driver)
+                word_entities.append((word_entity, ql_position))
 
-            # Assign qlPositions based on quaternal mod (word order determines position)
-            words_with_positions = [
-                {"word": word, "position": idx % quaternal_mod}
-                for idx, word in enumerate(request.words)
-            ]
+                logger.debug(f"Created EA word entity '{word}' (uuid={word_entity.uuid}, qlPosition={ql_position})")
 
-            params = {
-                "id": community_id,
-                "group_id": request.group_id,
-                "name": request.name,
-                "description": request.description,
-                "domain": request.domain,
-                "quaternal_type": request.quaternal_type.value,
+            # Step 2: Create EntityNode for community with EA:Community labels
+            # Build attributes dict with session tracking
+            community_attributes = {
+                "quaternal_type": actual_type,  # Use inferred type, not original request
                 "quaternal_mod": quaternal_mod,
-                "words_with_positions": words_with_positions,
                 "pie_root": request.pie_root,
                 "semantic_pattern": request.semantic_pattern,
-                "suggestion_resonance": request.bimba_coordinate,  # Agent hint only
-                "formed_at": datetime.now(timezone.utc).isoformat(),
-                "last_activity": datetime.now(timezone.utc).isoformat(),
-                "user_id": request.user_id,
-                "session_id": request.session_id,
-                "workspace_id": self.workspace_id
+                "domain": request.domain,
+                "word_count": len(request.words),
+                "suggestion_resonance": request.bimba_coordinate
             }
 
-            await self.neo4j_client.execute_query(query, params)
+            # Add session tracking (both thread_id and etymology_session_id)
+            if request.session_id:
+                community_attributes["thread_id"] = request.session_id  # This is the thread_id from agent
+            if request.user_id:
+                community_attributes["user_id"] = request.user_id
+            if etymology_session_id:
+                community_attributes["etymology_session_id"] = etymology_session_id  # The actual session UUID
 
-            # Create Community model response
+            community_entity = EntityNode(
+                name=request.name,
+                group_id=request.group_id,
+                summary=request.description or f"Etymology community for {request.pie_root}",
+                labels=["EA", "Community"],  # Custom labels work with EntityNode!
+                attributes=community_attributes
+            )
+
+            # Generate embedding and save
+            await community_entity.generate_name_embedding(self.graphiti.embedder)
+            await community_entity.save(self.graphiti.driver)
+
+            logger.info(
+                f"Created EA community entity {community_entity.uuid}: {request.name} "
+                f"with {len(request.words)} words (mod{quaternal_mod} QL structure)"
+            )
+
+            # Step 3: Link word entities to community via :CONTAINS relationships with qlPosition
+            for word_entity, ql_position in word_entities:
+                link_query = """
+                MATCH (c:Entity:EA:Community {uuid: $community_uuid})
+                MATCH (w:Entity:EA:Word {uuid: $word_uuid})
+                MERGE (c)-[r:CONTAINS {qlPosition: $ql_position, created_at: $created_at}]->(w)
+                RETURN r
+                """
+                self.neo4j_client.execute_query(
+                    link_query,
+                    {
+                        "community_uuid": community_entity.uuid,
+                        "word_uuid": word_entity.uuid,
+                        "ql_position": ql_position,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                )
+
+            # Step 4: Create response model
             community = Community(
-                id=community_id,
+                id=community_entity.uuid,
                 group_id=request.group_id,
                 name=request.name,
-                episode_ids=[],  # Initially empty
+                episode_ids=[w.uuid for w, _ in word_entities],  # Word entity IDs
                 quaternary_position=None,
-                context_frame_type=None,
+                context_frame_type="etymology_archaeology",
                 formed_at=datetime.now(timezone.utc),
                 last_activity=datetime.now(timezone.utc),
                 metadata={
@@ -1180,23 +1126,49 @@ class GraphitiService:
                 }
             )
 
-            logger.info(
-                f"Created EA community {community_id}: {request.name} "
-                f"with {len(request.words)} words (mod{quaternal_mod} QL structure)"
-            )
-
             return CommunityResponse(
                 success=True,
                 community=community,
-                message=f"Etymology community created with ID: {community_id}"
+                message=f"Etymology community created with ID: {community_entity.uuid} (EntityNode with custom labels)"
             )
 
         except Exception as e:
             logger.error(f"Error creating etymology community: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
             return CommunityResponse(
                 success=False,
                 message=f"Failed to create etymology community: {str(e)}"
             )
+
+    def _infer_quaternal_type(self, word_count: int) -> str:
+        """
+        Infer quaternal type from word count.
+
+        QL structures are determined by the number of words being organized.
+        The community node itself is the organizing principle, not a participant.
+
+        Args:
+            word_count: Number of words in the community
+
+        Returns:
+            Quaternal type string (TWO_PART, THREE_PART, etc.)
+        """
+        type_map = {
+            2: "TWO_PART",
+            3: "THREE_PART",
+            4: "FOUR_PART",
+            5: "FIVE_PART",
+            6: "SIX_PART",
+            7: "SEVEN_PART",
+            8: "EIGHT_PART",
+            9: "NINE_PART",
+            10: "TEN_PART",
+            12: "TWELVE_PART"
+        }
+
+        # For counts > 6 and not in map, default to SIX_PART (mod6 QL framework)
+        return type_map.get(word_count, "SIX_PART")
 
     def _get_quaternal_mod(self, quaternal_type: str) -> int:
         """
@@ -1215,7 +1187,12 @@ class GraphitiService:
             "TWO_PART": 2,
             "THREE_PART": 3,
             "FOUR_PART": 4,
+            "FIVE_PART": 5,
             "SIX_PART": 6,
+            "SEVEN_PART": 7,
+            "EIGHT_PART": 8,
+            "NINE_PART": 9,
+            "TEN_PART": 10,
             "TWELVE_PART": 12
         }
         return quaternal_mods.get(quaternal_type, 6)  # Default to mod6
@@ -1279,7 +1256,7 @@ class GraphitiService:
                 "workspace_id": self.workspace_id
             }
 
-            await self.neo4j_client.execute_query(query, params)
+            self.neo4j_client.execute_query(query, params)
 
             # Link to community if specified
             if request.community_id:
@@ -1288,7 +1265,7 @@ class GraphitiService:
                 MATCH (c:EA:Episodic {id: $community_id})
                 CREATE (a)-[:DISTILLS]->(c)
                 """
-                await self.neo4j_client.execute_query(link_query, {
+                self.neo4j_client.execute_query(link_query, {
                     "aphorism_id": aphorism_id,
                     "community_id": request.community_id
                 })
@@ -1300,7 +1277,7 @@ class GraphitiService:
                 MATCH (coord:BimbaNode {bimbaCoordinate: $coordinate})
                 CREATE (a)-[:RESONATES_WITH]->(coord)
                 """
-                await self.neo4j_client.execute_query(bimba_link_query, {
+                self.neo4j_client.execute_query(bimba_link_query, {
                     "aphorism_id": aphorism_id,
                     "coordinate": request.bimba_coordinate
                 })
@@ -1381,12 +1358,12 @@ class GraphitiService:
             set_clause_str = ", ".join(set_clauses)
 
             query = f"""
-            MATCH (c:EA:Episodic:Community {{id: $community_id, group_id: $group_id}})
-            SET {set_clause_str}, c.last_activity = $updated_at
+            MATCH (c:Entity:EA:Community {{uuid: $community_id, group_id: $group_id}})
+            SET {set_clause_str}, c.updated_at = $updated_at
             RETURN c
             """
 
-            records, _, _ = await self.neo4j_client.execute_query(query, params)
+            records, _, _ = self.neo4j_client.execute_query(query, params)
 
             if not records:
                 return {
@@ -1458,13 +1435,14 @@ class GraphitiService:
             set_clause_str = ", ".join(set_clauses)
 
             query = f"""
-            MATCH (c:EA:Episodic:Community {{id: $community_id, group_id: $group_id}})
-            MATCH (c)-[:CONTAINS]->(w:EA:Word {{word: $word}})
+            MATCH (c:Entity:EA:Community {{uuid: $community_id, group_id: $group_id}})
+            MATCH (c)-[:CONTAINS]->(w:Entity:EA:Word)
+            WHERE w.name = $word
             SET {set_clause_str}, w.enriched_at = $enriched_at
             RETURN w
             """
 
-            records, _, _ = await self.neo4j_client.execute_query(query, params)
+            records, _, _ = self.neo4j_client.execute_query(query, params)
 
             if not records:
                 return {
@@ -1513,8 +1491,8 @@ class GraphitiService:
         """
         try:
             query = f"""
-            MATCH (a:Episodic {{id: $aphorism_id, group_id: $group_id}})
-            MATCH (c:EA:Episodic:Community {{id: $community_id, group_id: $group_id}})
+            MATCH (a:Episodic {{uuid: $aphorism_id, group_id: $group_id}})
+            MATCH (c:Entity:EA:Community {{uuid: $community_id, group_id: $group_id}})
             MERGE (a)-[r:{relationship_type} {{
                 created_at: $created_at,
                 crystallization: true
@@ -1529,7 +1507,7 @@ class GraphitiService:
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
 
-            records, _, _ = await self.neo4j_client.execute_query(query, params)
+            records, _, _ = self.neo4j_client.execute_query(query, params)
 
             if not records:
                 return {

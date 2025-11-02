@@ -6,29 +6,95 @@
  * Shows counts for words explored, communities created, PIE roots, and resonances.
  *
  * Story 08.07 Enhancement - Frontend Observability
+ *
+ * CRITICAL: Stats are now queried from Neo4j directly via /etymology/sessions/{id}/stats
+ * instead of relying on MongoDB arrays. This ensures real-time accuracy.
  */
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/ui-system/utils/cn';
 import type { EtymologySession } from '@/types/etymology.types';
+import type { UseChatIntegrationReturn } from '@/hooks/useChatIntegration';
+
+interface SessionStats {
+  communities_count: number;
+  words_count: number;
+  pie_roots_count: number;
+  resonances_count: number;
+}
 
 interface SessionStatsModalProps {
   session: EtymologySession | null;
+  userId: string;
   hasUpdates: boolean;
   isOpen: boolean;
   onClose: () => void;
   onTabSwitch: (tab: 'chat' | 'tree' | 'community' | 'resonance') => void;
+  chat?: UseChatIntegrationReturn;  // Optional chat integration for model selector
 }
 
 export function SessionStatsModal({
   session,
+  userId,
   hasUpdates,
   isOpen,
   onClose,
-  onTabSwitch
+  onTabSwitch,
+  chat
 }: SessionStatsModalProps) {
+  const [stats, setStats] = useState<SessionStats | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch stats from Neo4j when modal opens
+  useEffect(() => {
+    if (!isOpen || !session) {
+      return;
+    }
+
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          group_id: userId
+        });
+
+        const resp = await fetch(`/api/graphiti/etymology/sessions/${session.session_id}/stats?${params}`);
+
+        if (!resp.ok) {
+          throw new Error(`Failed to fetch stats: ${resp.statusText}`);
+        }
+
+        const data = await resp.json();
+
+        if (data.success) {
+          setStats(data.stats);
+        } else {
+          console.error('Failed to fetch stats:', data.message);
+          setStats({
+            communities_count: 0,
+            words_count: 0,
+            pie_roots_count: 0,
+            resonances_count: 0
+          });
+        }
+      } catch (e: any) {
+        console.error('[SessionStatsModal] Error fetching stats:', e);
+        setStats({
+          communities_count: 0,
+          words_count: 0,
+          pie_roots_count: 0,
+          resonances_count: 0
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void fetchStats();
+  }, [isOpen, session, userId]);
+
   if (!isOpen) return null;
 
   const handleTabSwitch = (tab: 'chat' | 'tree' | 'community' | 'resonance') => {
@@ -57,10 +123,18 @@ export function SessionStatsModal({
     );
   }
 
-  const stats = [
+  // Use Neo4j stats if available, otherwise show loading/zero state
+  const statsData = stats || {
+    communities_count: 0,
+    words_count: 0,
+    pie_roots_count: 0,
+    resonances_count: 0
+  };
+
+  const statCards = [
     {
       label: 'Words Explored',
-      count: session.words_explored.length,
+      count: statsData.words_count,
       tab: 'tree' as const,
       icon: '🔤',
       description: 'Total words analyzed in this session',
@@ -68,7 +142,7 @@ export function SessionStatsModal({
     },
     {
       label: 'QL Communities',
-      count: session.communities_created.length,
+      count: statsData.communities_count,
       tab: 'community' as const,
       icon: '⬡',
       description: 'Quaternal Logic communities formed',
@@ -76,7 +150,7 @@ export function SessionStatsModal({
     },
     {
       label: 'PIE Roots',
-      count: session.pie_roots_discovered.length,
+      count: statsData.pie_roots_count,
       tab: 'tree' as const,
       icon: '🌳',
       description: 'Proto-Indo-European roots discovered',
@@ -84,7 +158,7 @@ export function SessionStatsModal({
     },
     {
       label: 'Bimba Resonances',
-      count: session.resonances_found.length,
+      count: statsData.resonances_count,
       tab: 'resonance' as const,
       icon: '✨',
       description: 'Canonical coordinate resonances detected',
@@ -121,20 +195,26 @@ export function SessionStatsModal({
 
         {/* Stats Grid */}
         <div className="p-6">
-          <div className="grid grid-cols-2 gap-4">
-            {stats.map((stat) => (
-              <StatCard
-                key={stat.label}
-                label={stat.label}
-                count={stat.count}
-                icon={stat.icon}
-                description={stat.description}
-                color={stat.color}
-                hasUpdates={hasUpdates}
-                onClick={() => handleTabSwitch(stat.tab)}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="text-sm text-gray-600">Loading stats from Neo4j...</div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {statCards.map((stat) => (
+                <StatCard
+                  key={stat.label}
+                  label={stat.label}
+                  count={stat.count}
+                  icon={stat.icon}
+                  description={stat.description}
+                  color={stat.color}
+                  hasUpdates={hasUpdates}
+                  onClick={() => handleTabSwitch(stat.tab)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Session Metadata */}
           <div className="mt-6 pt-6 border-t border-gray-200">

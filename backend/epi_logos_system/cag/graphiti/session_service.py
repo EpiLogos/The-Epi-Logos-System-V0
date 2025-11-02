@@ -184,6 +184,45 @@ class EtymologySessionService:
             logger.error(f"Error getting session {session_id}: {e}")
             return None
 
+    async def get_session_by_thread_id(self, thread_id: str) -> Optional[EtymologySession]:
+        """
+        Get etymology session by thread ID.
+
+        Looks up which session contains this thread_id in its thread_ids array.
+
+        Args:
+            thread_id: Thread identifier (e.g., "thread-d230bfdb-70f9-48f7-b10d-a32bff5319e5")
+
+        Returns:
+            EtymologySession or None if not found
+        """
+        try:
+            # Query MongoDB for session containing this thread_id
+            session_doc = self.collection.find_one({"thread_ids": thread_id})
+            if not session_doc:
+                logger.warning(f"No session found containing thread {thread_id}")
+                return None
+
+            # Remove MongoDB _id field
+            session_doc.pop("_id", None)
+
+            session = EtymologySession(**session_doc)
+
+            # Update Redis cache for future lookups by session_id
+            session_json = session.model_dump_json()
+            self.redis_client.setex(
+                self._redis_session_key(session.session_id),
+                self.CACHE_TTL,
+                session_json
+            )
+
+            logger.debug(f"Session {session.session_id} found by thread_id {thread_id}")
+            return session
+
+        except Exception as e:
+            logger.error(f"Error getting session by thread_id {thread_id}: {e}")
+            return None
+
     async def update_session(self, request: EtymologySessionUpdateRequest) -> EtymologySessionResponse:
         """
         Update etymology session data.
@@ -385,7 +424,10 @@ class EtymologySessionService:
 
     async def delete_session(self, session_id: str) -> bool:
         """
-        Delete an etymology session (hard delete).
+        Delete an etymology session (simple hard delete without cascade).
+
+        ⚠️ Use delete_session_cascade() for proper cleanup of related data.
+        This method only deletes the session document and cache.
 
         Args:
             session_id: Session identifier
@@ -400,9 +442,78 @@ class EtymologySessionService:
             # Delete from Redis cache
             self.redis_client.delete(self._redis_session_key(session_id))
 
-            logger.info(f"Deleted etymology session {session_id}")
+            logger.info(f"Deleted etymology session {session_id} (no cascade)")
             return result.deleted_count > 0
 
         except Exception as e:
             logger.error(f"Error deleting session {session_id}: {e}")
+            return False
+
+    async def delete_session_cascade(self, session_id: str) -> bool:
+        """
+        Permanently delete session with CASCADE cleanup of all related data.
+
+        Deletion order (important for referential integrity):
+        1. Load session to get thread_ids and related data
+        2. Delete thread messages from conversations collection
+        3. Delete session document from MongoDB
+        4. Clear all Redis cache entries
+        5. Remove from user's session set
+
+        Note: Does NOT delete Graphiti communities/episodes as they may be
+        referenced by other sessions or have independent value in the knowledge graph.
+
+        Args:
+            session_id: Session identifier
+
+        Returns:
+            True if successfully deleted (False if session not found)
+        """
+        try:
+            # Step 1: Load session to access relationships
+            session = await self.get_session(session_id)
+            if not session:
+                logger.warning(f"Session {session_id} not found for cascade deletion")
+                return False
+
+            logger.info(
+                f"CASCADE DELETE: Session {session_id} with "
+                f"{len(session.thread_ids)} threads, "
+                f"{len(session.communities_created)} communities"
+            )
+
+            # Step 2: Delete all linked threads from BOTH conversation collections
+            from shared.database.conversation_service import ConversationService
+
+            conv_service = ConversationService()
+            total_messages = 0
+            if session.thread_ids:
+                for thread_id in session.thread_ids:
+                    result = await conv_service.delete_thread(thread_id)
+                    deleted_count = result.get("turns_deleted", 0)
+                    total_messages += deleted_count
+                    logger.info(f"  Deleted {deleted_count} messages from thread {thread_id}")
+
+            # Step 3: Delete session document from MongoDB
+            delete_result = self.collection.delete_one({"session_id": session_id})
+
+            # Step 4: Clear Redis cache for session
+            self.redis_client.delete(self._redis_session_key(session_id))
+
+            # Step 5: Remove from user's session set in Redis
+            if session.user_id:
+                self.redis_client.srem(
+                    self._redis_user_sessions_key(session.user_id),
+                    session_id
+                )
+
+            logger.info(
+                f"✅ CASCADE DELETE completed: Session {session_id}, "
+                f"{len(session.thread_ids)} threads, {total_messages} messages deleted"
+            )
+
+            return delete_result.deleted_count > 0
+
+        except Exception as e:
+            logger.error(f"Error in cascade delete for session {session_id}: {e}")
             return False

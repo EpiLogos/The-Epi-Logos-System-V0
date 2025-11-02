@@ -134,58 +134,29 @@ class CreateThreadResponse(BaseModel):
 
 @router.get("/threads")
 async def list_user_threads(user_id: str, limit: int = 50, page: int = 1, context: Optional[str] = None) -> Dict[str, Any]:
-    """List recent threads (conversations) for a user.
+    """
+    List recent threads (conversations) for a user.
 
-    This aggregates Mongo conversation turns by session_id (which aligns with thread_id in AG-UI usage).
+    Uses ConversationService for fast retrieval from conversation_threads collection.
 
     Args:
         context: Optional coordinate filter (e.g., "#5-5" for etymology, "#1" for Paramasiva)
     """
     try:
-        deps = await create_enhanced_orchestrator_deps(
-            session_id="list-threads",
-            user_id=user_id or "web-user",
-            current_persona="system"
+        from shared.database.conversation_service import ConversationService
+
+        service = ConversationService()
+        threads = await service.list_threads(
+            user_id=user_id,
+            limit=limit,
+            page=page,
+            context=context
         )
-        if not deps.mongodb_client:
-            raise HTTPException(status_code=503, detail="Conversation service unavailable")
 
-        coll = deps.mongodb_client._coll  # conversations collection
-
-        skip = max(0, (page - 1) * max(1, limit))
-        # Build match filter with optional context filter
-        match_filter = {"user_id": user_id}
-        if context:
-            match_filter["context"] = context
-
-        pipeline = [
-            {"$match": match_filter},
-            {"$sort": {"created_at": -1}},
-            {"$group": {
-                "_id": "$session_id",
-                "created_at": {"$last": "$created_at"},
-                "last_activity": {"$first": "$created_at"},
-                "first_user": {"$last": "$user_message"},
-                "last_message": {"$first": {"$ifNull": ["$agent_response", "$user_message"]}},
-                "persona": {"$last": "$persona"}
-            }},
-            {"$sort": {"last_activity": -1}},
-            {"$skip": skip},
-            {"$limit": max(1, limit)}
-        ]
-
-        items: List[ThreadSummary] = []
-        for row in coll.aggregate(pipeline):
-            items.append(ThreadSummary(
-                thread_id=row.get("_id"),
-                title=(row.get("first_user") or "Untitled"),
-                last_message=row.get("last_message"),
-                created_at=(row.get("created_at").isoformat() if row.get("created_at") else None),
-                last_activity=(row.get("last_activity").isoformat() if row.get("last_activity") else None),
-                persona=row.get("persona")
-            ))
-
-        return {"threads": [i.model_dump() for i in items]}
+        return {
+            "success": True,
+            "threads": [t.model_dump() for t in threads]
+        }
 
     except HTTPException:
         raise
@@ -198,16 +169,12 @@ async def list_user_threads(user_id: str, limit: int = 50, page: int = 1, contex
 async def get_thread_messages(thread_id: str, limit: int = 200) -> ThreadMessagesResponse:
     """Return simplified message history for a thread (role/content)."""
     try:
-        deps = await create_enhanced_orchestrator_deps(
-            session_id="get-thread-messages",
-            user_id="web-user",
-            current_persona="system"
-        )
-        if not deps.mongodb_client:
-            raise HTTPException(status_code=503, detail="Conversation service unavailable")
+        from shared.database.conversation_service import ConversationService
 
-        history = await deps.mongodb_client.get_message_history(thread_id, max_turns=limit)
-        return ThreadMessagesResponse(thread_id=thread_id, messages=history)
+        service = ConversationService()
+        messages = await service.get_thread_messages(thread_id, limit=limit)
+
+        return ThreadMessagesResponse(thread_id=thread_id, messages=messages)
     except HTTPException:
         raise
     except Exception as e:
@@ -264,9 +231,9 @@ async def delete_thread(thread_id: str) -> Dict[str, bool]:
             current_persona="system"
         )
         # Clear conversation turns in Mongo
-        if deps.mongodb_client:
+        if deps.conversation_service:
             try:
-                await deps.mongodb_client.clear_session(thread_id)
+                await deps.conversation_service.delete_thread(thread_id)
             except Exception as e:
                 logger.warning(f"Conversation clear failed for {thread_id}: {e}")
         # Best-effort: leave redis mapping intact; consider TTL expiry

@@ -15,8 +15,8 @@ from fastapi.responses import Response, StreamingResponse
 from ag_ui.core import RunAgentInput
 from pydantic_ai.ag_ui import handle_ag_ui_request, run_ag_ui
 
-# Use the canonical orchestrator agent and HTTP-based deps
-from agentic.agents.orchestrator.orchestrator_agent import orchestrator_agent
+# Use AgentRouter for factory-based agent creation
+from agentic.agents.agent_router import AgentRouter
 from agentic.agents.orchestrator.tools.http_clients_factory import create_enhanced_orchestrator_deps
 
 logger = logging.getLogger(__name__)
@@ -108,20 +108,17 @@ async def run_agent(request: Request) -> Response:
         # Add target_agent to state if provided (for manual delegation)
         if target_agent is not None:
             deps.state['target_agent'] = target_agent
-        
-        # Create orchestrator agent with selected model
-        from agentic.agents.orchestrator.orchestrator_agent import create_orchestrator_agent
-        # Determine EA mode (etymology) from session metadata
-        ea_mode = False
-        try:
-            sess = deps.redis_client.get_session(session_id) if deps.redis_client else None
-            if sess:
-                meta = sess.get("metadata", {})
-                ea_mode = (meta.get("context") == "#5-5")
-        except Exception:
-            ea_mode = False
-        dynamic_agent = create_orchestrator_agent(model_config, ea_mode=ea_mode)
-        
+
+        # Create AgentRouter and get orchestrator agent via factory pattern
+        agent_router = AgentRouter(
+            bimba_client=deps.bimba_client,
+            redis_client=deps.redis_client,
+            default_model=model_config
+        )
+
+        # Get orchestrator agent from factory (loads from #5-4 coordinate via Prakāśa)
+        dynamic_agent = await agent_router.get_orchestrator_agent(model_name=model_config)
+
         # Use Pydantic AI's native AG-UI integration (original request, enriched deps)
         response = await handle_ag_ui_request(dynamic_agent, request, deps=deps)
         
@@ -194,18 +191,15 @@ async def run_agent_direct(run_input: RunAgentInput):
         if target_agent is not None:
             deps.state['target_agent'] = target_agent
 
-        # Create orchestrator agent with selected model
-        from ..agents.orchestrator.orchestrator_agent import create_orchestrator_agent
-        # Determine EA mode (etymology) from session metadata
-        ea_mode = False
-        try:
-            sess = deps.redis_client.get_session(session_id) if deps.redis_client else None
-            if sess:
-                meta = sess.get("metadata", {})
-                ea_mode = (meta.get("context") == "#5-5")
-        except Exception:
-            ea_mode = False
-        dynamic_agent = create_orchestrator_agent(model_config, ea_mode=ea_mode)
+        # Create AgentRouter and get orchestrator agent via factory pattern
+        agent_router = AgentRouter(
+            bimba_client=deps.bimba_client,
+            redis_client=deps.redis_client,
+            default_model=model_config
+        )
+
+        # Get orchestrator agent from factory (loads from #5-4 coordinate via Prakāśa)
+        dynamic_agent = await agent_router.get_orchestrator_agent(model_name=model_config)
 
         # Use Pydantic AI's run_ag_ui for direct control
         event_stream = run_ag_ui(dynamic_agent, run_input, deps=deps)
@@ -275,10 +269,18 @@ async def test_ag_ui():
         )
         logger.info(f"✅ Dependencies created: {type(deps).__name__}")
 
+        # Get orchestrator agent via factory
+        agent_router = AgentRouter(
+            bimba_client=deps.bimba_client,
+            redis_client=deps.redis_client,
+            default_model=model_config
+        )
+        orchestrator = await agent_router.get_orchestrator_agent(model_name=model_config)
+
         # Test Pydantic AI AG-UI integration
         print("🚀 AG-UI BACKEND: Starting AG-UI event stream...")
         logger.info("🚀 AG-UI BACKEND: Starting AG-UI event stream...")
-        event_stream = run_ag_ui(orchestrator_agent, test_input, deps=deps)
+        event_stream = run_ag_ui(orchestrator, test_input, deps=deps)
 
         events = []
         async for event_str in event_stream:

@@ -19,7 +19,7 @@ async def create_etymology_community(
     name: str,
     description: str,
     words: List[str],
-    quaternal_type: str = "FOUR_PART",
+    quaternal_type: Optional[str] = None,
     pie_root: Optional[str] = None,
     semantic_pattern: Optional[str] = None,
     user_id: Optional[str] = None,
@@ -38,6 +38,7 @@ async def create_etymology_community(
         description: Community description
         words: List of words in this etymology cluster
         quaternal_type: QL structure type (TWO_PART, THREE_PART, FOUR_PART, etc.)
+                       If None, backend auto-infers from word count
         pie_root: Optional PIE root
         semantic_pattern: Optional semantic shift pattern
         user_id: User who created this community
@@ -63,10 +64,26 @@ async def create_etymology_community(
         )
 
         if result.get("success", True):
+            community_id = result.get("community", {}).get("id")
             logger.info(f"Created EA community: {name}")
+
+            # CRITICAL FIX: Update session with words and PIE root
+            if session_id and (words or pie_root):
+                try:
+                    await graphiti_client.update_session(
+                        session_id=session_id,
+                        group_id=group_id,
+                        words_to_add=words if words else [],
+                        pie_roots_to_add=[pie_root] if pie_root else [],
+                        communities_to_add=[community_id] if community_id else []
+                    )
+                    logger.info(f"Updated session {session_id} with community data")
+                except Exception as e:
+                    logger.warning(f"Failed to update session: {e}")
+
             return {
                 "success": True,
-                "community_id": result.get("community", {}).get("id"),
+                "community_id": community_id,
                 "name": name,
                 "words": words,
                 "ql_structure": quaternal_type,

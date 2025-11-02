@@ -188,39 +188,9 @@ class GraphitiMCPServer:
                         "required": ["group_id", "agent_id"]
                     }
                 ),
-                Tool(
-                    name="create_community",
-                    description="Create a temporal community of related episodes with QL-aligned properties",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "group_id": {
-                                "type": "string",
-                                "description": "Multi-tenant group identifier"
-                            },
-                            "name": {
-                                "type": "string",
-                                "description": "Community name or description"
-                            },
-                            "episode_ids": {
-                                "type": "array",
-                                "items": {"type": "string"},
-                                "description": "List of episode IDs to include in the community"
-                            },
-                            "quaternary_position": {
-                                "type": "integer",
-                                "minimum": 0,
-                                "maximum": 5,
-                                "description": "QL position (#0-#5) for consciousness-aligned processing (optional)"
-                            },
-                            "context_frame_type": {
-                                "type": "string",
-                                "description": "Associated context frame type (optional)"
-                            }
-                        },
-                        "required": ["group_id", "name"]
-                    }
-                ),
+# DEPRECATED TOOL REMOVED (2025-10-27):
+                # create_community - Called deleted service method
+                # Use create_etymology_community via HTTP API instead
                 Tool(
                     name="create_quaternal_unit",
                     description="Create a new QuaternalUnit for QL-aligned episodic memory synthesis",
@@ -462,8 +432,7 @@ class GraphitiMCPServer:
                     return await self._handle_get_session_continuity(arguments)
                 elif name == "get_agent_ruminations":
                     return await self._handle_get_agent_ruminations(arguments)
-                elif name == "create_community":
-                    return await self._handle_create_community(arguments)
+                # create_community tool removed - use create_etymology_community via HTTP API
                 elif name == "create_quaternal_unit":
                     return await self._handle_create_quaternal_unit(arguments)
                 elif name == "update_quaternal_unit":
@@ -671,41 +640,8 @@ class GraphitiMCPServer:
                 text=f"Error getting agent ruminations: {str(e)}"
             )]
     
-    async def _handle_create_community(self, arguments: dict) -> list[TextContent]:
-        """Handle community creation tool call."""
-        try:
-            request = CommunityRequest(
-                group_id=arguments["group_id"],
-                name=arguments["name"],
-                episode_ids=arguments.get("episode_ids", []),
-                quaternary_position=arguments.get("quaternary_position"),
-                context_frame_type=arguments.get("context_frame_type")
-            )
-            
-            response = await self.graphiti_service.create_community(request)
-            
-            if response.success:
-                return [TextContent(
-                    type="text",
-                    text=f"Successfully created community: {response.community.id}\n"
-                         f"Name: {response.community.name}\n"
-                         f"Episodes: {len(response.community.episode_ids)}\n"
-                         f"QL Position: {response.community.quaternary_position or 'N/A'}\n"
-                         f"Context Frame: {response.community.context_frame_type or 'N/A'}\n"
-                         f"Formed: {response.community.formed_at.isoformat()}"
-                )]
-            else:
-                return [TextContent(
-                    type="text",
-                    text=f"Failed to create community: {response.message}"
-                )]
-                
-        except Exception as e:
-            return [TextContent(
-                type="text",
-                text=f"Error creating community: {str(e)}"
-            )]
-    
+    # _handle_create_community REMOVED (2025-10-27) - called deleted service method
+
     # QuaternalUnit MCP Tool Handlers
     
     async def _handle_create_quaternal_unit(self, arguments: dict) -> list[TextContent]:

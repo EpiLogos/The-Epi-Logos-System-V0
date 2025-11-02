@@ -17,6 +17,7 @@ interface SessionPanelProps {
   onSessionSelect: (sessionId: string) => void;
   onNewSession: () => Promise<void>;
   onDeleteSession: (sessionId: string) => Promise<boolean>;
+  onArchiveSession?: (sessionId: string) => Promise<boolean>;
   loading: boolean;
   error: string | null;
 }
@@ -27,6 +28,7 @@ export function SessionPanel({
   onSessionSelect,
   onNewSession,
   onDeleteSession,
+  onArchiveSession,
   loading,
   error
 }: SessionPanelProps) {
@@ -35,7 +37,7 @@ export function SessionPanel({
       {/* Header */}
       <div className="grid grid-cols-3 items-center mb-6 mt-4">
         <div />
-        <div className="text-sm text-center text-gray-300">Sessions</div>
+        <div className="text-sm text-center font-medium" style={{ color: '#4A1942' }}>Sessions</div>
         <div className="justify-self-end">
           <button
             className="text-xs px-3 py-1.5 border border-purple-500/50 hover:border-purple-400 text-purple-300 hover:text-purple-200 transition-colors rounded"
@@ -50,11 +52,11 @@ export function SessionPanel({
       {loading && <div className="text-gray-500 text-xs">Loading…</div>}
       {error && <div className="text-red-400 text-xs">{error}</div>}
 
-      {/* Session list - scrollable */}
+      {/* Session list - contained scrollable section */}
       {!loading && sessions.length === 0 ? (
         <div className="text-gray-500 text-xs">No sessions yet. Create one to begin.</div>
       ) : (
-        <div className="flex-1 overflow-y-auto no-scrollbar space-y-2">
+        <div className="overflow-y-auto no-scrollbar space-y-2" style={{ maxHeight: '30vh' }}>
           {sessions.map(session => (
             <div
               key={session.session_id}
@@ -67,19 +69,39 @@ export function SessionPanel({
               onClick={() => onSessionSelect(session.session_id)}
             >
               <div className="flex items-center justify-between">
-                <div className="truncate mr-2 text-gray-200">{session.title}</div>
-                <button
-                  className="text-gray-500 hover:text-red-400 transition-colors"
-                  aria-label="Delete session"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const ok = confirm('Delete this session?');
-                    if (!ok) return;
-                    void onDeleteSession(session.session_id);
-                  }}
-                >
-                  ×
-                </button>
+                <div className="truncate mr-2 font-medium" style={{ color: '#4A1942' }}>{session.title}</div>
+                <div className="flex items-center gap-2">
+                  {/* Archive button */}
+                  {onArchiveSession && (
+                    <button
+                      className="text-gray-500 hover:text-purple-400 transition-colors text-sm"
+                      aria-label="Archive session"
+                      title="Archive session (can be restored later)"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const ok = confirm('Archive this session? You can restore it later.');
+                        if (!ok) return;
+                        void onArchiveSession(session.session_id);
+                      }}
+                    >
+                      📦
+                    </button>
+                  )}
+                  {/* Delete button */}
+                  <button
+                    className="text-gray-500 hover:text-red-400 transition-colors text-base leading-none"
+                    aria-label="Delete session permanently"
+                    title="Delete permanently (cannot be undone)"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const ok = confirm('⚠️ PERMANENTLY delete this session and all threads?\n\nThis cannot be undone!');
+                      if (!ok) return;
+                      void onDeleteSession(session.session_id);
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
               </div>
               {/* Show word count */}
               {session.words_explored.length > 0 && (
@@ -87,14 +109,17 @@ export function SessionPanel({
                   {session.words_explored.length} word{session.words_explored.length !== 1 ? 's' : ''} explored
                 </div>
               )}
-              {/* Show last activity */}
-              <div className="text-gray-600 mt-1.5 text-[11px]">
-                {new Date(session.last_activity).toLocaleString()}
-              </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Session Info panel - full width below sessions, extends to fill remaining space */}
+      <div className="flex-1 mt-6 border border-gray-700/50 rounded p-3 min-h-[300px]">
+        <div className="text-xs text-gray-500 italic">
+          Session details will appear here
+        </div>
+      </div>
     </div>
   );
 }

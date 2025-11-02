@@ -8,7 +8,7 @@ Based on Story 02.24: Multi-Agent Architecture Foundation
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 from pydantic_ai import Agent
 
 from agentic.agents.orchestrator.orchestrator_agent import OrchestratorDeps
@@ -18,7 +18,8 @@ from agentic.agents.constellation import (
     create_parashakti_agent,
     create_mahamaya_agent,
     create_nara_agent,
-    create_epii_agent
+    create_epii_agent,
+    create_orchestrator_agent
 )
 
 logger = logging.getLogger(__name__)
@@ -29,21 +30,27 @@ class AgentRegistry:
     Registry for tracking created agents and enabling runtime discovery.
 
     Provides coordinate-based lookups and constellation management.
+    Supports both orchestrator (string key) and subsystem agents (int keys).
     """
 
     def __init__(self):
-        self._agents: Dict[int, Agent[OrchestratorDeps]] = {}
-        self._metadata: Dict[int, Dict[str, Any]] = {}
+        self._agents: Dict[Union[str, int], Agent[OrchestratorDeps]] = {}
+        self._metadata: Dict[Union[str, int], Dict[str, Any]] = {}
 
-    def register(self, subsystem: int, agent: Agent[OrchestratorDeps]) -> None:
-        """Register an agent in the registry"""
-        self._agents[subsystem] = agent
-        self._metadata[subsystem] = agent._metadata
-        logger.debug(f"Registered agent for subsystem #{subsystem}")
+    def register(self, key: Union[str, int], agent: Agent[OrchestratorDeps]) -> None:
+        """Register an agent in the registry.
 
-    def get(self, subsystem: int) -> Optional[Agent[OrchestratorDeps]]:
-        """Get agent by subsystem number"""
-        return self._agents.get(subsystem)
+        Args:
+            key: 'orchestrator' for root agent, or subsystem number (0-5) for specialists
+            agent: Agent instance to register
+        """
+        self._agents[key] = agent
+        self._metadata[key] = getattr(agent, '_metadata', {})
+        logger.debug(f"Registered agent for key={key}")
+
+    def get(self, key: Union[str, int]) -> Optional[Agent[OrchestratorDeps]]:
+        """Get agent by key (orchestrator or subsystem number)"""
+        return self._agents.get(key)
 
     def get_by_coordinate(self, coordinate: str) -> Optional[Agent[OrchestratorDeps]]:
         """Get agent by coordinate string (e.g., '#0', '#1')"""
@@ -83,6 +90,7 @@ class AgentFactory:
         """
         self.registry = AgentRegistry()
         self._agent_constructors = {
+            "orchestrator": create_orchestrator_agent,  # Root agent (#5-4)
             0: create_anuttara_agent,
             1: create_paramasiva_agent,
             2: create_parashakti_agent,
@@ -90,23 +98,30 @@ class AgentFactory:
             4: create_nara_agent,
             5: create_epii_agent
         }
-        logger.info("AgentFactory initialized")
+        logger.info("AgentFactory initialized with orchestrator + 6 subsystem agents")
 
     async def create_agent(
         self,
-        subsystem: int,
-        model_name: str,
+        subsystem: Optional[int] = None,
+        model_name: str = "gemini-2.0-flash-exp",
         name: Optional[str] = None,
         bimba_client = None,
         redis_client = None
     ) -> Agent[OrchestratorDeps]:
         """
-        Create a coordinate-specific agent with specified model.
+        Create an agent (orchestrator or subsystem specialist).
 
         Uses ASCP Prakāśa layered architecture for identity initialization.
 
         Args:
-            subsystem: Subsystem number (0-5) corresponding to coordinates #0-#5
+            subsystem: Subsystem number (0-5) or None for orchestrator
+                - None = Orchestrator (#5-4) - root agent with all tools
+                - 0 = Anuttara (#5-4.0)
+                - 1 = Paramasiva (#5-4.1)
+                - 2 = Parashakti (#5-4.2)
+                - 3 = Mahamaya (#5-4.3)
+                - 4 = Nara (#5-4.4)
+                - 5 = Epii (#5-4.5)
             model_name: Model to use (e.g., 'google-gla:gemini-2.0-flash-exp')
             name: Optional agent name override
             bimba_client: Optional BimbaGraphQLClient (creates new if None)
@@ -116,17 +131,25 @@ class AgentFactory:
             Pydantic AI Agent instance with OrchestratorDeps
 
         Raises:
-            ValueError: If subsystem is not in range 0-5
+            ValueError: If subsystem is not None or 0-5
         """
-        if subsystem not in range(6):
-            raise ValueError(
-                f"Invalid subsystem: {subsystem}. Must be between 0 and 5."
-            )
+        # Determine key for constructor lookup
+        if subsystem is None:
+            key = "orchestrator"
+        elif subsystem in range(6):
+            key = subsystem
+        else:
+            raise ValueError(f"Subsystem must be None (orchestrator) or 0-5, got {subsystem}")
 
-        # Get the appropriate constructor
-        constructor = self._agent_constructors[subsystem]
+        if key not in self._agent_constructors:
+            raise ValueError(f"No constructor registered for key {key}")
 
-        # Create the agent using the async constructor with optional clients
+        # Get constructor
+        constructor = self._agent_constructors[key]
+
+        logger.info(f"Creating agent for {key} with model {model_name}")
+
+        # Create agent via constructor (loads Prakāśa from appropriate coordinate)
         agent = await constructor(
             model=model_name,
             name=name,
@@ -134,16 +157,10 @@ class AgentFactory:
             redis_client=redis_client
         )
 
-        # Register agent in registry
-        self.registry.register(subsystem, agent)
+        # Register in registry for tracking
+        self.registry.register(key, agent)
 
-        coordinate = f"#{subsystem}"
-        agent_coordinate = f"#{subsystem}-4.{subsystem}"
-        logger.info(
-            f"Created agent for coordinate {coordinate} (agent node {agent_coordinate}): "
-            f"{agent.__class__.__name__} with model {model_name}"
-        )
-
+        logger.info(f"✅ Created and registered agent for {key}")
         return agent
 
     async def create_constellation(self, model_name: str) -> Dict[int, Agent[OrchestratorDeps]]:

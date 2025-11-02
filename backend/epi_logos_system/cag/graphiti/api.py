@@ -10,7 +10,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks
 from pydantic import BaseModel, Field
 
 from shared.database import Neo4jClient
@@ -25,20 +25,34 @@ from .models import (
     EtymologySessionResponse,
     EtymologySessionUpdateRequest,
     EtymologySessionListResponse,
-    EtymologySessionStatus
+    EtymologySessionStatus,
+    EtymologyCommunityRequest,
+    AphorismRequest
 )
 
 
 logger = logging.getLogger(__name__)
 
 
+# Singleton GraphitiService instance (initialized on first request)
+_graphiti_service_singleton: Optional[GraphitiService] = None
+
 # Dependency for getting Graphiti service instance
 def get_graphiti_service() -> GraphitiService:
-    """Get Graphiti service instance with shared Neo4j client."""
-    # This should be configured with proper dependency injection in the main FastAPI app
-    # For now, creating a new instance (this would be optimized in production)
-    neo4j_client = Neo4jClient()
-    return GraphitiService(neo4j_client)
+    """Get singleton Graphiti service instance with shared Neo4j client.
+
+    FIXED: Uses singleton pattern to avoid re-instantiation on every request,
+    preventing 54s+ index rebuilding delays (see GraphitiService._ensure_indices).
+    """
+    global _graphiti_service_singleton
+
+    if _graphiti_service_singleton is None:
+        # Create singleton on first request - shared across all requests
+        neo4j_client = Neo4jClient()
+        _graphiti_service_singleton = GraphitiService(neo4j_client)
+        logger.info("✅ Initialized singleton GraphitiService instance")
+
+    return _graphiti_service_singleton
 
 
 # Dependency for getting Etymology Session service
@@ -237,34 +251,9 @@ async def get_agent_ruminations(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/communities", response_model=GraphQLCommunityResponse)
-async def create_community(
-    request: CommunityRequest,
-    service: GraphitiService = Depends(get_graphiti_service)
-):
-    """
-    Create a temporal community of related episodes.
-    
-    Communities enable QL-aligned temporal clustering of related thoughts,
-    sessions, and reasoning processes for enhanced context formation.
-    """
-    try:
-        response = await service.create_community(request)
-        
-        if response.success:
-            return GraphQLCommunityResponse(
-                data=response.community,
-                message=response.message
-            )
-        else:
-            return GraphQLCommunityResponse(
-                errors=[response.message or "Failed to create community"],
-                message=response.message
-            )
-            
-    except Exception as e:
-        logger.error(f"Error in create_community API: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# DEPRECATED ENDPOINT REMOVED (2025-10-27):
+# POST /communities - Used deprecated service.create_community() method with sync/async mismatch
+# Use POST /etymology/community instead, which properly uses Graphiti's build_communities()
 
 
 @router.get("/episodes/types")
@@ -382,7 +371,7 @@ async def get_graphql_schema():
 
 @router.post("/etymology/community", response_model=GraphQLCommunityResponse)
 async def create_etymology_community(
-    request: 'EtymologyCommunityRequest',
+    request: EtymologyCommunityRequest,
     service: GraphitiService = Depends(get_graphiti_service),
     session_service: EtymologySessionService = Depends(get_session_service)
 ):
@@ -397,28 +386,45 @@ async def create_etymology_community(
     Story 08.07 - Etymology Archaeology Workflow
     """
     try:
-        # Import here to avoid circular dependency
-        from .models import EtymologyCommunityRequest
+        # STEP 1: Look up Etymology Session BEFORE creating community
+        # This allows us to store the etymology_session_id in the community attributes
+        etymology_session_id = None
+        if request.session_id:
+            thread_id = request.session_id  # request.session_id is actually the thread_id from agent
+            logger.info(f"Looking up Etymology Session for thread {thread_id}")
 
-        response = await service.create_etymology_community(request)
+            existing_session = await session_service.get_session_by_thread_id(thread_id)
+            if existing_session:
+                etymology_session_id = existing_session.session_id
+                logger.info(f"Found Etymology Session {etymology_session_id} for thread {thread_id}")
+            else:
+                logger.warning(
+                    f"No Etymology Session found for thread {thread_id}. "
+                    f"Community will be created without etymology_session_id link."
+                )
+
+        # STEP 2: Create community with etymology_session_id in attributes
+        response = await service.create_etymology_community(
+            request,
+            etymology_session_id=etymology_session_id
+        )
 
         if response.success:
-            # CRITICAL FIX: Update session with new community ID
-            # This enables stats button and frontend polling detection
-            if request.session_id and response.community:
+            # STEP 3: Update Etymology Session's communities_created array
+            if etymology_session_id and response.community:
                 community_id = response.community.id
-                logger.info(f"Updating session {request.session_id} with community {community_id}")
+                logger.info(f"Linking community {community_id} to session {etymology_session_id}")
 
                 session_update = EtymologySessionUpdateRequest(
-                    session_id=request.session_id,
+                    session_id=etymology_session_id,
                     communities_to_add=[community_id]
                 )
 
                 update_result = await session_service.update_session(session_update)
                 if not update_result.success:
-                    logger.warning(f"Failed to update session {request.session_id}: {update_result.message}")
+                    logger.warning(f"Failed to update session {etymology_session_id}: {update_result.message}")
                 else:
-                    logger.info(f"Successfully linked community {community_id} to session {request.session_id}")
+                    logger.info(f"Successfully linked community {community_id} to session {etymology_session_id}")
 
             return GraphQLCommunityResponse(
                 data=response.community,
@@ -444,7 +450,7 @@ class GraphQLAphorismResponse(BaseModel):
 
 @router.post("/etymology/aphorism", response_model=GraphQLAphorismResponse)
 async def create_aphorism(
-    request: 'AphorismRequest',
+    request: AphorismRequest,
     service: GraphitiService = Depends(get_graphiti_service),
     session_service: EtymologySessionService = Depends(get_session_service)
 ):
@@ -460,9 +466,6 @@ async def create_aphorism(
     Story 08.07 - Etymology Archaeology Workflow
     """
     try:
-        # Import here to avoid circular dependency
-        from .models import AphorismRequest, Aphorism
-
         response = await service.create_aphorism(request)
 
         if response.success:
@@ -498,6 +501,110 @@ async def create_aphorism(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/etymology/sessions/{session_id}/stats")
+async def get_etymology_session_stats(
+    session_id: str,
+    group_id: str = Query(..., description="User/group ID for multi-tenant isolation"),
+    service: GraphitiService = Depends(get_graphiti_service)
+):
+    """
+    Get real-time statistics for an Etymology Session by querying Neo4j directly.
+
+    Returns counts of:
+    - Communities created (filtered by etymology_session_id)
+    - Words explored (unique words across all communities)
+    - PIE roots discovered (unique pie_roots across communities)
+    - Resonances found (unique bimba_coordinates)
+
+    This replaces MongoDB array-based stats with direct Neo4j queries.
+    Story 08.07 - Real-time session observability
+    """
+    try:
+        logger.info(f"Fetching stats for session {session_id}, group {group_id}")
+
+        # Query communities for this session
+        # FIXED: Properties are stored DIRECTLY on EntityNode, not in attributes Map
+        communities_query = """
+        MATCH (c:Entity:EA:Community)
+        WHERE c.group_id = $group_id
+          AND c.etymology_session_id = $session_id
+        RETURN c.uuid as id,
+               c.pie_root as pie_root,
+               c.suggestion_resonance as suggestion_resonance
+        """
+
+        community_records, _, _ = service.neo4j_client.execute_query(
+            communities_query,
+            {"group_id": group_id, "session_id": session_id}
+        )
+
+        logger.info(f"Found {len(community_records)} communities for session {session_id}")
+
+        # Aggregate stats from communities
+        unique_words = set()
+        unique_pie_roots = set()
+        unique_resonances = set()
+
+        for record in community_records:
+            community_id = record["id"]
+            pie_root = record.get("pie_root")
+            suggestion_resonance = record.get("suggestion_resonance")
+
+            logger.debug(f"Processing community {community_id}, pie_root={pie_root}, resonance={suggestion_resonance}")
+
+            # Get words from this community
+            word_query = """
+            MATCH (c:Entity:EA:Community {uuid: $community_id})-[:CONTAINS]->(w:Entity:EA:Word)
+            RETURN w.name as word
+            """
+            word_records, _, _ = service.neo4j_client.execute_query(
+                word_query,
+                {"community_id": community_id}
+            )
+
+            logger.debug(f"Found {len(word_records)} words for community {community_id}")
+
+            for wr in word_records:
+                unique_words.add(wr["word"])
+
+            # Collect PIE roots (stored directly on node)
+            if pie_root:
+                unique_pie_roots.add(pie_root)
+                logger.debug(f"Added PIE root: {pie_root}")
+
+            # Collect resonances (stored directly on node)
+            if suggestion_resonance:
+                unique_resonances.add(suggestion_resonance)
+                logger.debug(f"Added resonance: {suggestion_resonance}")
+
+        stats_result = {
+            "communities_count": len(community_records),
+            "words_count": len(unique_words),
+            "pie_roots_count": len(unique_pie_roots),
+            "resonances_count": len(unique_resonances)
+        }
+
+        logger.info(f"Stats for session {session_id}: {stats_result}")
+
+        return {
+            "success": True,
+            "stats": stats_result
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching session stats: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to fetch session stats: {str(e)}",
+            "stats": {
+                "communities_count": 0,
+                "words_count": 0,
+                "pie_roots_count": 0,
+                "resonances_count": 0
+            }
+        }
+
+
 @router.get("/etymology/communities")
 async def list_etymology_communities(
     group_id: str = Query(..., description="Multi-tenant group identifier"),
@@ -511,32 +618,114 @@ async def list_etymology_communities(
 
     Provides access to personal etymology explorations in EA namespace.
     Story 08.07 - AC: 8 (Personal Exploration Tracking)
+
+    FIXED: Query now matches EntityNode structure created by create_etymology_community.
+    Community nodes are :Entity:EA:Community with data in attributes Map.
+
+    NOTE: session_id parameter is the Etymology Session UUID (not thread_id).
+    Communities store etymology_session_id in attributes for filtering.
     """
     try:
+        # FIXED: EntityNode stores properties DIRECTLY on node, not in attributes Map
         query = """
-        MATCH (c:EA:Episodic)
+        MATCH (c:Entity:EA:Community)
         WHERE c.group_id = $group_id
         """
 
         params = {"group_id": group_id, "limit": limit}
 
+        # Properties are stored directly on the node
         if user_id:
             query += " AND c.user_id = $user_id"
             params["user_id"] = user_id
 
         if session_id:
-            query += " AND c.session_id = $session_id"
+            # session_id is the Etymology Session UUID (stored as etymology_session_id directly on node)
+            query += " AND c.etymology_session_id = $session_id"
             params["session_id"] = session_id
 
         query += """
-        RETURN c
-        ORDER BY c.formed_at DESC
+        RETURN c.uuid as id, c.name as name, c.group_id as group_id,
+               c.summary as description,
+               c.quaternal_type as quaternal_type,
+               c.pie_root as pie_root,
+               c.semantic_pattern as semantic_pattern,
+               c.thread_id as thread_id,
+               c.etymology_session_id as etymology_session_id,
+               c.user_id as user_id,
+               c.suggestion_resonance as suggestion_resonance,
+               c.domain as domain,
+               c.created_at as formed_at
+        ORDER BY c.created_at DESC
         LIMIT $limit
         """
 
-        records, _, _ = await service.neo4j_client.execute_query(query, params)
+        records, _, _ = service.neo4j_client.execute_query(query, params)
 
-        communities = [dict(record["c"]) for record in records]
+        # Transform EntityNode results to expected EtymologyCommunity format
+        # FIXED: Properties are now returned directly from query, not from attrs Map
+        communities = []
+        for record in records:
+            # Query word entities linked to this community
+            word_query = """
+            MATCH (c:Entity:EA:Community {uuid: $community_id})-[r:CONTAINS]->(w:Entity:EA:Word)
+            RETURN
+                w.uuid as word_id,
+                w.name as word,
+                coalesce(w.pie_root, w.attributes.pie_root) as word_pie_root,
+                coalesce(w.pie_lineage, w.attributes.pie_lineage) as pie_lineage,
+                coalesce(w.lineage, w.attributes.lineage) as lineage,
+                coalesce(w.semantic_pattern, w.attributes.semantic_pattern) as word_semantic_pattern,
+                coalesce(w.relationship_descriptor, w.relation_descriptor, w.attributes.relationship_descriptor, w.attributes.relation_descriptor) as relation_descriptor,
+                w.enriched_at as enriched_at,
+                r.qlPosition as ql_position
+            ORDER BY w.name
+            """
+            word_records, _, _ = service.neo4j_client.execute_query(
+                word_query,
+                {"community_id": record["id"]}
+            )
+
+            word_nodes = []
+            for wr in word_records:
+                wr_data = dict(wr)
+                word_nodes.append({
+                    "id": wr_data.get("word_id"),
+                    "word": wr_data.get("word"),
+                    "pie_root": wr_data.get("word_pie_root"),
+                    "pie_lineage": wr_data.get("pie_lineage"),
+                    "lineage": wr_data.get("lineage"),
+                    "semantic_pattern": wr_data.get("word_semantic_pattern"),
+                    "relation_descriptor": wr_data.get("relation_descriptor"),
+                    "ql_position": wr_data.get("ql_position"),
+                    "enriched_at": wr_data.get("enriched_at")
+                })
+
+            words = [wn["word"] for wn in word_nodes if wn.get("word")]
+
+            # Normalize quaternal_type to lowercase for frontend (backend stores uppercase)
+            raw_quaternal_type = record.get("quaternal_type", "FOUR_PART")
+            quaternal_type_normalized = raw_quaternal_type.lower() if raw_quaternal_type else "four_part"
+
+            community = {
+                "id": record["id"],
+                "name": record["name"],
+                "group_id": record["group_id"],
+                "description": record["description"] or "",
+                "quaternal_type": quaternal_type_normalized,
+                "words": words,
+                "pie_root": record.get("pie_root"),
+                "semantic_pattern": record.get("semantic_pattern"),
+                "thread_id": record.get("thread_id"),  # Thread ID from agent context
+                "etymology_session_id": record.get("etymology_session_id"),  # Etymology Session UUID
+                "user_id": record.get("user_id"),
+                "bimba_coordinate": record.get("suggestion_resonance"),
+                "domain": record.get("domain", "EA"),
+                "formed_at": record["formed_at"],
+                "last_activity": record["formed_at"],  # TODO: track actual last activity
+                "word_nodes": word_nodes
+            }
+            communities.append(community)
 
         return {
             "success": True,
@@ -587,7 +776,7 @@ async def list_aphorisms(
         LIMIT $limit
         """
 
-        records, _, _ = await service.neo4j_client.execute_query(query, params)
+        records, _, _ = service.neo4j_client.execute_query(query, params)
 
         aphorisms = [dict(record["a"]) for record in records]
 
@@ -621,7 +810,7 @@ async def get_bimba_resonances(
         MATCH (c:EA:Episodic {id: $community_id})
         RETURN c
         """
-        records, _, _ = await service.neo4j_client.execute_query(query, {"community_id": community_id})
+        records, _, _ = service.neo4j_client.execute_query(query, {"community_id": community_id})
 
         if not records:
             raise HTTPException(status_code=404, detail=f"Community {community_id} not found")
@@ -643,6 +832,93 @@ async def get_bimba_resonances(
         raise
     except Exception as e:
         logger.error(f"Error getting resonances for community {community_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/etymology/sessions/backfill-words")
+async def backfill_session_words(
+    group_id: str = Query(..., description="Group ID for multi-tenant isolation"),
+    service: GraphitiService = Depends(get_graphiti_service)
+):
+    """
+    Backfill session words_explored and pie_roots_discovered from existing communities.
+
+    Story 08.10 - Fix missing session data arrays
+    """
+    try:
+        # Get all EA sessions for this group
+        query = """
+        MATCH (s:EA:Session {group_id: $group_id})
+        RETURN s
+        """
+
+        sessions_records, _, _ = service.neo4j_client.execute_query(
+            query, {"group_id": group_id}
+        )
+
+        updated_count = 0
+
+        for record in sessions_records:
+            session = dict(record["s"])
+            session_id = session.get("session_id")
+
+            if not session_id:
+                continue
+
+            # Get all communities for this session
+            community_query = """
+            MATCH (c:EA:Episodic {session_id: $session_id})
+            RETURN c
+            """
+
+            communities_records, _, _ = service.neo4j_client.execute_query(
+                community_query, {"session_id": session_id}
+            )
+
+            if not communities_records:
+                continue
+
+            # Collect words and PIE roots
+            words_set = set(session.get("words_explored", []))
+            pie_roots_set = set(session.get("pie_roots_discovered", []))
+
+            for comm_record in communities_records:
+                community = dict(comm_record["c"])
+
+                for word in community.get("words", []):
+                    words_set.add(word)
+
+                pie_root = community.get("pie_root")
+                if pie_root:
+                    pie_roots_set.add(pie_root)
+
+            # Update session
+            if words_set or pie_roots_set:
+                update_query = """
+                MATCH (s:EA:Session {session_id: $session_id})
+                SET s.words_explored = $words,
+                    s.pie_roots_discovered = $pie_roots
+                RETURN s
+                """
+
+                service.neo4j_client.execute_query(
+                    update_query,
+                    {
+                        "session_id": session_id,
+                        "words": list(words_set),
+                        "pie_roots": list(pie_roots_set)
+                    }
+                )
+                updated_count += 1
+
+        return {
+            "success": True,
+            "updated_sessions": updated_count,
+            "message": f"Backfilled {updated_count} sessions"
+        }
+
+    except Exception as e:
+        logger.error(f"Error backfilling sessions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -669,7 +945,7 @@ async def get_etymology_tree(
         ORDER BY c.formed_at DESC
         LIMIT $limit
         """
-        records, _, _ = await service.neo4j_client.execute_query(
+        records, _, _ = service.neo4j_client.execute_query(
             query, {"word": word, "limit": limit}
         )
 
@@ -721,7 +997,7 @@ async def get_ql_structure(
         MATCH (c:EA:Episodic {id: $community_id})
         RETURN c
         """
-        records, _, _ = await service.neo4j_client.execute_query(
+        records, _, _ = service.neo4j_client.execute_query(
             query, {"community_id": community_id}
         )
 
@@ -907,9 +1183,7 @@ async def create_etymology_session(
     Story 08.07 Enhancement - AC: 8 (Personal Exploration Tracking)
     """
     try:
-        import traceback
-        logger.warning(f"🚨 ETYMOLOGY SESSION CREATION REQUESTED - user_id: {request.user_id}, title: {request.title}")
-        logger.warning(f"🚨 CALL STACK:\n{''.join(traceback.format_stack())}")
+        logger.info(f"Creating etymology session - user_id: {request.user_id}, title: {request.title}")
         return await service.create_session(request)
     except Exception as e:
         logger.error(f"Error creating etymology session: {e}")
@@ -942,6 +1216,37 @@ async def get_etymology_session(
         raise
     except Exception as e:
         logger.error(f"Error getting etymology session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/etymology/sessions/thread/{thread_id}")
+async def get_session_by_thread(
+    thread_id: str,
+    service: EtymologySessionService = Depends(get_session_service)
+):
+    """
+    Get session ID for a given thread ID.
+
+    Used by frontend to restore session context after page reload.
+    When user selects a thread, this endpoint returns the session_id
+    so session data/stats/communities can load properly.
+
+    Story 08.13 - Bug Fix: Stats panel reload issue
+    """
+    try:
+        session = await service.get_session_by_thread_id(thread_id)
+        if not session:
+            raise HTTPException(status_code=404, detail=f"No session found for thread {thread_id}")
+
+        return {
+            "success": True,
+            "session_id": session.session_id,
+            "thread_id": thread_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting session for thread {thread_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -1015,34 +1320,33 @@ async def add_thread_to_session(
                         is_new_session=is_new_session
                     )
 
-                    # Insert onboarding message into conversations collection
-                    db = MongoDBClient().get_database()
-                    conversations_coll = db.get_collection("conversations")
+                    # Insert onboarding message using ConversationService
+                    from shared.database.conversation_service import ConversationService
+
+                    conv_service = ConversationService()
 
                     # Check if thread already has messages to avoid duplicates
-                    existing_messages = conversations_coll.count_documents({"session_id": thread_id})
+                    existing_thread = await conv_service.get_thread(thread_id)
 
-                    if existing_messages == 0:
+                    if not existing_thread or len(existing_thread.messages) == 0:
                         # Create first assistant message with onboarding
-                        onboarding_doc = {
-                            "session_id": thread_id,
-                            "user_id": session_response.user_id,
-                            "persona": "epii",
-                            "user_message": "",  # No user message for onboarding
-                            "agent_response": onboarding_text,
-                            "metadata": {
+                        await conv_service.add_turn(
+                            thread_id=thread_id,
+                            user_id=session_response.user_id,
+                            user_message="",  # No user message for onboarding
+                            agent_response=onboarding_text,
+                            persona="epii",
+                            context="#5-5",  # Etymology Archaeology coordinate
+                            etymology_session_id=session_id,
+                            metadata={
                                 "execution_time_ms": 0,
                                 "is_onboarding": True,
                                 "etymology_session_id": session_id
-                            },
-                            "context": "#5-5",  # Etymology Archaeology coordinate
-                            "created_at": datetime.now(timezone.utc)
-                        }
-
-                        conversations_coll.insert_one(onboarding_doc)
+                            }
+                        )
                         logger.info(f"✅ Created onboarding message for thread {thread_id} in session {session_id}")
                     else:
-                        logger.info(f"⏭️ Skipped onboarding - thread {thread_id} already has {existing_messages} messages")
+                        logger.info(f"⏭️ Skipped onboarding - thread {thread_id} already has {len(existing_thread.messages)} messages")
 
                 except Exception as onboarding_error:
                     logger.error(f"Failed to create onboarding message: {onboarding_error}")
@@ -1058,16 +1362,17 @@ async def add_thread_to_session(
 @router.get("/etymology/sessions/{session_id}/threads")
 async def list_etymology_session_threads(
     session_id: str,
-    service: EtymologySessionService = Depends(get_session_service)
+    service: EtymologySessionService = Depends(get_session_service),
+    graphiti_service: GraphitiService = Depends(get_graphiti_service)
 ) -> Dict[str, Any]:
     """
     List threads for a specific Etymology Session.
 
-    Returns thread metadata by joining Etymology Session thread_ids with conversations collection.
-    Provides thread titles, message counts, and timestamps for UI display.
+    Returns thread metadata by joining Etymology Session thread_ids with conversation_threads collection.
+    Provides thread titles, message counts, timestamps, and latest communities formed in each thread.
     """
     try:
-        from shared.database.mongodb_client import MongoDBClient
+        from shared.database.conversation_service import ConversationService
 
         # Get Etymology Session to retrieve thread_ids
         session_response = await service.get_session(session_id)
@@ -1078,35 +1383,62 @@ async def list_etymology_session_threads(
         if not thread_ids:
             return {"threads": []}
 
-        # Query conversations collection for thread metadata
-        db = MongoDBClient().get_database()
-        conversations_coll = db.get_collection("conversations")
+        # Query conversation_threads collection for thread metadata
+        conv_service = ConversationService()
 
         threads = []
         for thread_id in thread_ids:
-            # Get first message for title
-            first_doc = conversations_coll.find_one(
-                {"session_id": thread_id},
-                sort=[("created_at", 1)]
-            )
+            # Get thread from conversation_threads
+            thread = await conv_service.get_thread(thread_id)
 
-            if first_doc:
-                # Count messages in thread
-                message_count = conversations_coll.count_documents({"session_id": thread_id})
+            if thread:
+                # Use thread_title from metadata if available, otherwise use first user message
+                thread_title = thread.metadata.get("thread_title")
+                if not thread_title and thread.messages:
+                    first_user_msg = next((m for m in thread.messages if m.role == "user"), None)
+                    if first_user_msg:
+                        thread_title = first_user_msg.content[:100]
+                    else:
+                        thread_title = "Untitled"
+                else:
+                    thread_title = thread_title or "Untitled"
+
+                # Fetch latest communities created in this thread (max 3)
+                # Communities store thread_id in attributes.thread_id
+                communities_query = """
+                MATCH (c:Entity:EA:Community)
+                WHERE c.attributes.thread_id = $thread_id
+                  AND c.attributes.etymology_session_id = $session_id
+                RETURN c.name as name, c.created_at as created_at
+                ORDER BY c.created_at DESC
+                LIMIT 3
+                """
+
+                try:
+                    community_records, _, _ = graphiti_service.neo4j_client.execute_query(
+                        communities_query,
+                        {"thread_id": thread_id, "session_id": session_id}
+                    )
+                    latest_communities = [rec["name"] for rec in community_records]
+                except Exception as comm_err:
+                    logger.warning(f"Failed to fetch communities for thread {thread_id}: {comm_err}")
+                    latest_communities = []
 
                 threads.append({
                     "thread_id": thread_id,
-                    "title": first_doc.get("user_message", "Untitled")[:100],  # First message as title
-                    "created_at": first_doc.get("created_at").isoformat() if first_doc.get("created_at") else None,
-                    "message_count": message_count
+                    "title": thread_title,
+                    "created_at": thread.created_at.isoformat(),
+                    "message_count": len(thread.messages),
+                    "latest_communities": latest_communities  # NEW: Community names
                 })
             else:
                 # Thread exists in session but has no messages yet
                 threads.append({
                     "thread_id": thread_id,
-                    "title": "Empty thread",
+                    "title": None,  # Will show date/time only in frontend
                     "created_at": None,
-                    "message_count": 0
+                    "message_count": 0,
+                    "latest_communities": []
                 })
 
         return {"threads": threads}
@@ -1146,9 +1478,10 @@ async def archive_etymology_session(
     service: EtymologySessionService = Depends(get_session_service)
 ):
     """
-    Archive an etymology session.
+    Archive an etymology session (soft delete).
 
-    Sets session status to ARCHIVED (soft delete).
+    Sets session status to ARCHIVED. Session remains in database but is hidden from UI.
+    Use DELETE /etymology/sessions/{session_id}/permanent for irreversible hard delete.
 
     Story 08.07 Enhancement - AC: 8 (Personal Exploration Tracking)
     """
@@ -1162,6 +1495,304 @@ async def archive_etymology_session(
         raise
     except Exception as e:
         logger.error(f"Error archiving etymology session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/etymology/sessions/{session_id}/permanent")
+async def delete_etymology_session_permanent(
+    session_id: str,
+    service: EtymologySessionService = Depends(get_session_service)
+):
+    """
+    PERMANENTLY delete an etymology session with CASCADE cleanup.
+
+    ⚠️ IRREVERSIBLE ACTION ⚠️
+
+    Deletes:
+    - Session document from MongoDB
+    - All linked thread messages from conversations collection
+    - Session from Redis cache
+    - Entry from user's session set
+
+    Does NOT delete:
+    - Graphiti communities (may be referenced by other sessions)
+    - Neo4j episodic data (preserves knowledge graph)
+
+    Use DELETE /etymology/sessions/{session_id} for safe archiving instead.
+
+    Story: Cascade Deletion Implementation
+    """
+    try:
+        success = await service.delete_session_cascade(session_id)
+        if success:
+            return {
+                "success": True,
+                "message": f"Session {session_id} permanently deleted with cascade cleanup"
+            }
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Session {session_id} not found"
+            )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error permanently deleting session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==============================================================================
+# MEF Resonance Analysis Endpoints - Story 08.13
+# ==============================================================================
+
+@router.post("/etymology/communities/{community_id}/analyze-mef")
+async def trigger_mef_analysis(
+    community_id: str,
+    group_id: str = Query(..., description="Multi-tenant group identifier"),
+    user_id: str = Query(..., description="User ID for authorization"),
+    background_tasks: BackgroundTasks = None,
+    service: GraphitiService = Depends(get_graphiti_service)
+):
+    """
+    Trigger MEF (Meta-Epistemic Framework) resonance analysis for a community.
+
+    Manual trigger endpoint called by UI "Analyze MEF" button.
+    Queues background task for async 6-lens MEF analysis via Parashakti agent.
+
+    Story 08.13 - AC: 4 (API Endpoints)
+
+    Args:
+        community_id: Etymology community UUID
+        group_id: Multi-tenant group identifier
+        user_id: User ID for community ownership validation
+        background_tasks: FastAPI background tasks queue
+        service: GraphitiService dependency
+
+    Returns:
+        JSON with success status, is_reanalysis flag, and message
+
+    Raises:
+        404: Community not found
+        403: User doesn't own community
+    """
+    try:
+        # STEP 1: Validate community exists
+        community_query = """
+        MATCH (c:Entity:EA:Community {uuid: $community_id, group_id: $group_id})
+        RETURN c.user_id as owner_id, c.name as name
+        """
+        records, _, _ = service.neo4j_client.execute_query(
+            community_query,
+            {"community_id": community_id, "group_id": group_id}
+        )
+
+        if not records:
+            logger.warning(f"Community {community_id} not found for group {group_id}")
+            raise HTTPException(
+                status_code=404,
+                detail=f"Community {community_id} not found"
+            )
+
+        # STEP 2: Ownership validation REMOVED
+        # Community ownership validation removed - users can analyze any community
+        # in their group_id scope (multi-tenant isolation via group_id)
+        community_owner = records[0]["owner_id"]
+        logger.debug(
+            f"User {user_id} analyzing community {community_id} "
+            f"(owner: {community_owner})"
+        )
+
+        # STEP 3: Check for existing resonances (set is_reanalysis flag)
+        resonance_check_query = """
+        MATCH (c:Entity:EA:Community {uuid: $community_id})-[:RESONATES_WITH]->(r:BimbaResonance)
+        RETURN count(r) as resonance_count
+        """
+        resonance_records, _, _ = service.neo4j_client.execute_query(
+            resonance_check_query,
+            {"community_id": community_id}
+        )
+
+        resonance_count = resonance_records[0]["resonance_count"] if resonance_records else 0
+        is_reanalysis = resonance_count > 0
+
+        logger.info(
+            f"MEF analysis trigger for community {community_id}: "
+            f"is_reanalysis={is_reanalysis} (found {resonance_count} existing resonances)"
+        )
+
+        # STEP 4: Queue background task for MEF analysis
+        if background_tasks:
+            # Import MEF service function
+            from backend.epi_logos_system.cag.graphiti.mef_service import run_mef_analysis
+
+            background_tasks.add_task(
+                run_mef_analysis,
+                community_id=community_id,
+                service=service
+            )
+
+            logger.info(f"Queued MEF analysis background task for community {community_id}")
+
+            return {
+                "success": True,
+                "status": "queued",
+                "is_reanalysis": is_reanalysis,
+                "message": (
+                    f"MEF analysis queued for '{records[0]['name']}'. "
+                    f"{'Re-analyzing (previous resonances will be cleared).' if is_reanalysis else 'First analysis.'}"
+                )
+            }
+        else:
+            # Fallback for testing environments without BackgroundTasks
+            logger.warning("BackgroundTasks not available, returning mock response")
+            return {
+                "success": True,
+                "status": "mock",
+                "is_reanalysis": is_reanalysis,
+                "message": "MEF analysis would be queued (BackgroundTasks not available)"
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error triggering MEF analysis for community {community_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/etymology/communities/{community_id}/resonances")
+async def get_community_resonances(
+    community_id: str,
+    group_id: str = Query(..., description="Multi-tenant group identifier"),
+    user_id: str = Query(..., description="User ID for authorization"),
+    service: GraphitiService = Depends(get_graphiti_service)
+):
+    """
+    Get MEF resonances for an etymology community.
+
+    Retrieves all BimbaResonance nodes linked to the community,
+    with coordinate details and MEF lens insights.
+
+    Story 08.13 - AC: 4 (API Endpoints)
+
+    Args:
+        community_id: Etymology community UUID
+        group_id: Multi-tenant group identifier
+        user_id: User ID for community ownership validation
+        service: GraphitiService dependency
+
+    Returns:
+        JSON with resonances array (ordered by strength DESC)
+
+    Raises:
+        404: Community not found
+        403: User doesn't own community
+    """
+    try:
+        import json
+
+        # STEP 1: Validate community exists and user owns it
+        community_query = """
+        MATCH (c:Entity:EA:Community {uuid: $community_id, group_id: $group_id})
+        RETURN c.user_id as owner_id, c.name as name
+        """
+        records, _, _ = service.neo4j_client.execute_query(
+            community_query,
+            {"community_id": community_id, "group_id": group_id}
+        )
+
+        if not records:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Community {community_id} not found"
+            )
+
+        # Ownership validation REMOVED - users can view any community resonances
+        # in their group_id scope (multi-tenant isolation via group_id)
+        community_owner = records[0]["owner_id"]
+        logger.debug(
+            f"User {user_id} viewing resonances for community {community_id} "
+            f"(owner: {community_owner})"
+        )
+
+        # STEP 2: Query resonances with coordinate details
+        resonance_query = """
+        MATCH (c:Entity:EA:Community {uuid: $community_id})
+              -[:RESONATES_WITH]->(r:BimbaResonance:EA:Episodic)
+              -[:TARGETS]->(coord:BimbaNode)
+        RETURN r.uuid as id,
+               coord.bimbaCoordinate as coordinate,
+               coord.name as coordinate_name,
+               r.resonance_type as resonance_type,
+               r.resonance_strength as resonance_strength,
+               r.description as description,
+               r.detected_via_lens as detected_via_lens,
+               r.detected_via_tool as detected_via_tool,
+               r.reasoning_summary as reasoning_summary,
+               r.deepseek_reasoning_chain as deepseek_reasoning,
+               r.detected_at as detected_at,
+               r.mef_archetypal as mef_archetypal,
+               r.mef_causal as mef_causal,
+               r.mef_logical as mef_logical,
+               r.mef_processual as mef_processual,
+               r.mef_meta_epistemic as mef_meta_epistemic,
+               r.mef_divine_scalar as mef_divine_scalar
+        ORDER BY r.resonance_strength DESC
+        """
+
+        resonance_records, _, _ = service.neo4j_client.execute_query(
+            resonance_query,
+            {"community_id": community_id}
+        )
+
+        # STEP 3: Parse resonances and lens insights
+        resonances = []
+        for record in resonance_records:
+            # Parse JSON lens insights (stored as JSON strings in Neo4j)
+            def parse_lens_json(lens_str):
+                if lens_str:
+                    try:
+                        return json.loads(lens_str)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse lens JSON: {lens_str}")
+                        return None
+                return None
+
+            resonance = {
+                "id": record["id"],
+                "coordinate": record["coordinate"],
+                "coordinate_name": record["coordinate_name"],
+                "resonance_type": record["resonance_type"],
+                "resonance_strength": record["resonance_strength"],
+                "description": record["description"],
+                "detected_via_lens": record["detected_via_lens"],
+                "detected_via_tool": record["detected_via_tool"],
+                "reasoning_summary": record["reasoning_summary"],
+                "deepseek_reasoning": record["deepseek_reasoning"],
+                "detected_at": record["detected_at"],
+                # Parse MEF lens insights from JSON
+                "mef_archetypal": parse_lens_json(record["mef_archetypal"]),
+                "mef_causal": parse_lens_json(record["mef_causal"]),
+                "mef_logical": parse_lens_json(record["mef_logical"]),
+                "mef_processual": parse_lens_json(record["mef_processual"]),
+                "mef_meta_epistemic": parse_lens_json(record["mef_meta_epistemic"]),
+                "mef_divine_scalar": parse_lens_json(record["mef_divine_scalar"])
+            }
+            resonances.append(resonance)
+
+        logger.info(
+            f"Retrieved {len(resonances)} resonances for community {community_id}"
+        )
+
+        return {
+            "success": True,
+            "resonances": resonances,
+            "count": len(resonances)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving resonances for community {community_id}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

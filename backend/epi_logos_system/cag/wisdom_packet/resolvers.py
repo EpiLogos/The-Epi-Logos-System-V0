@@ -13,6 +13,9 @@ from backend.epi_logos_system.cag.wisdom_packet.service import (
     WisdomPacketFocus as ServiceFocus
 )
 from shared.database import Neo4jClient, RedisClient
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # GraphQL enum for synthesis focus
@@ -94,8 +97,21 @@ def get_wisdom_packet_resolver(
     neo4j_client = Neo4jClient()
     redis_client = RedisClient()
 
-    # Initialize service
-    service = WisdomPacketService(neo4j_client, redis_client)
+    # Initialize AgentFactory for Epii synthesis (Sprint 4 enhancement)
+    agent_factory = None
+    try:
+        from agentic.agents.factory import AgentFactory
+        agent_factory = AgentFactory()
+        logger.info("Initialized AgentFactory for Epii agent narrative synthesis")
+    except Exception as e:
+        logger.warning(f"AgentFactory initialization failed, using template synthesis: {e}")
+
+    # Initialize service with agent factory
+    service = WisdomPacketService(
+        neo4j_client,
+        redis_client,
+        agent_factory=agent_factory
+    )
 
     # Convert GraphQL enum to service enum
     service_focus = None
@@ -150,11 +166,12 @@ def get_wisdom_packet_resolver(
         )
 
     except ValueError as e:
-        # Coordinate not found
-        return None
+        # Coordinate not found or synthesis failed
+        logger.error(f"ValueError generating WisdomPacket for {coordinate}: {e}")
+        # Re-raise as GraphQL error with full message
+        raise ValueError(f"Wisdom packet generation failed for {coordinate}: {str(e)}")
     except Exception as e:
-        # Log error and return None
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Error generating WisdomPacket for {coordinate}: {e}")
-        return None
+        # Log and re-raise with full error details
+        logger.error(f"Exception generating WisdomPacket for {coordinate}: {e}", exc_info=True)
+        # Re-raise as GraphQL error with full message and traceback
+        raise Exception(f"Wisdom packet generation failed for {coordinate}: {str(e)}")

@@ -15,6 +15,36 @@ export interface ThreadSummary {
   title?: string;
   created_at: string | null;
   message_count?: number;
+  latest_communities?: string[];  // NEW: Latest community names
+}
+
+/**
+ * Format thread title with EA prefix, date/time, and optional summary
+ * Format: [EA] Oct 29, 2:34 PM • summary
+ */
+function formatThreadTitle(thread: ThreadSummary): string {
+  const createdAt = thread.created_at ? new Date(thread.created_at) : new Date();
+
+  // Format date and time
+  const dateStr = createdAt.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  });
+  const timeStr = createdAt.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+
+  // Build title with EA prefix
+  const baseTitle = `[EA] ${dateStr}, ${timeStr}`;
+
+  // Add summary if available (and it's not the default raw title)
+  if (thread.title && !thread.title.startsWith('Thread ') && thread.title !== 'Untitled' && thread.title !== 'Empty thread') {
+    return `${baseTitle} • ${thread.title}`;
+  }
+
+  return baseTitle;
 }
 
 interface SessionThreadsPanelProps {
@@ -44,8 +74,8 @@ export function SessionThreadsPanel({
         >
           ← Back to Sessions
         </button>
-        <div className="text-sm text-gray-200 mb-1 truncate">{sessionTitle}</div>
-        <div className="text-xs text-gray-500">Threads</div>
+        <div className="text-sm mb-1 truncate font-medium" style={{ color: '#4A1942' }}>{sessionTitle}</div>
+        <div className="text-xs font-medium" style={{ color: '#4A1942' }}>Threads</div>
       </div>
 
       {/* New Thread Button */}
@@ -74,17 +104,21 @@ export function SessionThreadsPanel({
               )}
               onClick={() => onThreadSelect(thread.thread_id)}
             >
-              <div className="text-gray-200 truncate" title={thread.title || `Thread ${thread.thread_id.slice(0, 8)}...`}>
-                {thread.title || `Thread ${thread.thread_id.slice(0, 8)}...`}
+              <div className="flex items-start justify-between gap-2">
+                <div className="font-medium truncate flex-1" style={{ color: '#4A1942' }} title={formatThreadTitle(thread)}>
+                  {formatThreadTitle(thread)}
+                </div>
+                {/* Latest communities on the right */}
+                {thread.latest_communities && thread.latest_communities.length > 0 && (
+                  <div className="text-[10px] text-purple-400 font-mono shrink-0">
+                    {thread.latest_communities.slice(0, 2).join(', ')}
+                    {thread.latest_communities.length > 2 && ` +${thread.latest_communities.length - 2}`}
+                  </div>
+                )}
               </div>
               {thread.message_count !== undefined && (
                 <div className="text-gray-500 mt-1.5">
                   {thread.message_count} message{thread.message_count !== 1 ? 's' : ''}
-                </div>
-              )}
-              {thread.created_at && (
-                <div className="text-gray-600 mt-1.5 text-[11px]">
-                  {new Date(thread.created_at).toLocaleString()}
                 </div>
               )}
             </div>

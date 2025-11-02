@@ -9,37 +9,43 @@ UnifiedOrchestrator infrastructure.
 import asyncio
 import json
 import logging
+import os
 from typing import Optional, List, Dict, Any, AsyncIterator, Callable
 from datetime import datetime, timezone
 
 from agentic.agents.orchestrator.orchestrator_agent import (
-    orchestrator_agent, 
-    OrchestratorDeps, 
-    OrchestratorResponse,
-    is_agent_available,
-    create_orchestrator_agent
+    OrchestratorDeps,
+    is_agent_available
 )
 
 # Import existing infrastructure
 from agentic.agents.orchestrator.types import PersonaType
 from agentic.agents.orchestrator.session.session import OrchestratorSession
 
+# Import multi-agent infrastructure
+from agentic.agents.agent_router import AgentRouter
+
 logger = logging.getLogger(__name__)
 
 
 class AgentRunner:
-    """Service to run the Pydantic AI agent with proper streaming and integration"""
-    
+    """Service to run the Pydantic AI agent with proper streaming and integration
+
+    Uses AgentRouter for multi-agent constellation pattern.
+    Legacy orchestrator_agent is DEPRECATED and maintained only for backward compatibility.
+    """
+
     def __init__(self):
         """Initialize the agent runner"""
         if not is_agent_available():
             raise RuntimeError("Pydantic AI agent is not available")
-        
-        self.agent = orchestrator_agent
-        logger.info("AgentRunner initialized with Pydantic AI agent")
+
+        # Multi-agent routing via AgentRouter (factory pattern)
+        self.router = AgentRouter()
+        logger.info("AgentRunner initialized with AgentRouter (factory-based multi-agent constellation)")
     
-    def _prepare_dependencies(
-        self, 
+    async def _prepare_dependencies(
+        self,
         session: OrchestratorSession,
         session_manager: Any,
         conversation_manager: Any,
@@ -48,19 +54,61 @@ class AgentRunner:
         graphiti_client: Optional[Any] = None,
         context_package: Optional[Dict[str, Any]] = None
     ) -> OrchestratorDeps:
-        """Prepare the dependencies container for the agent"""
-        
+        """Prepare the dependencies container for the agent (with EA mode pre-population)"""
+
+        # Pre-populate state dict with EA mode detection
+        # This MUST happen in async context before OrchestratorDeps.__post_init__
+        state_dict = {}
+
+        try:
+            # Check if session is Etymology Archaeology mode (#5-5)
+            if session_manager and hasattr(session_manager, 'get_session'):
+                # Call async get_session safely in async context
+                sess_data = await session_manager.get_session(session.session_id)
+                if sess_data:
+                    metadata = sess_data.get("metadata", {}) if isinstance(sess_data, dict) else {}
+                    if metadata.get("context") == "#5-5":
+                        state_dict['ea_mode'] = True
+                        logger.info(f"✅ Pre-populated EA mode for session {session.session_id}")
+        except Exception as e:
+            logger.debug(f"EA mode pre-population failed (non-critical): {e}")
+
         return OrchestratorDeps(
             session_id=session.session_id,
             user_id=session.user_id,
             redis_client=session_manager,
-            mongodb_client=conversation_manager,
+            conversation_service=conversation_manager,
             bimba_client=bimba_client,
             lightrag_client=lightrag_client,
             graphiti_client=graphiti_client,
             current_persona=session.active_persona or "system",
-            context_package=context_package
+            context_package=context_package,
+            state=state_dict  # Pass pre-populated state dict
         )
+
+    async def _run_agent(
+        self,
+        message: str,
+        deps: OrchestratorDeps,
+        persona: str,
+        model_name: Optional[str],
+        message_history: Optional[List]
+    ) -> Any:
+        """
+        Internal method to run agent - uses multi-agent constellation pattern.
+
+        Returns the agent result object.
+        """
+        # Multi-agent mode: ALWAYS route via AgentRouter (factory pattern)
+        logger.info(f"🌟 MULTI-AGENT MODE: Routing request via AgentRouter")
+        result = await self.router.route_request(
+            message=message,
+            deps=deps,
+            persona=persona,
+            model_name=model_name,
+            message_history=message_history  # Pass message history through
+        )
+        return result
     
     async def run_streaming(
         self, 
@@ -81,8 +129,8 @@ class AgentRunner:
         Yields text chunks as they're generated, then handles final result processing
         """
         try:
-            # Prepare dependencies
-            deps = self._prepare_dependencies(
+            # Prepare dependencies (async - includes EA mode pre-population)
+            deps = await self._prepare_dependencies(
                 session=session,
                 session_manager=session_manager,
                 conversation_manager=conversation_manager,
@@ -232,8 +280,8 @@ class AgentRunner:
         This is useful for API endpoints that need structured responses
         """
         try:
-            # Prepare dependencies
-            deps = self._prepare_dependencies(
+            # Prepare dependencies (async - includes EA mode pre-population)
+            deps = await self._prepare_dependencies(
                 session=session,
                 session_manager=session_manager,
                 conversation_manager=conversation_manager,
@@ -242,26 +290,10 @@ class AgentRunner:
                 graphiti_client=graphiti_client,
                 context_package=context_package
             )
-            
-            # Use specified model or default agent
-            current_agent = self.agent
-            if model_name:
-                try:
-                    current_agent = create_orchestrator_agent(model_name)
-                    logger.info(f"🤖 STRUCTURED AGENT CREATED: model={model_name}, session={session.session_id}")
-                except Exception as e:
-                    logger.warning(f"❌ STRUCTURED AGENT CREATION FAILED: model={model_name}, error={e}, using default")
-                    current_agent = self.agent
-            else:
-                logger.info(f"🤖 USING DEFAULT AGENT FOR STRUCTURED RUN: session={session.session_id}")
-            
-            # Log the actual model being used
-            actual_model = getattr(current_agent, 'model', 'unknown')
-            logger.info(f"📡 STRUCTURED RUN MODEL: {actual_model}")
+
             logger.info(f"🚀 STARTING STRUCTURED RUN: session={session.session_id}, persona={deps.current_persona}")
             logger.info(f"💬 USER MESSAGE: {message}")
-            
-            # Run the agent
+
             # Auto-hydrate message history from conversation store if not provided
             effective_history = message_history
             if effective_history is None and conversation_manager is not None:
@@ -272,11 +304,14 @@ class AgentRunner:
 
             import time
             start_time = time.time()
-            
-            result = await current_agent.run(
-                message,
+
+            # Run the agent using unified routing
+            result = await self._run_agent(
+                message=message,
                 deps=deps,
-                message_history=effective_history or []
+                persona=deps.current_persona,
+                model_name=model_name,
+                message_history=effective_history
             )
             
             structured_output = result.output
@@ -362,8 +397,8 @@ class AgentRunner:
         This provides detailed insight into what the agent is doing
         """
         try:
-            # Prepare dependencies
-            deps = self._prepare_dependencies(
+            # Prepare dependencies (async - includes EA mode pre-population)
+            deps = await self._prepare_dependencies(
                 session=session,
                 session_manager=session_manager,
                 conversation_manager=conversation_manager,

@@ -28,7 +28,7 @@ export function AtelierHeader() {
       </div>
 
       {/* Page Title and Coordinate - natural position, icon overlays on top */}
-      <h2 className="text-lg font-semibold text-gray-300 mb-1">
+      <h2 className="text-lg font-semibold mb-1" style={{ color: '#4A1942' }}>
         Atelier
       </h2>
       <div className="text-xs text-gray-500 font-mono hover:text-blue-400 transition-colors cursor-default">

@@ -9,7 +9,7 @@
  * - Thread ID is used for chat messages
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useThreads, type UseThreadsConfig, type UseThreadsReturn } from './useThreads';
 import { DEFAULT_ENDPOINTS, createRequestConfig, parseAPIResponse } from '@/domains/chat/api.domain';
 
@@ -18,7 +18,7 @@ export interface UseEtymologyThreadsConfig extends Omit<UseThreadsConfig, 'endpo
 }
 
 export interface UseEtymologyThreadsReturn extends Omit<UseThreadsReturn, 'createThread'> {
-  createThread: () => Promise<string | null>;
+  createThread: (existingSessionId?: string) => Promise<string | null>;
   currentSessionId: string | null;  // CRITICAL: Session ID for polling
 }
 
@@ -34,40 +34,93 @@ export function useEtymologyThreads(config: UseEtymologyThreadsConfig): UseEtymo
   });
 
   /**
+   * CRITICAL FIX: Restore session ID when thread is selected after page reload
+   *
+   * When user selects a thread from the sidebar, fetch that thread's session_id
+   * and update currentSessionId so session data/stats/communities load properly.
+   */
+  useEffect(() => {
+    const fetchSessionForThread = async () => {
+      if (!baseThreads.activeThreadId) {
+        setCurrentSessionId(null);
+        return;
+      }
+
+      try {
+        // Fetch thread metadata which includes session_id
+        const resp = await fetch(
+          `http://localhost:8000/api/graphiti/etymology/sessions/thread/${baseThreads.activeThreadId}`
+        );
+
+        if (!resp.ok) {
+          console.warn(`Failed to fetch session for thread ${baseThreads.activeThreadId}`);
+          return;
+        }
+
+        const data = await resp.json();
+
+        if (data.success && data.session_id) {
+          console.log(`✅ Restored session ${data.session_id} for thread ${baseThreads.activeThreadId}`);
+          setCurrentSessionId(data.session_id);
+        }
+      } catch (e) {
+        console.error('Error fetching session for thread:', e);
+      }
+    };
+
+    fetchSessionForThread();
+  }, [baseThreads.activeThreadId]);
+
+  /**
    * Create Etymology Session → Thread → Link them
    *
    * PROPER FLOW:
+   * Option A (New Session):
    * 1. POST /api/graphiti/etymology/sessions - Creates Etymology Session
    * 2. POST /api/graphiti/etymology/sessions/{session_id}/threads - Links thread to session
    * 3. Returns thread_id for chat + stores session_id for polling
+   *
+   * Option B (Existing Session):
+   * 1. Generate thread_id
+   * 2. POST /api/graphiti/etymology/sessions/{existing_session_id}/threads - Links thread to existing session
+   * 3. Returns thread_id for chat
    */
-  const createEtymologyThread = useCallback(async () => {
+  const createEtymologyThread = useCallback(async (existingSessionId?: string) => {
     try {
-      // Step 1: Create Etymology Session
-      const sessionResp = await fetch(
-        'http://localhost:8000/api/graphiti/etymology/sessions',
-        createRequestConfig({
-          user_id: config.userId,
-          title: `Etymology Session ${new Date().toLocaleDateString()}`,
-          description: 'Etymological archaeology exploration',
-          coordinate_context: '#5-5'
-        })
-      );
+      let sessionId: string;
 
-      const sessionData = await parseAPIResponse(sessionResp);
-      if (!sessionData.success) {
-        throw new Error(sessionData.message || 'Failed to create etymology session');
+      if (existingSessionId) {
+        // Option B: Add thread to existing session
+        console.log('🔗 Adding new thread to existing session:', existingSessionId);
+        sessionId = existingSessionId;
+        setCurrentSessionId(sessionId);
+      } else {
+        // Option A: Create new Etymology Session
+        const sessionResp = await fetch(
+          'http://localhost:8000/api/graphiti/etymology/sessions',
+          createRequestConfig({
+            user_id: config.userId,
+            title: `Etymology Session ${new Date().toLocaleDateString()}`,
+            description: 'Etymological archaeology exploration',
+            coordinate_context: '#5-5'
+          })
+        );
+
+        const sessionData = await parseAPIResponse(sessionResp);
+        if (!sessionData.success) {
+          throw new Error(sessionData.message || 'Failed to create etymology session');
+        }
+
+        sessionId = sessionData.session?.session_id;
+        if (!sessionId) {
+          throw new Error('No session_id returned from session creation');
+        }
+
+        console.log('✅ Created Etymology Session:', sessionId);
+        setCurrentSessionId(sessionId);
       }
 
-      const sessionId = sessionData.session?.session_id;
-      if (!sessionId) {
-        throw new Error('No session_id returned from session creation');
-      }
-
-      console.log('✅ Created Etymology Session:', sessionId);
-      setCurrentSessionId(sessionId);
-
-      // Step 2: Create Thread linked to this session
+      // Create Thread and link to session (both new and existing)
       const threadId = `thread-${crypto.randomUUID()}`;
       const threadResp = await fetch(
         `http://localhost:8000/api/graphiti/etymology/sessions/${sessionId}/threads?thread_id=${encodeURIComponent(threadId)}`,
@@ -81,7 +134,7 @@ export function useEtymologyThreads(config: UseEtymologyThreadsConfig): UseEtymo
 
       console.log('✅ Linked Thread to Session:', { sessionId, threadId });
 
-      // Step 3: Set Redis metadata for context injection
+      // Set Redis metadata for context injection
       try {
         const metadataResp = await fetch(
           `http://localhost:8000/api/conversations/sessions/${threadId}/metadata`,
@@ -102,7 +155,7 @@ export function useEtymologyThreads(config: UseEtymologyThreadsConfig): UseEtymo
         console.warn('⚠️ Redis metadata call failed (non-critical):', metadataError.message);
       }
 
-      // Step 4: Reload threads to show new thread in sidebar
+      // Reload threads to show new thread in sidebar
       await baseThreads.loadThreads();
 
       // Return thread_id for chat binding (session_id stored in state)

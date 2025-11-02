@@ -3,10 +3,14 @@ Agent Node Manager
 
 Manages agent node lifecycle and properties in the Bimba graph.
 
-Agent nodes (#N-4.N) contain:
-- f_system_prompt: Stored identity prompt with metadata
+Agent nodes (#5-4.N) contain:
+- f_agent_prompt: Agent identity prompt (Layer 1c in Prakāśa)
+- f_system_prompt: Stored identity prompt with metadata (deprecated)
 - f_workflow_prompts: Workflow-specific prompt templates (lazy-loaded)
 - f_* capabilities: Functional capabilities for the agent
+
+All agents are Epii manifestations (#5-4.N pattern).
+#5 Epii is the agentic subsystem.
 
 Reference: /memory/sprint_tracking/sprint-3/active_sprint/prakasa-layered-architecture-refactor-plan.md
 """
@@ -22,12 +26,18 @@ class AgentNodeManager:
     """
     Manages agent node lifecycle and properties.
 
-    Agent nodes follow coordinate pattern: #N-4.N (e.g., #5-4.5 for Epii agent)
+    Agent nodes follow coordinate pattern: #5-4.N (all agents are Epii manifestations)
+    - #5-4.0: Anuttara agent
+    - #5-4.1: Paramasiva agent
+    - #5-4.2: Parashakti agent
+    - #5-4.3: Mahamaya agent
+    - #5-4.4: Nara agent
+    - #5-4.5: Epii agent
 
     Responsibilities:
     - Create agent nodes in #5-4 branch
-    - Store/retrieve f_system_prompt (identity prompts)
-    - Store/retrieve f_workflow_prompts (workflow templates)
+    - Store/retrieve f_agent_prompt (Layer 1c identity prompts)
+    - Store/retrieve f_workflow_* (workflow-specific prompts)
     - Manage MANIFESTS_AS relationships between subsystems and agents
     """
 
@@ -55,13 +65,16 @@ class AgentNodeManager:
         """
         Get agent coordinate for subsystem.
 
+        ALL agents are Epii manifestations (#5-4.N pattern).
+        #5 Epii is the agentic subsystem - all agents exist within it.
+
         Args:
             subsystem: Subsystem number (0-5)
 
         Returns:
-            Agent coordinate (e.g., "#5-4.5")
+            Agent coordinate (e.g., "#5-4.0" for Anuttara, "#5-4.5" for Epii)
         """
-        return f"#{subsystem}-4.{subsystem}"
+        return f"#5-4.{subsystem}"
 
     async def ensure_agent_node_exists(self, subsystem: int) -> str:
         """
@@ -260,6 +273,40 @@ class AgentNodeManager:
         except Exception as e:
             logger.error(f"Error saving workflow prompts for {agent_coordinate}: {e}")
             return False
+
+    async def get_agent_prompt(self, agent_coordinate: str) -> Optional[str]:
+        """
+        Get f_agent_prompt from agent node.
+
+        This is the agent identity prompt (Layer 1c in Prakāśa composition).
+
+        Args:
+            agent_coordinate: Agent coordinate (e.g., "#5-4.5")
+
+        Returns:
+            Agent prompt string, or None if not found
+        """
+        try:
+            result = await self.bimba.get_node_details_complete(
+                agent_coordinate, include_functional_properties=True
+            )
+
+            if not result or result.get("success") is False:
+                logger.warning(f"Failed to get agent node: {agent_coordinate}")
+                return None
+
+            props = result.get("allProperties", {})
+            agent_prompt = props.get("f_agent_prompt")
+
+            if not agent_prompt:
+                logger.debug(f"No f_agent_prompt found on {agent_coordinate}")
+                return None
+
+            return agent_prompt
+
+        except Exception as e:
+            logger.error(f"Error getting agent prompt for {agent_coordinate}: {e}")
+            return None
 
     async def get_agent_capabilities(
         self,

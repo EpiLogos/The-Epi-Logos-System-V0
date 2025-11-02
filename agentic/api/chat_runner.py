@@ -66,7 +66,7 @@ async def stream_chat(request: Request):
             current_persona=persona,
             model_config=model or ""
         )
-        if not deps.redis_client or not deps.mongodb_client:
+        if not deps.redis_client or not deps.conversation_service:
             raise HTTPException(status_code=503, detail="Required services unavailable")
 
         # Build in-memory session using thread_id for persistence alignment
@@ -86,7 +86,7 @@ async def stream_chat(request: Request):
             message=message,
             session=session,
             session_manager=deps.redis_client,
-            conversation_manager=deps.mongodb_client,
+            conversation_manager=deps.conversation_service,
             bimba_client=deps.bimba_client,
             lightrag_client=deps.lightrag_client,
             graphiti_client=deps.graphiti_client,

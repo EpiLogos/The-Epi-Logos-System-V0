@@ -84,6 +84,30 @@ class LightRAGHttpClient(BackendHttpClient):
         """Get list of documents in the workspace"""
         return await self.get("/api/lightrag/workspace/documents")
     
+    async def query(
+        self,
+        query: str,
+        mode: str = "hybrid",
+        only_need_context: bool = False
+    ) -> Dict[str, Any]:
+        """Query LightRAG knowledge using specified mode"""
+        request_data = {
+            "query": query,
+            "mode": mode,
+            "only_need_context": only_need_context
+        }
+        logger.info(f"Querying LightRAG: '{query[:50]}...' (mode: {mode})")
+        return await self.post("/api/lightrag/query", json_data=request_data)
+
+    async def insert(self, content: str, description: Optional[str] = None) -> Dict[str, Any]:
+        """Insert content into LightRAG for knowledge graph building"""
+        request_data = {
+            "content": content,
+            "description": description
+        }
+        logger.info(f"Inserting content into LightRAG: {len(content)} chars")
+        return await self.post("/api/lightrag/insert", json_data=request_data)
+
     async def health_check(self) -> Dict[str, Any]:
         """Check LightRAG service health"""
         return await self.get("/api/lightrag/health")

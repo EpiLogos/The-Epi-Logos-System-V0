@@ -232,6 +232,26 @@ def resolve_lexical_coordinate_search(_: Any, info: Any, searchString: str, limi
         }
 
 
+@query.field("getFunctionalProperties")
+def resolve_get_functional_properties(
+    _: Any, info: Any, coordinate: str, propertyPrefix: Optional[str] = None
+) -> dict:
+    """Resolve functional properties for agent discovery and configuration.
+
+    Returns f_* properties for a coordinate, enabling agents to discover tools,
+    workflows, capabilities, and other operational configuration.
+
+    Args:
+        coordinate: Bimba coordinate to query
+        propertyPrefix: Optional prefix filter (e.g., "f_workflow_")
+
+    Returns:
+        FunctionalPropertiesResponse with success flag and properties dict
+    """
+    node_service = info.context["service"]
+    return node_service.get_functional_properties(coordinate, propertyPrefix)
+
+
 @query.field("directChildren")
 def resolve_direct_children(_: Any, info: Any, bimbaCoordinate: str) -> dict:
     """Get direct child nodes of a Bimba coordinate.
@@ -377,6 +397,55 @@ def resolve_get_wisdom_packet(
         logger = logging.getLogger(__name__)
         logger.error(f"Error generating WisdomPacket for {coordinate}: {e}")
         return None
+
+
+@query.field("getQuintessentialProperties")
+def resolve_get_quintessential_properties(
+    _: Any,
+    info: Any,
+    coordinate: str
+) -> dict:
+    """
+    Get quintessential properties (q_*) for a Bimba coordinate.
+
+    Retrieves pithy, well-crafted distillations of a node's essential nature,
+    priority-sorted: q_ (base) → q0_ → q1_ → q2_ → ...
+
+    Args:
+        coordinate: Bimba coordinate to query
+
+    Returns:
+        Dict with coordinate and properties list
+    """
+    # Import WisdomPacketService for q_ property extraction logic
+    from backend.epi_logos_system.cag.wisdom_packet.service import WisdomPacketService
+
+    # Get node data
+    neo4j_client = Neo4jClient()
+    node_data = neo4j_client.get_bimba_node(coordinate)
+
+    if not node_data:
+        # Return empty properties for non-existent nodes
+        return {
+            "coordinate": coordinate,
+            "properties": []
+        }
+
+    # Use WisdomPacketService helper to extract and sort q_ properties
+    service = WisdomPacketService(neo4j_client, RedisClient())
+    q_props = service._get_quintessential_properties(node_data)
+
+    # Convert dict to GraphQL format (array of key-value objects)
+    properties_list = [
+        {"key": key, "value": value}
+        for key, value in q_props.items()
+    ]
+
+    return {
+        "coordinate": coordinate,
+        "properties": properties_list
+    }
+
 
 
 @mutation.field("regenerateNodeEmbedding")

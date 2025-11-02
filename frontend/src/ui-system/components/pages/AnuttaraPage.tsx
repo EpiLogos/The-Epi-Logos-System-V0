@@ -526,12 +526,18 @@ export const AnuttaraPage: React.FC<{ coordinate?: string; autoExpand?: boolean 
               </div>
             )}
 
-            {/* Anuttara Image - Always clickable for modal close */}
+            {/* Anuttara Image - Always clickable for modal close - Custom sizing for Anuttara */}
             <ParamasivaImage
               src="/ui-system/anuttara-icon.png"
               alt="Anuttara Ground Glyph"
               isExpanded={modalState.isModalExpanded}
               onClick={handleImageClick}
+              className={cn(
+                modalState.isModalExpanded && [
+                  "!w-[96px] !h-[96px]",  // 0.8x of standard 120px
+                  "!top-[3px] !left-[3px]"  // 2px border + 1px gap from visible corner
+                ]
+              )}
             />
 
             {/* Corner Modal Indicator */}

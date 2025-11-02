@@ -8,6 +8,7 @@ Implements pattern from Story 08.03 Dev Notes.
 
 import logging
 import asyncio
+import os
 from typing import Optional, Dict, Any
 from enum import Enum
 
@@ -79,6 +80,12 @@ class PipelineOrchestrator:
         try:
             # Initialize Redis tracking
             self._update_status(document_id, PipelineStatus.PREPROCESSING, 0)
+
+            # Validate source file exists before processing
+            if not os.path.exists(source_path):
+                error_msg = f"Source document not found: {source_path}. File may have been deleted from temporary storage."
+                logger.error(error_msg)
+                raise FileNotFoundError(error_msg)
 
             # Step 1: SYNC Docling preprocessing (run in thread pool)
             logger.info(f"Starting pipeline for document {document_id} at {coordinate}")

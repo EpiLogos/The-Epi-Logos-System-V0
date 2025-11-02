@@ -36,6 +36,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Suppress noisy third-party loggers
+logging.getLogger("google_genai.models").setLevel(logging.WARNING)  # Suppress AFC initialization spam
+logging.getLogger("graphiti_core.llm_client.gemini_client").setLevel(logging.WARNING)  # Suppress JSON parse retry noise
+
 # Dependency injection for Neo4j client with explicit lifecycle
 def get_neo4j_client(request: Request) -> Neo4jClient:
     """
@@ -74,6 +78,32 @@ async def lifespan(app: FastAPI):
         logger.info("Redis client connected successfully")
     else:
         logger.warning("Redis connection test failed - some features may be unavailable")
+
+    # Ensure Neo4j fulltext index for Bimba nodes
+    try:
+        logger.info("Ensuring Neo4j fulltext index for Bimba nodes")
+        app.state.neo4j_client.execute_query(
+            """
+            CREATE FULLTEXT INDEX bimba_node_fulltext IF NOT EXISTS
+            FOR (n:BimbaNode)
+            ON EACH [n.name, n.description, n.operationalEssence, n.coreNature,
+                     n.function, n.architecturalFunction, n.primaryDesignation]
+            """,
+            {}
+        )
+        logger.info("Neo4j fulltext index ensured successfully")
+    except Exception as e:
+        logger.warning(f"Failed to create Neo4j fulltext index (may already exist): {e}")
+
+    # Pre-initialize Graphiti service and build indices at startup (prevents 48s timeout on first agent call)
+    try:
+        logger.info("Pre-initializing Graphiti service and building indices...")
+        from backend.epi_logos_system.cag.graphiti.api import get_graphiti_service
+        graphiti_service = get_graphiti_service()
+        await graphiti_service._ensure_indices()
+        logger.info("✅ Graphiti service pre-initialized with indices built")
+    except Exception as e:
+        logger.warning(f"Failed to pre-initialize Graphiti (non-critical): {e}")
 
     # AG-UI Protocol moved to Agentic layer - Backend handles only database operations
 

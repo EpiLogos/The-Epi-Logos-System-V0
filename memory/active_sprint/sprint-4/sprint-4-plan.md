@@ -33,11 +33,18 @@ Last Revised: 2025-10-23 (Added Story 03.01.1 for architectural alignment)
 - Real-time animation for crystallization events
 
 ### Phase 3: Intelligence Synthesis (After Phase 2)
-**03.01 Generating Wisdom Packet** (see ./03.01.generating-wisdom-packet.md)
+**03.01 Generating Wisdom Packet** ✅ COMPLETE + ENHANCED (2025-10-25) (see ./03.01.generating-wisdom-packet.md)
 - GraphQL query for pre-synthesized Bimba coordinate wisdom packets
 - Intelligent subgraph traversal with relevance scoring
 - Narrative synthesis with apophatic pointers
 - Redis caching with 24h TTL for performance
+- **SPRINT 4 ENHANCEMENT:**
+  - Quintessential property (q_*) awareness and prioritization
+  - LLM-powered narrative synthesis (Gemini 2.0 Flash Experimental)
+  - New shared tool: `get_quintessential_properties` (agent + GraphQL + MCP)
+  - Holistic tool docstrings with philosophical grounding
+  - Ready for canonical ← episodic ← canonical refinement workflow
+  - See: [wisdom-packet-q-properties-llm-enhancement-IMPLEMENTED.md](./wisdom-packet-q-properties-llm-enhancement-IMPLEMENTED.md)
 
 **03.01.1 Shared Synthesis Engine** (NEW - see ../../docs/stories/03.01.1.shared-synthesis-engine.md)
 - Architectural alignment between Story 03.01 (Wisdom Packet) and Story 08.07 (EA Workflow)

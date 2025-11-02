@@ -368,3 +368,63 @@ class DelegationManager:
         except Exception as e:
             logger.error(f"Error cancelling MEF task {task_id}: {e}")
             return False
+
+    async def delegate(
+        self,
+        message: str,
+        ctx: Any,  # RunContext or None
+        target_subsystem: int,
+        model_name: str,
+        deps: Optional[OrchestratorDeps] = None,
+        message_history: Optional[List] = None
+    ) -> Any:
+        """
+        General delegation method for agent-to-agent communication.
+
+        Creates target agent and executes message with proper context propagation.
+
+        Args:
+            message: Message to send to target agent
+            ctx: RunContext (can be None for top-level routing)
+            target_subsystem: Target agent subsystem (0-5)
+            model_name: Model to use for target agent
+            deps: OrchestratorDeps (required if ctx is None)
+            message_history: Optional Pydantic AI message history
+
+        Returns:
+            Agent run result with aggregated usage
+        """
+        # Get or create deps
+        if ctx is not None and hasattr(ctx, 'deps'):
+            effective_deps = ctx.deps
+        elif deps is not None:
+            effective_deps = deps
+        else:
+            raise ValueError("Either ctx.deps or deps must be provided")
+
+        # Get or create target agent
+        target_agent = await self.factory.create_agent(
+            subsystem=target_subsystem,
+            model_name=model_name,
+            bimba_client=effective_deps.bimba_client if hasattr(effective_deps, 'bimba_client') else None,
+            redis_client=effective_deps.redis_client if hasattr(effective_deps, 'redis_client') else None
+        )
+
+        logger.info(
+            f"Delegating to subsystem {target_subsystem} agent with model {model_name}"
+        )
+
+        # Execute with delegation deps (shared context)
+        delegation_deps = effective_deps
+
+        # Run the agent WITH message history
+        result = await target_agent.run(
+            message,
+            deps=delegation_deps,
+            message_history=message_history or [],  # Pass message history
+            usage=ctx.usage if ctx and hasattr(ctx, 'usage') else None  # Usage aggregation
+        )
+
+        logger.info(f"Delegation to subsystem {target_subsystem} completed")
+
+        return result

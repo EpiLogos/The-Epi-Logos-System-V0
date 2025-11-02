@@ -19,7 +19,7 @@ export const anuttaraModalCards: FocusCard[] = [
     src: '/ui-system/anuttara-0-0.png',
     coordinate: '#0-0',
     objectFit: 'contain',
-    imageZoom: 2.25,
+    imageZoom: 1.8,
     imageOffsetY: 0,
     borderColor: "border-black/40"
   },
@@ -31,7 +31,7 @@ export const anuttaraModalCards: FocusCard[] = [
     coordinate: '#0-5',
     objectFit: 'contain',
     imageZoom: 2.25,
-    imageOffsetY: 0,
+    imageOffsetY: 45,
     borderColor: "border-black/40"
   }
 ];
@@ -82,7 +82,7 @@ export const anuttaraSubnodeCards: FocusCard[] = [
     coordinate: '#0-4',
     objectFit: 'contain',
     imageZoom: 2.25,
-    imageOffsetY: 0,
+    imageOffsetY: -30,
     borderColor: "border-black/40"
   }
 ];

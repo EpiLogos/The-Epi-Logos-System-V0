@@ -27,13 +27,61 @@ export enum QuaternalType {
   TWELVE_PART = "twelve_part"
 }
 
+/**
+ * MEF Lens Insight structure
+ * Contains lens-specific analysis from MEF (Meta-Epistemic Framework)
+ */
+export interface MEFLensInsight {
+  lens_name?: string;
+  analysis?: string;
+  key_patterns?: string[];
+  resonance_factors?: string[];
+  [key: string]: any; // Allow additional lens-specific properties
+}
+
+/**
+ * MEF Lens Types - 6-fold cognitive framework
+ */
+export type MEFLensType =
+  | "archetypal"
+  | "causal"
+  | "logical"
+  | "processual"
+  | "meta_epistemic"
+  | "divine_scalar";
+
+/**
+ * Bimba Resonance - MEF-analyzed coordinate connection
+ *
+ * Story 08.13: Complete structure for MEF Resonance Analysis
+ * Represents a discovered resonance between an etymology community
+ * and a Bimba coordinate, analyzed through the 6-lens MEF framework.
+ */
 export interface BimbaResonance {
-  coordinate: string;
-  name: string;
-  resonance_strength: float;
+  // Core Identity
+  id: string; // UUID of the BimbaResonance node
+  coordinate: string; // Bimba coordinate (e.g., "#2-1-0")
+  coordinate_name: string; // Human-readable name of the coordinate
+
+  // Resonance Properties
   resonance_type: "semantic" | "structural" | "hybrid";
+  resonance_strength: number; // 0.0-1.0 float
+  description?: string; // High-level description of the resonance
+
+  // MEF Analysis Metadata
+  detected_via_lens: MEFLensType; // Primary MEF lens that detected this resonance
+  detected_via_tool: string; // Tool used (semantic_coordinate_discovery, get_direct_children, get_node_relationships)
+  reasoning_summary: string; // User-friendly summary of why this resonance was detected
+  deepseek_reasoning: string; // DeepSeek reasoning chain (for transparency)
   detected_at: string; // ISO timestamp
-  description?: string;
+
+  // MEF Lens-Specific Insights (JSON objects)
+  mef_archetypal?: MEFLensInsight | any; // Archetypal lens analysis
+  mef_causal?: MEFLensInsight | any; // Causal lens analysis
+  mef_logical?: MEFLensInsight | any; // Logical lens analysis
+  mef_processual?: MEFLensInsight | any; // Processual lens analysis
+  mef_meta_epistemic?: MEFLensInsight | any; // Meta-epistemic lens analysis
+  mef_divine_scalar?: MEFLensInsight | any; // Divine-scalar lens analysis
 }
 
 export interface EtymologySession {
@@ -70,6 +118,27 @@ export interface EtymologyCommunity {
   domain: string; // "EA" for Etymology Archaeology
   formed_at: string; // ISO timestamp
   last_activity: string; // ISO timestamp
+
+  // MEF Resonance Analysis (Story 08.13)
+  bimba_resonances?: BimbaResonance[]; // Array of discovered Bimba coordinate resonances
+  mef_analyzed_at?: string; // ISO timestamp of last MEF analysis
+  mef_reasoning_summary?: string; // Overall reasoning summary for the analysis
+  mef_resonance_count?: number; // Total number of resonances found
+
+  // Word-level enrichment metadata
+  word_nodes?: EtymologyCommunityWord[];
+}
+
+export interface EtymologyCommunityWord {
+  id?: string | null;
+  word: string;
+  pie_root?: string | null;
+  pie_lineage?: string | null;
+  lineage?: string | null;
+  semantic_pattern?: string | null;
+  relation_descriptor?: string | null;
+  ql_position?: number | null;
+  enriched_at?: string | null;
 }
 
 export interface QLStructure {

@@ -27,12 +27,15 @@ class GraphitiHttpClient(BackendHttpClient):
         metadata: Dict[str, Any] = None
     ) -> Dict[str, Any]:
         """Create a new episodic memory episode"""
-        # Map common episode types to valid Graphiti types
+        # Map common episode types to valid Graphiti backend types
+        # Backend EpisodeType enum: user_session, agent_rumination, context_frame, learning_event, community_formation
         episode_type_mapping = {
+            "experience": "user_session",  # Default type from orchestrator tools
             "insight": "agent_rumination",
             "conversation": "user_session",
             "rumination": "agent_rumination",
-            "reflection": "agent_rumination"
+            "reflection": "agent_rumination",
+            "interaction": "user_session"
         }
 
         mapped_type = episode_type_mapping.get(episode_type, episode_type)
@@ -75,16 +78,16 @@ class GraphitiHttpClient(BackendHttpClient):
         logger.info(f"Searching episodes: '{query[:50]}...' (session: {session_id})")
         return await self.get("/api/graphiti/episodes/search", params=params)
     
-    async def get_session_episodes(self, session_id: str, limit: int = 50) -> Dict[str, Any]:
+    async def get_session_episodes(self, session_id: str, group_id: str, limit: int = 50) -> Dict[str, Any]:
         """Get all episodes for a specific session"""
-        params = {"limit": limit}
-        logger.info(f"Getting session episodes: {session_id}")
+        params = {"group_id": group_id, "limit": limit}
+        logger.info(f"Getting session episodes: {session_id} (group: {group_id})")
         return await self.get(f"/api/graphiti/sessions/{session_id}/episodes", params=params)
     
-    async def get_agent_ruminations(self, agent_id: str, limit: int = 20) -> Dict[str, Any]:
+    async def get_agent_ruminations(self, agent_id: str, group_id: str, limit: int = 20) -> Dict[str, Any]:
         """Get agent ruminations (reflective thoughts)"""
-        params = {"limit": limit}
-        logger.info(f"Getting agent ruminations: {agent_id}")
+        params = {"group_id": group_id, "limit": limit}
+        logger.info(f"Getting agent ruminations: {agent_id} (group: {group_id})")
         return await self.get(f"/api/graphiti/agents/{agent_id}/ruminations", params=params)
     
     async def create_community(
@@ -92,22 +95,37 @@ class GraphitiHttpClient(BackendHttpClient):
         name: str,
         description: str,
         group_id: str,
+        words: List[str],
+        quaternal_type: str = "FOUR_PART",
+        domain: str = "EA",
         session_id: str = None,
-        bimba_coordinate: str = None,
-        metadata: Dict[str, Any] = None
+        user_id: str = None,
+        pie_root: str = None,
+        semantic_pattern: str = None,
+        bimba_coordinate: str = None
     ) -> Dict[str, Any]:
-        """Create a new community (topic cluster)"""
+        """
+        Create an etymology community using Graphiti's native community building.
+
+        This calls the /etymology/community endpoint which uses Graphiti's
+        EpisodicNode and CommunityNode classes with QL extensions.
+        """
         request_data = {
             "group_id": group_id,
             "name": name,
             "description": description,
+            "words": words,
+            "quaternal_type": quaternal_type,
+            "domain": domain,
             "session_id": session_id,
-            "bimba_coordinate": bimba_coordinate,
-            "metadata": metadata or {}
+            "user_id": user_id,
+            "pie_root": pie_root,
+            "semantic_pattern": semantic_pattern,
+            "bimba_coordinate": bimba_coordinate
         }
 
-        logger.info(f"Creating community: {name} (group: {group_id})")
-        return await self.post("/api/graphiti/communities", json_data=request_data)
+        logger.info(f"Creating etymology community: {name} (group: {group_id}, words: {words})")
+        return await self.post("/api/graphiti/etymology/community", json_data=request_data)
     
     async def get_episode_types(self) -> Dict[str, Any]:
         """Get available episode types"""
@@ -199,12 +217,28 @@ class GraphitiHttpClient(BackendHttpClient):
         Returns:
             Dict with success status and relationship details
         """
-        params = {
-            "group_id": group_id,
-            "relationship_type": relationship_type
-        }
+        # Build query string manually - post() doesn't accept params parameter
+        url = f"/api/graphiti/etymology/communities/{community_id}/aphorisms/{aphorism_id}?group_id={group_id}&relationship_type={relationship_type}"
         logger.info(f"Linking aphorism {aphorism_id} to community {community_id}")
-        return await self.post(
-            f"/api/graphiti/etymology/communities/{community_id}/aphorisms/{aphorism_id}",
-            params=params
-        )
+        return await self.post(url)
+
+    async def trigger_mef_analysis(
+        self,
+        community_id: str
+    ) -> Dict[str, Any]:
+        """
+        Trigger MEF (Meta-Epistemic Framework) resonance analysis for a community.
+
+        This initiates an async background task that uses the Parashakti agent to
+        analyze the community through 6 cognitive lenses and discover resonant
+        Bimba coordinates. The analysis runs in the background and results are
+        stored as BimbaResonance nodes in Neo4j.
+
+        Args:
+            community_id: Community UUID to analyze
+
+        Returns:
+            Dict with success status, is_reanalysis flag, and any errors
+        """
+        logger.info(f"Triggering MEF analysis for community {community_id}")
+        return await self.post(f"/api/graphiti/etymology/communities/{community_id}/analyze-mef")

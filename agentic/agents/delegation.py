@@ -191,7 +191,7 @@ class DelegationManager:
             session_id=ctx.deps.session_id,
             user_id=ctx.deps.user_id,
             redis_client=ctx.deps.redis_client,
-            mongodb_client=ctx.deps.mongodb_client,
+            conversation_service=ctx.deps.conversation_service,
             bimba_client=ctx.deps.bimba_client,
             lightrag_client=ctx.deps.lightrag_client,
             graphiti_client=ctx.deps.graphiti_client,

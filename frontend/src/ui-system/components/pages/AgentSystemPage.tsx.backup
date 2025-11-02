@@ -1,0 +1,352 @@
+'use client';
+
+import React, { useState, useEffect, useRef } from 'react';
+import { PortfolioContainer } from '../ui/PortfolioContainer';
+import { Sidebar } from '../ui/Sidebar';
+import { WhiteFadeOverlay } from '../ui/WhiteFadeOverlay';
+import { PageFadeIn } from '../ui/PageFadeIn';
+import { TextAnimate } from '../ui/TextAnimate';
+import { WaveBackground } from '../ui/WaveBackground';
+import { CoordinateText } from '../ui/CoordinateText';
+import { GlowParticles } from '../ui/GlowParticles';
+import { useInterPageTransition } from '@/hooks/ui-system/useInterPageTransition';
+import { cn } from '../../lib/utils';
+import { HexagonButton } from '../navigation/HexagonButton';
+import { useSidebar } from '@/contexts/SidebarContext';
+import { AgentSelector } from './agent-system/AgentSelector';
+import { AgentContentPanel } from './agent-system/AgentContentPanel';
+import { AgentPromptView } from './agent-system/AgentPromptView';
+import { AgentToolsView } from './agent-system/AgentToolsView';
+import { OrchestratorView } from './agent-system/OrchestratorView';
+import { AgentToolbar, ViewMode, ModalMode } from './agent-system/AgentToolbar';
+import { FunctionalPropertyModal } from './agent-system/FunctionalPropertyModal';
+
+export const AgentSystemPage: React.FC<{ coordinate?: string }> = ({ coordinate = '#5-4' }) => {
+  const { openHexagonPanel, panelMode } = useSidebar();
+
+  // Page transition state
+  const {
+    whiteOverlayVisible,
+    isTransitioning,
+    textFadeStarted,
+    currentTransitionDirection,
+    transitionToSubsystems,
+    transitionToEpiLogosFromQuaternal
+  } = useInterPageTransition();
+
+  // Selected agent state (null = showing agent selector, number = selected agent)
+  const [selectedAgent, setSelectedAgent] = useState<number | null>(null);
+
+  // View mode state
+  const [viewMode, setViewMode] = useState<ViewMode>('prompts');
+
+  // Modal state
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
+
+  // Coordinate text animation state
+  const [coordinateTextVisible, setCoordinateTextVisible] = useState(false);
+
+  // Wave and particles background state
+  const [wavesVisible, setWavesVisible] = useState(false);
+  const [wavesFadeState, setWavesFadeState] = useState<'hidden' | 'visible' | 'modal-hiding'>('hidden');
+  const [particlesVisible, setParticlesVisible] = useState(false);
+  const [particlesFadeState, setParticlesFadeState] = useState<'hidden' | 'visible' | 'modal-hiding'>('hidden');
+  const modalPanelRef = useRef<HTMLDivElement>(null);
+
+  // Coordinate text animation - becomes visible after initial load
+  useEffect(() => {
+    const coordTimer = setTimeout(() => {
+      setCoordinateTextVisible(true);
+    }, 2500);
+
+    return () => clearTimeout(coordTimer);
+  }, []);
+
+  // Wave background initialization
+  useEffect(() => {
+    const waveTimer = setTimeout(() => {
+      setWavesVisible(true);
+      setWavesFadeState('visible');
+    }, 1000);
+
+    return () => clearTimeout(waveTimer);
+  }, []);
+
+  // Particles initialization
+  useEffect(() => {
+    const particleTimer = setTimeout(() => {
+      setParticlesVisible(true);
+      setParticlesFadeState('visible');
+    }, 1000);
+
+    return () => clearTimeout(particleTimer);
+  }, []);
+
+  // Handle view mode changes
+  const handleViewModeChange = (mode: ViewMode) => {
+    if (mode === 'orchestrator') {
+      setSelectedAgent(null);
+      setViewMode('orchestrator');
+    } else {
+      setViewMode(mode);
+    }
+  };
+
+  // Handle modal open
+  const handleModalOpen = (mode: ModalMode) => {
+    setModalMode(mode);
+  };
+
+  // Handle modal close
+  const handleModalClose = () => {
+    setModalMode(null);
+  };
+
+  // Handle agent selection
+  const handleSelectAgent = (agentIndex: number) => {
+    setSelectedAgent(agentIndex);
+    setViewMode('prompts'); // Default to prompts view
+  };
+
+  // Handle back to selector
+  const handleBackToSelector = () => {
+    setSelectedAgent(null);
+    setViewMode('prompts');
+  };
+
+  // Navigation handlers
+  const handleSubsystemsClick = () => {
+    transitionToSubsystems();
+  };
+
+  const handleEpiLogosClick = () => {
+    transitionToEpiLogosFromQuaternal();
+  };
+
+  // Determine current coordinate
+  const currentCoordinate = selectedAgent !== null ? `#5-4.${selectedAgent}` : '#5-4';
+
+  // Render content based on state
+  const renderContent = () => {
+    // Orchestrator view (overrides everything)
+    if (viewMode === 'orchestrator') {
+      return <OrchestratorView />;
+    }
+
+    // Agent selector (no agent selected)
+    if (selectedAgent === null) {
+      return (
+        <>
+          <AgentContentPanel coordinate="#5-4" />
+          <div className="mt-8">
+            <AgentSelector onSelectAgent={handleSelectAgent} />
+          </div>
+        </>
+      );
+    }
+
+    // Agent detail views
+    if (viewMode === 'prompts') {
+      return <AgentPromptView coordinate={currentCoordinate} />;
+    }
+
+    if (viewMode === 'tools') {
+      return <AgentToolsView coordinate={currentCoordinate} />;
+    }
+
+    return null;
+  };
+
+  return (
+    <div data-coordinate={coordinate}>
+      <PageFadeIn>
+        <PortfolioContainer
+          pageType="agent-system"
+          isModalExpanded={false}
+          isTransitioning={isTransitioning}
+          transitionDirection="to-subsystems"
+        >
+          {/* Left Sidebar */}
+          <Sidebar
+            variant="main"
+            isModalExpanded={false}
+            isTransitioning={isTransitioning}
+          >
+            {/* Logo */}
+            <TextAnimate
+              visible={!textFadeStarted}
+              delay={200}
+              duration="slow"
+              className="text-[18px] font-normal tracking-[2px] text-[#333] mb-10 text-center"
+            >
+              EPI : LOGOS
+            </TextAnimate>
+
+            {/* Title Section */}
+            <div className="flex flex-col flex-1 justify-center">
+              <TextAnimate
+                visible={!textFadeStarted}
+                delay={600}
+                duration="slow"
+                className="text-[18px] font-normal text-[#333] leading-[1.3] mb-[2px] text-center"
+              >
+                AGENT SYSTEM
+              </TextAnimate>
+              <TextAnimate
+                visible={!textFadeStarted}
+                delay={1000}
+                className="text-[11px] text-[#666] mt-[20px] tracking-[1px] text-center"
+              >
+                EPII SIVA-SHAKTI
+              </TextAnimate>
+            </div>
+
+            {/* Footer Links */}
+            <div className="flex flex-col gap-[10px]">
+              <div className="flex flex-col gap-[10px] items-start text-left">
+                <div onClick={handleSubsystemsClick}>
+                  <TextAnimate
+                    visible={!textFadeStarted}
+                    delay={1300}
+                    duration="normal"
+                    className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+                  >
+                    Subsystems
+                  </TextAnimate>
+                </div>
+                <div onClick={handleEpiLogosClick}>
+                  <TextAnimate
+                    visible={!textFadeStarted}
+                    delay={1600}
+                    duration="normal"
+                    className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+                  >
+                    Epi:Logos
+                  </TextAnimate>
+                </div>
+                <TextAnimate
+                  visible={!textFadeStarted}
+                  delay={1900}
+                  duration="normal"
+                  className="text-[12px] text-[#333] cursor-pointer tracking-[1px] hover:text-[#666]"
+                >
+                  Account
+                </TextAnimate>
+              </div>
+
+              {/* Hexagon Button - Centered */}
+              <div className="mt-6 flex justify-center w-full">
+                <TextAnimate
+                  visible={!textFadeStarted}
+                  delay={2200}
+                  duration="normal"
+                >
+                  <div className="translate-y-[3px]">
+                    <HexagonButton
+                      onClick={openHexagonPanel}
+                      isOpen={panelMode === 'hexagon-panel'}
+                    />
+                  </div>
+                </TextAnimate>
+              </div>
+            </div>
+          </Sidebar>
+
+          {/* Main Content */}
+          <div className="flex-1 flex flex-col relative">
+            {/* Content Panel Container */}
+            <div className={cn(
+              "relative overflow-hidden m-[20px_20px_0_0] bg-[#090a09]",
+              "transition-[height,z-index] duration-700 ease-out",
+              "h-[80vh]",
+              "flex flex-col"
+            )}>
+              <div
+                ref={modalPanelRef}
+                className="flex-1 bg-[#090a09] relative overflow-hidden border-2 border-[#ccc] flex flex-col"
+              >
+                {/* Wave Background */}
+                <WaveBackground
+                  isVisible={wavesVisible}
+                  containerRef={modalPanelRef}
+                  modalExpanded={false}
+                  fadeState={wavesFadeState}
+                />
+
+                {/* Particles */}
+                <GlowParticles
+                  isVisible={particlesVisible}
+                  particleCount={50}
+                  baseHue={270}
+                  monochrome={true}
+                  mode="default"
+                  saturation={100}
+                  lightness={70}
+                  radiusScale={0.6}
+                  parentRef={modalPanelRef}
+                  showDebug={false}
+                  scaleOnHover={false}
+                  fadeState={particlesFadeState}
+                />
+
+                {/* Toolbar */}
+                <div className="relative z-10">
+                  <AgentToolbar
+                    viewMode={viewMode}
+                    onViewModeChange={handleViewModeChange}
+                    onModalOpen={handleModalOpen}
+                    selectedAgent={selectedAgent}
+                  />
+                </div>
+
+                {/* Content */}
+                <div className="relative z-10 flex-1 overflow-y-auto">
+                  <div className="p-8">
+                    {/* Back button when agent selected */}
+                    {selectedAgent !== null && viewMode !== 'orchestrator' && (
+                      <button
+                        onClick={handleBackToSelector}
+                        className="mb-4 px-4 py-2 bg-purple-900/40 hover:bg-purple-900/60 rounded text-sm text-purple-300 transition-colors"
+                      >
+                        ← Back to Agent Selector
+                      </button>
+                    )}
+
+                    {/* Render appropriate content */}
+                    {renderContent()}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Coordinate Text Overlay */}
+            <CoordinateText
+              coordinate={coordinate}
+              visible={!textFadeStarted && coordinateTextVisible}
+              position="overlay"
+              linkToPageCoordinate
+            />
+          </div>
+        </PortfolioContainer>
+      </PageFadeIn>
+
+      {/* White Fade Overlay for Page Transitions */}
+      <WhiteFadeOverlay
+        visible={whiteOverlayVisible}
+        onAnimationComplete={() => {}}
+      />
+
+      {/* Functional Property Modal */}
+      {modalMode && (
+        <FunctionalPropertyModal
+          coordinate={currentCoordinate}
+          propertyType={modalMode}
+          isOpen={true}
+          onClose={handleModalClose}
+        />
+      )}
+    </div>
+  );
+};
+
+export default AgentSystemPage;

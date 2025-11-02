@@ -19,7 +19,7 @@ class BackendHttpClient:
     
     def __init__(self, base_url: str = None, default_headers: Optional[dict] = None):
         self.base_url = base_url or os.getenv("BACKEND_URL", "http://localhost:8000")
-        self.timeout = httpx.Timeout(30.0)  # 30 second timeout
+        self.timeout = httpx.Timeout(60.0)  # 60 second timeout (Graphiti can take 48s)
         self._client: Optional[httpx.AsyncClient] = None
         self._default_headers = {"User-Agent": "EpiLogos-Agentic/1.0"}
         if default_headers:
@@ -72,10 +72,10 @@ class BackendHttpClient:
         """Make POST request to Backend API"""
         if not self._client:
             await self.connect()
-            
+
         try:
             response = await self._client.post(
-                endpoint, 
+                endpoint,
                 data=data,
                 json=json_data
             )
@@ -87,7 +87,28 @@ class BackendHttpClient:
         except Exception as e:
             logger.error(f"Request error on POST {endpoint}: {e}")
             raise
-    
+
+    async def patch(self, endpoint: str, data: Optional[Dict[str, Any]] = None, json_data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Make PATCH request to Backend API"""
+        if not self._client:
+            await self.connect()
+
+        try:
+            response = await self._client.patch(
+                endpoint,
+                data=data,
+                json=json_data,
+                params=params
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error on PATCH {endpoint}: {e.response.status_code} - {e.response.text}")
+            raise
+        except Exception as e:
+            logger.error(f"Request error on PATCH {endpoint}: {e}")
+            raise
+
     async def health_check(self) -> Dict[str, Any]:
         """Check Backend API health"""
         return await self.get("/api/health/")

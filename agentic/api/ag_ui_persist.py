@@ -17,7 +17,7 @@ import logging
 from ag_ui.core import RunAgentInput
 from pydantic_ai.ag_ui import run_ag_ui
 
-from agentic.agents.orchestrator.orchestrator_agent import create_orchestrator_agent
+from agentic.agents.agent_router import AgentRouter
 from agentic.agents.orchestrator.tools.http_clients_factory import create_enhanced_orchestrator_deps
 import httpx
 
@@ -94,8 +94,15 @@ async def run_agent_with_persistence(request: Request):
             model_config=model_config or ''
         )
 
-        # Create agent for selected model
-        agent = create_orchestrator_agent(model_config or '')
+        # Create agent via factory pattern
+        agent_router = AgentRouter(
+            bimba_client=deps.bimba_client,
+            redis_client=deps.redis_client,
+            default_model=model_config or None
+        )
+        agent = await agent_router.get_orchestrator_agent(model_name=model_config or None)
+
+        logger.info(f"🚀 Starting agent run: thread={thread_id}, persona={persona}, user_msg='{user_message[:100]}'")
 
         # Run AG-UI event stream (yields per-event strings)
         event_stream = run_ag_ui(agent, run_input, deps=deps)
@@ -106,8 +113,10 @@ async def run_agent_with_persistence(request: Request):
         async def sse_wrapper() -> AsyncIterator[str]:
             import time
             start = time.time()
+            event_count = 0
             try:
                 async for event_str in event_stream:
+                    event_count += 1
                     # Normalize and stream as proper SSE
                     # Some versions emit raw JSON, others may already include 'data: '
                     line = event_str.strip()
@@ -129,12 +138,13 @@ async def run_agent_with_persistence(request: Request):
                         pass
                 # Persist on success via Backend
                 total_ms = int((time.time() - start) * 1000)
+                logger.info(f"✅ Agent completed: {event_count} events, {len(assistant_accum)} text chunks, {total_ms}ms")
 
                 # Get context from Redis metadata if available
                 context = None
                 try:
                     if deps.redis_client:
-                        session_data = deps.redis_client.get_session(thread_id)
+                        session_data = await deps.redis_client.get_session(thread_id)
                         if session_data:
                             context = session_data.get("metadata", {}).get("context")
                 except Exception:
@@ -162,6 +172,8 @@ async def run_agent_with_persistence(request: Request):
                 except Exception as pe:
                     logger.error(f"Backend persistence failed: {pe}")
             except Exception as e:
+                # Log the actual error
+                logger.error(f"🔥 Agent execution failed: {e}", exc_info=True)
                 # Persist error turn via Backend
                 try:
                     async with httpx.AsyncClient(timeout=10.0) as client:

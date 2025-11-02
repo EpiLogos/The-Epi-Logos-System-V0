@@ -433,6 +433,56 @@ class NodeService:
             "allProperties": serialized_props  # Fully JSON-serializable properties
         }
 
+    def get_functional_properties(self, coordinate: str, property_prefix: Optional[str] = None) -> dict:
+        """Get functional (f_*) properties for a coordinate, optionally filtered by prefix.
+
+        Enables agent discovery and configuration management by exposing f_* properties
+        like f_agent, f_tools, f_system_prompt, f_workflow_*, f_capabilities, etc.
+
+        Args:
+            coordinate: Bimba coordinate to query
+            property_prefix: Optional prefix filter (e.g., "f_workflow_" to get only workflows)
+
+        Returns:
+            Dict with success flag, coordinate, properties dict, and optional error
+        """
+        try:
+            node_data = self._repo.neo4j_client.get_bimba_node(coordinate)
+            if not node_data:
+                return {
+                    "success": False,
+                    "coordinate": coordinate,
+                    "properties": {},
+                    "error": f"Coordinate {coordinate} not found"
+                }
+
+            # Extract f_* properties
+            functional_props = {}
+            for key, value in node_data.items():
+                if key.startswith("f_"):
+                    # Apply prefix filter if provided
+                    if property_prefix is None or key.startswith(property_prefix):
+                        functional_props[key] = value
+
+            # Serialize Neo4j types
+            serialized_props = self._serialize_neo4j_types(functional_props)
+
+            return {
+                "success": True,
+                "coordinate": coordinate,
+                "properties": serialized_props,
+                "error": None
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting functional properties for {coordinate}: {e}")
+            return {
+                "success": False,
+                "coordinate": coordinate,
+                "properties": {},
+                "error": str(e)
+            }
+
     def _serialize_neo4j_types(self, data: Any) -> Any:
         """Recursively serialize Neo4j types to JSON-compatible values.
 

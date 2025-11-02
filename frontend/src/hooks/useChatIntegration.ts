@@ -129,9 +129,22 @@ export function useChatIntegration(config: UseChatIntegrationConfig): UseChatInt
         // Note: The actual session update will be handled by the CLI hook callbacks
       }
     } else {
+      // Check if this is the first user message (for title generation)
+      const isFirstMessage = session.messages.filter(m => m.role === 'user').length === 0;
+
       await baseSendMessage(content);
+
+      // Trigger thread title generation after first user message
+      if (isFirstMessage && session.threadId && !content.startsWith('__INIT_')) {
+        // Fire-and-forget title generation (async, non-blocking)
+        fetch(`${apiEndpoints.backendConversations}/threads/${encodeURIComponent(session.threadId)}/generate-title`, {
+          method: 'POST'
+        }).catch(err => {
+          console.warn('Failed to generate thread title:', err);
+        });
+      }
     }
-  }, [enableCLI, executeCommand, baseSendMessage, session]);
+  }, [enableCLI, executeCommand, baseSendMessage, session, apiEndpoints.backendConversations]);
 
   // Load a thread's history into the current session
   const loadThread = useCallback(async (threadId: string) => {

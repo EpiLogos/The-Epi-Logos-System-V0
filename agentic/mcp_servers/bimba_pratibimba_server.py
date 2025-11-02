@@ -418,8 +418,30 @@ The tool returns comprehensive node information including name, subsystem, conte
                         },
                         "required": ["bimbaCoordinate"]
                     }
-                )
-                ,
+                ),
+                Tool(
+                    name="get_quintessential_properties",
+                    description=(
+                        "Get quintessential properties (q_*) for a Bimba coordinate.\n\n"
+                        "Quintessential properties are pithy, well-crafted distillations of a node's "
+                        "essential nature. These properties follow the pattern q_ or q<digits>_ (e.g., "
+                        "q_, q0_, q1_, q12_) and represent refined understanding from episodic research "
+                        "and MEF lens crystallization.\n\n"
+                        "Priority order: q_ (base) → q0_ → q1_ → q2_ → ... (sorted numerically).\n\n"
+                        "Use when you need distilled, essential understanding (not verbose descriptions)."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {
+                                "type": "string",
+                                "description": "Bimba coordinate (e.g., '#1-2', '#3-4-5')",
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
+                            }
+                        },
+                        "required": ["bimbaCoordinate"]
+                    }
+                ),
                 Tool(
                     name="lexical_coordinate_search",
                     description=(
@@ -463,6 +485,31 @@ The tool returns comprehensive node information including name, subsystem, conte
                         },
                         "required": ["bimbaCoordinate"]
                     }
+                ),
+                Tool(
+                    name="get_agent_functional_properties",
+                    description=(
+                        "Get functional (f_*) properties for agent discovery and configuration. "
+                        "Returns f_* properties like f_agent, f_tools, f_system_prompt, f_workflow_*, "
+                        "f_capabilities, etc. Enables agents to discover their own operational configuration "
+                        "and other agents' capabilities dynamically from Neo4j. "
+                        "Optionally filter by property prefix (e.g., 'f_workflow_' for workflow properties only)."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "bimbaCoordinate": {
+                                "type": "string",
+                                "description": "Bimba coordinate to query for functional properties",
+                                "pattern": r"^#(\d+([-\.\/]\d+)*)?$"
+                            },
+                            "propertyPrefix": {
+                                "type": "string",
+                                "description": "Optional prefix filter (e.g., 'f_workflow_', 'f_tools')"
+                            }
+                        },
+                        "required": ["bimbaCoordinate"]
+                    }
                 )
             ]
         
@@ -494,10 +541,14 @@ The tool returns comprehensive node information including name, subsystem, conte
                     return await self._handle_create_bimba_relationship(arguments)
                 elif name == "get_wisdom_packet":
                     return await self._handle_get_wisdom_packet(arguments)
+                elif name == "get_quintessential_properties":
+                    return await self._handle_get_quintessential_properties(arguments)
                 elif name == "lexical_coordinate_search":
                     return await self._handle_lexical_coordinate_search(arguments)
                 elif name == "get_direct_children":
                     return await self._handle_get_direct_children(arguments)
+                elif name == "get_agent_functional_properties":
+                    return await self._handle_get_agent_functional_properties(arguments)
                 else:
                     return [TextContent(
                         type="text",
@@ -1142,6 +1193,51 @@ The tool returns comprehensive node information including name, subsystem, conte
             logger.error(f"Error in get_wisdom_packet: {e}")
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
+    async def _handle_get_quintessential_properties(self, arguments: dict) -> list[TextContent]:
+        """Handle quintessential properties retrieval via GraphQL.
+
+        Returns pithy, well-crafted distillations of a node's essential nature.
+        """
+        try:
+            coordinate = arguments.get("bimbaCoordinate")
+            if not coordinate:
+                return [TextContent(type="text", text="Error: bimbaCoordinate parameter is required")]
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Quintessential properties client not initialized")]
+
+            result = await self.bimba_client.get_quintessential_properties(coordinate)
+
+            if result.get("success"):
+                q_props = result.get("quintessential_properties", {})
+
+                # Format quintessential properties for MCP display
+                lines: list[str] = []
+                lines.append(f"=== Quintessential Properties: {coordinate} ===")
+                lines.append("")
+
+                if q_props:
+                    for key, value in q_props.items():
+                        lines.append(f"{key}:")
+                        lines.append(f"  {value}")
+                        lines.append("")
+                else:
+                    lines.append("No quintessential properties found for this coordinate.")
+                    lines.append("")
+                    lines.append("Quintessential properties (q_*) are pithy, well-crafted")
+                    lines.append("distillations created through episodic research and")
+                    lines.append("MEF lens crystallization. They represent refined")
+                    lines.append("understanding beyond standard descriptions.")
+
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                error = result.get("error", "Unknown error")
+                return [TextContent(type="text", text=f"Quintessential properties error: {error}")]
+
+        except Exception as e:
+            logger.error(f"Error in get_quintessential_properties: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
     async def _handle_lexical_coordinate_search(self, arguments: dict) -> list[TextContent]:
         """Handle lexical substring search via GraphQL.
 
@@ -1236,6 +1332,58 @@ The tool returns comprehensive node information including name, subsystem, conte
 
         except Exception as e:
             logger.error(f"Error in get_direct_children: {e}")
+            return [TextContent(type="text", text=f"Error: {str(e)}")]
+
+    async def _handle_get_agent_functional_properties(self, arguments: dict) -> list[TextContent]:
+        """Handle functional properties query via GraphQL.
+
+        Returns f_* properties for agent discovery and configuration.
+        """
+        try:
+            bimba_coordinate = arguments.get("bimbaCoordinate")
+            if not bimba_coordinate:
+                return [TextContent(type="text", text="Error: bimbaCoordinate parameter is required")]
+
+            property_prefix = arguments.get("propertyPrefix")
+
+            if not self.bimba_client:
+                return [TextContent(type="text", text="Error: Bimba client not initialized")]
+
+            result = await self.bimba_client.get_functional_properties(bimba_coordinate, property_prefix)
+
+            if result.get("success"):
+                properties = result.get("properties", {})
+                lines: list[str] = []
+
+                filter_text = f" (filtered: {property_prefix})" if property_prefix else ""
+                lines.append(f"Functional properties for '{bimba_coordinate}'{filter_text}:")
+
+                if not properties:
+                    lines.append("(No functional properties found)")
+                else:
+                    for key, value in properties.items():
+                        # Format value based on type
+                        if isinstance(value, list):
+                            value_str = f"[{len(value)} items]"
+                            lines.append(f"  {key}: {value_str}")
+                            # Show first few items
+                            for item in value[:3]:
+                                lines.append(f"    - {item}")
+                            if len(value) > 3:
+                                lines.append(f"    ... and {len(value) - 3} more")
+                        elif isinstance(value, str) and len(value) > 100:
+                            # Truncate long strings
+                            lines.append(f"  {key}: {value[:100]}...")
+                        else:
+                            lines.append(f"  {key}: {value}")
+
+                return [TextContent(type="text", text="\n".join(lines))]
+            else:
+                error = result.get("error", "Unknown error")
+                return [TextContent(type="text", text=f"Get functional properties failed: {error}")]
+
+        except Exception as e:
+            logger.error(f"Error in get_agent_functional_properties: {e}")
             return [TextContent(type="text", text=f"Error: {str(e)}")]
 
     def _get_schema_resource(self) -> str:

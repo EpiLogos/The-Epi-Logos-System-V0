@@ -2,7 +2,7 @@ scalar Generic
 
 type BimbaNode {
     coordinate: String!
-    name: String!
+    name: String
     subsystem: String
     description: String
     operationalEssence: String
@@ -18,7 +18,7 @@ type BimbaNode {
 """Complete node with ALL Neo4j properties via Generic scalar - no filtering"""
 type BimbaNodeComplete {
     coordinate: String!
-    name: String!
+    name: String
     allProperties: Generic!
 }
 
@@ -113,6 +113,16 @@ type Query {
     directChildren(bimbaCoordinate: String!): DirectChildrenResponse
     getAllCoordinates: [BimbaCoordinate!]!
     getWisdomPacket(coordinate: String!, depth: Int, focus: WisdomPacketFocus, forceRegenerate: Boolean): WisdomPacket
+    getQuintessentialProperties(coordinate: String!): QuintessentialPropertiesResponse
+    getFunctionalProperties(coordinate: String!, propertyPrefix: String): FunctionalPropertiesResponse
+}
+
+"""Response for functional properties query"""
+type FunctionalPropertiesResponse {
+    success: Boolean!
+    coordinate: String
+    properties: Generic
+    error: String
 }
 
 """Structured mutation error with code taxonomy"""
@@ -377,4 +387,16 @@ type WisdomPacket {
     cacheHit: Boolean!
     depth: Int!
     focus: WisdomPacketFocus
+}
+
+"""Quintessential property key-value pair"""
+type QuintessentialProperty {
+    key: String!
+    value: String!
+}
+
+"""Quintessential properties response for a coordinate"""
+type QuintessentialPropertiesResponse {
+    coordinate: String!
+    properties: [QuintessentialProperty!]!
 }

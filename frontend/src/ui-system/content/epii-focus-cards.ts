@@ -69,6 +69,7 @@ export const epiiSubnodeCards: FocusCard[] = [
     title: "SIVA-SHAKTI",
     description: "Where ground and expression meet. Agents hand off by coordinate, deepen when needed, and return just enough—your intuition steering, my memory carrying the through-line. See the six agents and the orchestrator in detail—how prompts drive them, how handoffs work—and where to contribute or seek guidance.",
     src: "/ui-system/epii-5-4-siva-shakti.png",
+    link: "/epii/agent-system",
     coordinate: "#5-4",
     objectFit: 'contain',
     imageZoom: 2.25,

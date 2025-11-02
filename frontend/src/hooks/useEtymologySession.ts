@@ -70,16 +70,19 @@ export function useEtymologySession(config: UseEtymologySessionConfig): UseEtymo
 
       const newSession = data.session as EtymologySession;
 
-      // Detect updates by comparing with previous session
-      if (prevSessionRef.current && !isFirstLoad) {
-        const hasChanges = detectSessionChanges(prevSessionRef.current, newSession);
-        if (hasChanges) {
+      const hasChanges = prevSessionRef.current
+        ? detectSessionChanges(prevSessionRef.current, newSession)
+        : true;
+
+      if (hasChanges) {
+        if (prevSessionRef.current && !isFirstLoad) {
           setHasUpdates(true);
           setLastUpdate(new Date());
         }
+
+        setSession(newSession);
       }
 
-      setSession(newSession);
       prevSessionRef.current = newSession;
       setError(null);
 
@@ -170,12 +173,80 @@ export function useEtymologySession(config: UseEtymologySessionConfig): UseEtymo
 function detectSessionChanges(prev: EtymologySession, current: EtymologySession): boolean {
   if (!prev || !current) return false;
 
-  return (
-    prev.words_explored.length !== current.words_explored.length ||
-    prev.communities_created.length !== current.communities_created.length ||
-    prev.resonances_found.length !== current.resonances_found.length ||
-    prev.pie_roots_discovered.length !== current.pie_roots_discovered.length ||
-    prev.aphorisms.length !== current.aphorisms.length ||
-    prev.semantic_patterns.length !== current.semantic_patterns.length
-  );
+  if (prev.status !== current.status) {
+    return true;
+  }
+
+  if (haveStringArrayChanges(prev.words_explored, current.words_explored)) {
+    return true;
+  }
+
+  if (haveStringArrayChanges(prev.communities_created, current.communities_created)) {
+    return true;
+  }
+
+  if (haveStringArrayChanges(prev.pie_roots_discovered, current.pie_roots_discovered)) {
+    return true;
+  }
+
+  if (haveStringArrayChanges(prev.aphorisms, current.aphorisms)) {
+    return true;
+  }
+
+  if (haveStringArrayChanges(prev.semantic_patterns, current.semantic_patterns)) {
+    return true;
+  }
+
+  if (haveResonanceChanges(prev.resonances_found, current.resonances_found)) {
+    return true;
+  }
+
+  const prevMetadata = JSON.stringify(prev.metadata ?? {});
+  const currentMetadata = JSON.stringify(current.metadata ?? {});
+
+  return prevMetadata !== currentMetadata;
+}
+
+function haveStringArrayChanges(prev: string[], current: string[]): boolean {
+  if (prev.length !== current.length) {
+    return true;
+  }
+
+  for (let i = 0; i < prev.length; i += 1) {
+    if (prev[i] !== current[i]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function haveResonanceChanges(prev: EtymologySession["resonances_found"], current: EtymologySession["resonances_found"]): boolean {
+  if (prev.length !== current.length) {
+    return true;
+  }
+
+  for (let i = 0; i < prev.length; i += 1) {
+    const prevRes = prev[i];
+    const currRes = current[i];
+
+    if (
+      prevRes.id !== currRes.id ||
+      prevRes.coordinate !== currRes.coordinate ||
+      prevRes.resonance_strength !== currRes.resonance_strength ||
+      prevRes.resonance_type !== currRes.resonance_type ||
+      prevRes.detected_at !== currRes.detected_at
+    ) {
+      return true;
+    }
+
+    if (
+      JSON.stringify(prevRes.reasoning_summary ?? null) !==
+      JSON.stringify(currRes.reasoning_summary ?? null)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }

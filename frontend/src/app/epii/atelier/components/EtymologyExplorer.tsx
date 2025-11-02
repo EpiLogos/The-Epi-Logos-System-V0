@@ -27,21 +27,29 @@ interface EtymologyExplorerProps {
   chat: UseChatIntegrationReturn;
   activeThreadId: string | null;
   activeSessionId: string | null;  // CRITICAL: Use session_id for polling
+  userId: string;  // Required for communities API (group_id)
   onCreateSession: () => void;
   onSelectSession: () => void;
   isSidebarCollapsed: boolean;
+  // Compact thread selector bar props (for buffer under header)
+  threadOptions?: Array<{ id: string; title?: string | null }>;
+  onSelectThread?: (threadId: string) => void;
 }
 
 export function EtymologyExplorer({
   chat,
   activeThreadId,
   activeSessionId,
+  userId,
   onCreateSession,
   onSelectSession,
-  isSidebarCollapsed
+  isSidebarCollapsed,
+  threadOptions = [],
+  onSelectThread
 }: EtymologyExplorerProps) {
   const [activeTab, setActiveTab] = useState<'chat' | 'tree' | 'community' | 'resonance'>('chat');
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [headerCollapsed, setHeaderCollapsed] = useState(false);
 
   // Poll session data with smart inactivity timeout
   const sessionData = useEtymologySession({
@@ -65,7 +73,8 @@ export function EtymologyExplorer({
   // Fetch communities for session (also uses session_id)
   const communitiesData = useCommunitiesForSession({
     sessionId: activeSessionId || undefined,  // FIX: Use session_id not thread_id
-    enabled: !!activeSessionId && activeTab === 'community'
+    userId,  // Required for group_id (multi-tenant isolation)
+    enabled: !!activeSessionId
   });
 
   const handleTabSwitch = (tab: 'chat' | 'tree' | 'community' | 'resonance') => {
@@ -74,9 +83,29 @@ export function EtymologyExplorer({
 
   return (
     <div className="h-full flex flex-col bg-[#f5f5f5] p-5 relative">
+      {/* Epii Hex Toggle - Always Visible at Top Center */}
+      {activeThreadId && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20">
+          <button
+            onClick={() => setHeaderCollapsed(!headerCollapsed)}
+            className="transition-opacity hover:opacity-80"
+            title={headerCollapsed ? 'Expand header' : 'Collapse header'}
+          >
+            <img
+              src="/ui-system/epii-hex.png"
+              alt="Epii"
+              className="w-12 h-12 object-contain"
+            />
+          </button>
+        </div>
+      )}
+
       {/* Header with tab navigation - hidden when no session selected */}
       {activeThreadId && (
-        <div className="border-b border-[#e0e0e0] bg-white px-6 py-6">
+        <div className={cn(
+          'bg-white px-6 overflow-hidden transition-all duration-300 ease-in-out',
+          headerCollapsed ? 'h-0 opacity-0' : 'pt-12 pb-6 border-b border-[#e0e0e0] opacity-100'
+        )}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-semibold text-[#333] mb-2">
@@ -86,29 +115,58 @@ export function EtymologyExplorer({
               Co-creative exploration with AI partnership
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {activeThreadId && (
-              <div className="text-xs text-[#888] font-mono">
-                Thread: {activeThreadId.substring(0, 8)}...
-              </div>
-            )}
-            {/* Stats Button */}
-            <button
-              onClick={() => setShowStatsModal(true)}
-              disabled={!sessionData.session}
-              title="View session statistics"
-              className={cn(
-                'px-3 py-1.5 rounded text-xs font-medium transition-all',
-                'flex items-center gap-2',
-                sessionData.session
-                  ? 'bg-purple-100 border border-purple-400 text-purple-700 hover:bg-purple-200'
-                  : 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed',
-                sessionData.hasUpdates && 'animate-pulse'
-              )}
-            >
-              <span>📊</span>
-              <span>Stats</span>
-            </button>
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-3">
+              {/* Stats Button */}
+              <button
+                onClick={() => setShowStatsModal(true)}
+                disabled={!sessionData.session}
+                title="View session statistics"
+                className={cn(
+                  'px-3 py-1.5 rounded text-xs font-medium transition-all',
+                  'flex items-center gap-2',
+                  sessionData.session
+                    ? 'bg-purple-100 border border-purple-400 text-purple-700 hover:bg-purple-200'
+                    : 'bg-gray-100 border border-gray-300 text-gray-400 cursor-not-allowed',
+                  sessionData.hasUpdates && 'animate-pulse'
+                )}
+              >
+                <span>📊</span>
+                <span>Stats</span>
+              </button>
+            </div>
+            {/* Model Selector - beneath stats button on right side */}
+            <div className="flex items-center gap-2">
+              <select
+                value={chat.currentModel}
+                onChange={(e) => chat.setCurrentModel(e.target.value)}
+                className={cn(
+                  "bg-white border border-gray-300 text-gray-700 text-xs px-2 py-1 rounded",
+                  "hover:border-purple-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-200 transition-all"
+                )}
+              >
+                {chat.models.length === 0 && (
+                  <option value="">Loading models…</option>
+                )}
+                {chat.models.map((m) => (
+                  <option key={m.id} value={m.id} disabled={!m.available}>
+                    {m.name} ({m.provider})
+                  </option>
+                ))}
+              </select>
+              <select
+                value={chat.currentPersona}
+                onChange={(e) => chat.setCurrentPersona(e.target.value)}
+                className={cn(
+                  "bg-white border border-gray-300 text-gray-700 text-xs px-2 py-1 rounded",
+                  "hover:border-purple-400 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-200 transition-all"
+                )}
+              >
+                <option value="system">System</option>
+                <option value="nara">Nara</option>
+                <option value="epii">Epii</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -162,27 +220,61 @@ export function EtymologyExplorer({
         </div>
       )}
 
-      {/* Insight notification banner - only when session exists */}
+      {/* Insight notification banner - only when session exists and header not collapsed */}
       {activeThreadId && (
-        <InsightNotificationBanner
-          session={sessionData.session}
-          onViewClick={handleTabSwitch}
-        />
+        <div className={cn(
+          'overflow-hidden transition-all duration-300 ease-in-out',
+          headerCollapsed ? 'max-h-0 opacity-0' : 'max-h-[200px] opacity-100'
+        )}>
+          <InsightNotificationBanner
+            session={sessionData.session}
+            onViewClick={handleTabSwitch}
+          />
+        </div>
+      )}
+
+      {/* Thread selector bar - only for Chat view, persists when header collapsed */}
+      {activeTab === 'chat' && activeThreadId && threadOptions.length > 0 && (
+        <div className="border-b border-[#e0e0e0] bg-white px-6 py-2">
+          <div className="flex items-center gap-3 w-full">
+            {/* Left: label fully left */}
+            <div className="text-xs font-medium text-[#666] whitespace-nowrap">Threads</div>
+            {/* Left-anchored selector with capped width (< half screen) */}
+            <select
+              value={activeThreadId || ''}
+              onChange={(e) => onSelectThread?.(e.target.value)}
+              className={cn(
+                'w-[26vw] max-w-[26vw]',
+                'px-3 py-1.5 text-xs rounded',
+                'border border-[#e0e0e0] text-[#666] bg-white',
+                'transition-colors hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/30'
+              )}
+            >
+              {threadOptions.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title || `${t.id.substring(0, 8)}...`}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       )}
 
       {/* Stats Modal - only when session exists */}
       {activeSessionId && (
         <SessionStatsModal
           session={sessionData.session}
+          userId={userId}
           hasUpdates={sessionData.hasUpdates}
           isOpen={showStatsModal}
           onClose={() => setShowStatsModal(false)}
           onTabSwitch={handleTabSwitch}
+          chat={chat}
         />
       )}
 
       {/* Content area - switches based on active tab */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden border border-[#e0e0e0] bg-white">
         {activeTab === 'chat' && !activeThreadId && (
           <NoSessionState
             onCreateSession={onCreateSession}
@@ -194,6 +286,7 @@ export function EtymologyExplorer({
         {activeTab === 'tree' && (
           <EtymologyTreePanel
             session={sessionData.session}
+            communities={communitiesData.communities}
             loading={sessionData.loading}
           />
         )}
@@ -207,8 +300,11 @@ export function EtymologyExplorer({
         {activeTab === 'resonance' && (
           <ResonancePanel
             session={sessionData.session}
+            userId={userId}
             communities={communitiesData.communities}
             loading={communitiesData.loading}
+            onRefetch={communitiesData.refetch}
+            headerCollapsed={headerCollapsed}
           />
         )}
       </div>
@@ -324,4 +420,3 @@ function ChatExplorePanel({ chat }: { chat: UseChatIntegrationReturn }) {
     </div>
   );
 }
-

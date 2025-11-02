@@ -1,0 +1,98 @@
+---
+title: Prakāśa & Tool Loading Architecture
+description: Three-layer prompt system (Prakāśa) + inline tool registration pattern for agent invocation
+date: 2025-10-30
+sprint: 4
+status: implemented
+---
+
+graph TB
+    subgraph "Agent Creation Flow"
+        A[Initialize Clients] --> B[Create PrakasaManager]
+        B --> C[Load Identity Layer 1]
+        C --> D[Create Pydantic AI Agent]
+        D --> E[Register @agent.instructions<br/>Dynamic Layers 2-3]
+        E --> F[Register Tools Inline<br/>@agent.tool decorators]
+        F --> G[Return Configured Agent]
+    end
+
+    subgraph "Prakāśa Three-Layer Architecture"
+        C --> L1[Layer 1: Identity Prakāśa<br/>STATIC - CACHED]
+        E --> L2[Layer 2: Workflow Prakāśa<br/>DYNAMIC - CONDITIONAL]
+        E --> L3[Layer 3: Context Prakāśa<br/>DYNAMIC - ALWAYS]
+    end
+
+    subgraph "Layer 1 Sources - Neo4j + Redis Cache"
+        L1 --> L1A["#1-4.f_agent_prompt<br/>QL Foundation"]
+        L1 --> L1B["# root properties<br/>Project Context"]
+        L1 --> L1C["#5-4.0.f_system_prompt<br/>System Prompt"]
+        L1 --> L1D["Agent node f_agent_prompt<br/>Agent Identity"]
+        L1A --> CACHE1[Redis Cache<br/>TTL: Manual]
+        L1B --> CACHE1
+        L1C --> CACHE1
+        L1D --> CACHE1
+    end
+
+    subgraph "Layer 2 Sources - Neo4j (No Cache)"
+        L2 --> L2A["f_workflow_{name}_description<br/>Workflow Overview"]
+        L2 --> L2B["f_workflow_{name}_stage_{N}_*<br/>Stage Guidance"]
+        L2 --> L2C["f_workflow_{name}_uses_capabilities<br/>Capability Details"]
+    end
+
+    subgraph "Layer 3 Sources - Runtime"
+        L3 --> L3A[Current User Message]
+        L3 --> L3B[Session ID]
+        L3 --> L3C[Timestamp]
+        L3 --> L3D[Recent Conversation]
+    end
+
+    subgraph "Tool Registration Pattern - Inline"
+        F --> T1["Shared Tools<br/>from HttpBimbaClient/HttpGraphitiClient"]
+        F --> T2["Workflow-Specific Tools<br/>from agent/tools/*.py"]
+        T1 --> T1A["@agent.tool<br/>semantic_coordinate_discovery"]
+        T1 --> T1B["@agent.tool<br/>get_wisdom_packet"]
+        T1 --> T1C["@agent.tool<br/>remember_episode"]
+        T2 --> T2A["@agent.tool<br/>create_etymology_community"]
+        T2 --> T2B["@agent.tool<br/>enrich_community_properties"]
+        T2 --> T2C["@agent.tool<br/>enrich_word_node"]
+    end
+
+    subgraph "Agent Request Flow"
+        REQ[User Request] --> AGENT[Pydantic AI Agent]
+        AGENT --> STATIC[Layer 1: Identity<br/>from system_prompt]
+        AGENT --> DYN["@agent.instructions<br/>Layers 2+3 Dynamic"]
+        DYN --> CHECK{Workflow Mode<br/>Active?}
+        CHECK -->|Yes| LOAD2[Load Layer 2<br/>engage_workflow_prakasa]
+        CHECK -->|No| SKIP2[Skip Layer 2]
+        LOAD2 --> BUILD3[Build Layer 3<br/>build_context_prakasa]
+        SKIP2 --> BUILD3
+        BUILD3 --> COMBINE[Combine Layers<br/>Return Instructions]
+        COMBINE --> LLM[LLM Processing<br/>with Identity + Workflow + Context + Tools]
+    end
+
+    subgraph "Anti-Patterns DEPRECATED"
+        X1["❌ setup_selective_tools<br/>Neo4j f_tools whitelist"]
+        X2["❌ _build_tool_registry<br/>Registry pattern"]
+        X3["❌ setup_all_cag_tools<br/>40+ tools on workflow agents"]
+
+        X1 -.->|"Doesn't work:<br/>Can't hide tools after registration"| X1
+        X2 -.->|"Dead code:<br/>Unused complexity"| X2
+        X3 -.->|"Token bloat:<br/>Only for orchestrator"| X3
+    end
+
+    style L1 fill:#e1f5e1
+    style L2 fill:#fff4e1
+    style L3 fill:#e1f0ff
+    style CACHE1 fill:#ffe1e1
+    style T1A fill:#d4edda
+    style T1B fill:#d4edda
+    style T1C fill:#d4edda
+    style T2A fill:#cce5ff
+    style T2B fill:#cce5ff
+    style T2C fill:#cce5ff
+    style X1 fill:#f8d7da
+    style X2 fill:#f8d7da
+    style X3 fill:#f8d7da
+
+    classDef deprecated stroke:#dc3545,stroke-width:2px,stroke-dasharray: 5 5
+    class X1,X2,X3 deprecated

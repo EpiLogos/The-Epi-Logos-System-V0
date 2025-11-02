@@ -479,6 +479,56 @@ class BimbaGraphQLClient(BackendHttpClient):
         err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
         return {"success": False, "children": [], "error": err_msg or "GraphQL query failed"}
 
+    async def get_functional_properties(
+        self, coordinate: str, property_prefix: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Get functional (f_*) properties for agent discovery and configuration via GraphQL.
+
+        Returns f_* properties like f_agent, f_tools, f_system_prompt, f_workflow_*, f_capabilities, etc.
+        Enables agents to discover their operational configuration and other agents' capabilities.
+
+        Args:
+            coordinate: Bimba coordinate to query
+            property_prefix: Optional prefix filter (e.g., 'f_workflow_')
+
+        Returns:
+            Dict with success flag, properties dict, and error (if any)
+        """
+        query = """
+        query GetFunctionalProperties($coordinate: String!, $propertyPrefix: String) {
+          getFunctionalProperties(coordinate: $coordinate, propertyPrefix: $propertyPrefix) {
+            success
+            coordinate
+            properties
+            error
+          }
+        }
+        """
+        variables = {"coordinate": coordinate}
+        if property_prefix:
+            variables["propertyPrefix"] = property_prefix
+
+        resp = await self.post("/graphql", json_data={"query": query, "variables": variables})
+
+        if "data" in resp and resp["data"] is not None:
+            func_props_response = resp["data"].get("getFunctionalProperties", {})
+            return {
+                "success": func_props_response.get("success", False),
+                "coordinate": func_props_response.get("coordinate"),
+                "properties": func_props_response.get("properties", {}),
+                "error": func_props_response.get("error")
+            }
+
+        # Handle GraphQL errors
+        errors = resp.get("errors", []) if isinstance(resp, dict) else []
+        err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
+        return {
+            "success": False,
+            "coordinate": coordinate,
+            "properties": {},
+            "error": err_msg or "GraphQL query failed"
+        }
+
     async def regenerate_node_embedding(self, coordinate: str) -> Dict[str, Any]:
         mutation = """
         mutation Regen($coordinate: String!) {
@@ -600,6 +650,66 @@ class BimbaGraphQLClient(BackendHttpClient):
         err_msg = "; ".join([e.get("message", "Unknown error") for e in errors])
         return {"success": False, "errors": [{"field": None, "message": err_msg or "GraphQL error", "code": "GRAPHQL_ERROR"}]}
 
+    async def get_path_between_coordinates(
+        self,
+        start_coordinate: str,
+        end_coordinate: str,
+        max_hops: int = 5
+    ) -> Dict[str, Any]:
+        """
+        Get path between two Bimba coordinates via GraphQL query.
+
+        Args:
+            start_coordinate: Starting coordinate
+            end_coordinate: Ending coordinate
+            max_hops: Maximum number of hops (default 5)
+
+        Returns:
+            Dict with path data or error
+        """
+        query = """
+        query GetPath($start: String!, $end: String!, $hops: Int) {
+          getPathBetweenCoordinates(startCoordinate: $start, endCoordinate: $end, maxHops: $hops) {
+            startNode { coordinate name subsystem }
+            endNode { coordinate name subsystem }
+            pathLength
+            pathComponents {
+              ... on PathNode { position coordinate name subsystem }
+              ... on PathRelationship { position type direction properties { key value } }
+            }
+          }
+        }
+        """
+
+        variables = {
+            "start": start_coordinate,
+            "end": end_coordinate,
+            "hops": max_hops
+        }
+
+        logger.info(f"Requesting path: {start_coordinate} → {end_coordinate} (maxHops={max_hops})")
+        response = await self.post("/graphql", json_data={"query": query, "variables": variables})
+
+        if "data" in response and response["data"]:
+            path = response["data"].get("getPathBetweenCoordinates")
+            if path is None:
+                return {
+                    "success": False,
+                    "error": "No path found within constraints",
+                    "path": None
+                }
+            return {"success": True, "path": path}
+
+        # Handle GraphQL errors
+        errors = response.get("errors", [])
+        error_msg = "; ".join([err.get("message", "Unknown error") for err in errors])
+        logger.warning(f"Path query failed: {error_msg}")
+        return {
+            "success": False,
+            "error": error_msg or "GraphQL query failed",
+            "path": None
+        }
+
     async def get_wisdom_packet(
         self,
         coordinate: str,
@@ -672,6 +782,17 @@ class BimbaGraphQLClient(BackendHttpClient):
         response = await self.post("/graphql", json_data={"query": query, "variables": variables})
 
         # Extract data from GraphQL response format
+        # Check for GraphQL errors first (priority for error surfacing)
+        if "errors" in response and response["errors"]:
+            errors = response["errors"]
+            error_msg = "; ".join([err.get("message", "Unknown error") for err in errors])
+            logger.error(f"GraphQL errors for wisdom packet {coordinate}: {error_msg}")
+            return {
+                "success": False,
+                "error": error_msg,
+                "coordinate": coordinate
+            }
+
         if "data" in response and response["data"]:
             wisdom_packet = response["data"].get("getWisdomPacket")
             if wisdom_packet:
@@ -683,7 +804,63 @@ class BimbaGraphQLClient(BackendHttpClient):
             else:
                 return {
                     "success": False,
-                    "error": "Wisdom packet not found or generation failed",
+                    "error": "Wisdom packet not found or generation failed (resolver returned None)",
+                    "coordinate": coordinate
+                }
+        else:
+            return {
+                "success": False,
+                "error": "GraphQL query failed: no data or errors in response",
+                "coordinate": coordinate
+            }
+
+    async def get_quintessential_properties(self, coordinate: str) -> Dict[str, Any]:
+        """
+        Execute getQuintessentialProperties GraphQL query.
+
+        Retrieves pithy, well-crafted quintessential properties (q_*) for a coordinate,
+        priority-sorted: q_ (base) → q0_ → q1_ → q2_ → ...
+
+        Args:
+            coordinate: Bimba coordinate (e.g., "#1-2", "#3-4-5")
+
+        Returns:
+            Dict with quintessential properties or error
+        """
+        query = """
+        query GetQuintessentialProperties($coordinate: String!) {
+            getQuintessentialProperties(coordinate: $coordinate) {
+                coordinate
+                properties {
+                    key
+                    value
+                }
+            }
+        }
+        """
+
+        variables = {"coordinate": coordinate}
+
+        logger.info(f"Getting quintessential properties for coordinate: {coordinate}")
+        response = await self.post("/graphql", json_data={"query": query, "variables": variables})
+
+        # Extract data from GraphQL response format
+        if "data" in response and response["data"]:
+            q_data = response["data"].get("getQuintessentialProperties")
+            if q_data:
+                # Convert properties array to dict
+                properties_list = q_data.get("properties", [])
+                q_props = {prop["key"]: prop["value"] for prop in properties_list}
+
+                return {
+                    "success": True,
+                    "quintessential_properties": q_props,
+                    "coordinate": q_data.get("coordinate", coordinate)
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Coordinate not found",
                     "coordinate": coordinate
                 }
         else:

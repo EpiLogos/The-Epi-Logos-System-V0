@@ -71,6 +71,9 @@ class WisdomPacket(BaseModel):
     subgraph_nodes: List[dict] = Field(default_factory=list, description="Traversed subgraph nodes")
     subgraph_relationships: List[dict] = Field(default_factory=list, description="Traversed relationships")
 
+    # LLM exploration output (full agent run for heavy calls)
+    llm_full_output: Optional[str] = Field(None, description="Complete agent exploration output (cached for performance)")
+
     model_config = {
         "json_schema_extra": {
             "example": {

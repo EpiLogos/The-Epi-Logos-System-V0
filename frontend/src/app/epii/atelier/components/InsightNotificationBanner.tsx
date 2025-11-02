@@ -31,7 +31,13 @@ export function InsightNotificationBanner({ session, onViewClick }: InsightNotif
 
   // Detect updates and show notifications
   useEffect(() => {
-    if (!session || !prevSessionRef.current) {
+    if (!session) {
+      prevSessionRef.current = null;
+      return;
+    }
+
+    // Initialize ref on first session load without triggering notifications
+    if (!prevSessionRef.current) {
       prevSessionRef.current = session;
       return;
     }

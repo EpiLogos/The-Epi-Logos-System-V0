@@ -98,7 +98,7 @@ class Neo4jClient:
     # Note: Creation of Bimba nodes is handled by explicit admin/seed services, not generic clients.
     
     def get_bimba_node(self, coordinate: str) -> Optional[Dict[str, Any]]:
-        """Get a Bimba Map node by coordinate."""
+        """Get a Bimba Map node by coordinate (temporal properties stripped)."""
         # Use defensive querying to handle both property names for backward compatibility
         query = """
         MATCH (n:BimbaNode { bimbaCoordinate: $coordinate })
@@ -106,12 +106,17 @@ class Neo4jClient:
         """
         records, _, _ = self.execute_query(query, {"coordinate": coordinate})
 
-        return dict(records[0]["n"]) if records else None
+        if records:
+            node_data = dict(records[0]["n"])
+            # Strip temporal properties to prevent serialization issues
+            return self._strip_temporal_properties(node_data)
+        return None
 
     def get_bimba_node_relationships(self, coordinate: str) -> List[Dict[str, Any]]:
         """Get all direct relationships for a Bimba node identified by coordinate.
 
         Returns a list of dictionaries with keys: type, direction, neighbor, properties.
+        Temporal properties are stripped from neighbors and relationship properties.
         """
         edges: List[Dict[str, Any]] = []
 
@@ -132,12 +137,17 @@ class Neo4jClient:
             for rec in out_records:
                 neighbor = dict(rec["neighbor"]) if rec.get("neighbor") is not None else {}
                 props = dict(rec["rel_props"]) if rec.get("rel_props") is not None else {}
+
+                # Strip temporal properties
+                filtered_neighbor = self._strip_temporal_properties(neighbor)
+                filtered_props = self._strip_temporal_properties(props)
+
                 edges.append(
                     {
                         "type": rec.get("rel_type"),
                         "direction": "OUTGOING",
-                        "neighbor": neighbor,
-                        "properties": props,
+                        "neighbor": filtered_neighbor,
+                        "properties": filtered_props,
                     }
                 )
 
@@ -145,12 +155,17 @@ class Neo4jClient:
             for rec in in_records:
                 neighbor = dict(rec["neighbor"]) if rec.get("neighbor") is not None else {}
                 props = dict(rec["rel_props"]) if rec.get("rel_props") is not None else {}
+
+                # Strip temporal properties
+                filtered_neighbor = self._strip_temporal_properties(neighbor)
+                filtered_props = self._strip_temporal_properties(props)
+
                 edges.append(
                     {
                         "type": rec.get("rel_type"),
                         "direction": "INCOMING",
-                        "neighbor": neighbor,
-                        "properties": props,
+                        "neighbor": filtered_neighbor,
+                        "properties": filtered_props,
                     }
                 )
         except Exception as e:
@@ -158,6 +173,43 @@ class Neo4jClient:
             raise
 
         return edges
+
+    def _strip_temporal_properties(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Remove datetime/timestamp properties from Neo4j data.
+
+        Filters out properties that contain Neo4j DateTime objects or timestamp-like fields
+        to prevent serialization issues in Wisdom Packets.
+
+        Args:
+            data: Dictionary of Neo4j node/relationship properties
+
+        Returns:
+            Filtered dictionary without temporal properties
+        """
+        from neo4j.time import DateTime as Neo4jDateTime
+
+        # Properties to exclude (common timestamp field names)
+        temporal_field_patterns = [
+            'created', 'updated', 'modified', 'deleted',
+            'createdAt', 'updatedAt', 'modifiedAt', 'deletedAt',
+            'created_at', 'updated_at', 'modified_at', 'deleted_at',
+            'timestamp', 'time', 'date'
+        ]
+
+        filtered = {}
+        for key, value in data.items():
+            # Skip Neo4j DateTime objects
+            if isinstance(value, Neo4jDateTime):
+                continue
+
+            # Skip fields matching temporal patterns
+            if any(pattern in key.lower() for pattern in temporal_field_patterns):
+                continue
+
+            filtered[key] = value
+
+        return filtered
 
     def traverse_subgraph(self, coordinate: str, depth: int = 2) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
         """
@@ -172,13 +224,14 @@ class Neo4jClient:
 
         Returns:
             Tuple of (nodes, relationships) where:
-                - nodes: List of connected node dictionaries
+                - nodes: List of connected node dictionaries (temporal properties stripped)
                 - relationships: List of relationship dictionaries with type, direction, target
         """
         # Variable-length pattern traversal with literal depth (not parameterized)
+        # Updated syntax to fix Neo4j deprecation warning
         query = f"""
         MATCH (start:BimbaNode {{bimbaCoordinate: $coordinate}})
-        CALL {{
+        CALL (start) {{
             WITH start
             MATCH path = (start)-[*1..{depth}]-(connected:BimbaNode)
             RETURN connected, relationships(path) as rels
@@ -196,12 +249,14 @@ class Neo4jClient:
             seen_rels = set()
 
             for record in records:
-                # Extract connected node
+                # Extract connected node (strip temporal properties)
                 connected_node = dict(record["connected"]) if record.get("connected") else None
                 if connected_node:
                     coord = connected_node.get("bimbaCoordinate")
                     if coord and coord not in seen_coords:
-                        nodes.append(connected_node)
+                        # Strip temporal properties before adding
+                        filtered_node = self._strip_temporal_properties(connected_node)
+                        nodes.append(filtered_node)
                         seen_coords.add(coord)
 
                 # Extract relationships
@@ -211,11 +266,15 @@ class Neo4jClient:
                     rel_key = (rel_type, rel.start_node.get("bimbaCoordinate"), rel.end_node.get("bimbaCoordinate"))
 
                     if rel_key not in seen_rels:
+                        # Strip temporal properties from relationship properties
+                        rel_props = dict(rel) if hasattr(rel, '__iter__') else {}
+                        filtered_rel_props = self._strip_temporal_properties(rel_props)
+
                         relationships.append({
                             "type": rel_type,
                             "direction": "OUTGOING" if rel.start_node.get("bimbaCoordinate") == coordinate else "INCOMING",
                             "target": rel.end_node.get("bimbaCoordinate"),
-                            "properties": dict(rel) if hasattr(rel, '__iter__') else {}
+                            "properties": filtered_rel_props
                         })
                         seen_rels.add(rel_key)
 

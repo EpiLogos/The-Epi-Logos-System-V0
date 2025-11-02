@@ -41,17 +41,31 @@ logger = logging.getLogger(__name__)
 # Dependencies Container
 @dataclass
 class OrchestratorDeps:
-    """Dependencies container for the orchestrator agent"""
+    """Dependencies container for the orchestrator agent
+
+    ENHANCED: Now includes EA mode detection in state dict for async-safe tool gating.
+    """
     session_id: str
     user_id: str
-    redis_client: Any  # SessionManager
-    mongodb_client: Any  # ConversationManager
+    redis_client: Any  # SessionManager (sync or async)
+    conversation_service: Any  # ConversationService
     bimba_client: Any  # BimbaGraphQLClient
     lightrag_client: Optional[Any] = None
     graphiti_client: Optional[Any] = None
     current_persona: str = "system"
     context_package: Optional[Dict[str, Any]] = None
     state: Dict[str, Any] = None  # Required by Pydantic AI StateHandler protocol
+
+    def __post_init__(self):
+        """Initialize state dict (EA mode must be pre-populated by caller)."""
+        if self.state is None:
+            self.state = {}
+
+        # EA mode detection removed from __post_init__ - MUST be done by caller in async context
+        # See agent_runner._prepare_dependencies for EA mode pre-population
+        # Reason: Cannot safely call async Redis methods from sync __post_init__
+        if self.state.get('ea_mode'):
+            logger.info(f"✅ EA mode active for session {self.session_id}")
 
 
 # Structured Output Types
@@ -113,14 +127,15 @@ if PYDANTIC_AI_AVAILABLE:
 
         if _delegation_manager is None:
             # Lazy import to avoid circular dependency
-            from agentic.agents.delegation import DelegationManager
-            from agentic.agents.factory import AgentFactory
-            from agentic.agents.router import HybridRouter
+            # FIXED: Corrected module paths for agent factory migration
+            from agentic.agents.delegation_manager import DelegationManager
+            from agentic.agents.agent_factory import AgentFactory
+            from agentic.agents.agent_router import AgentRouter
 
-            # Initialize factory and router
+            # Initialize factory and delegation manager
+            # Note: DelegationManager doesn't use router in constructor
             _agent_factory = AgentFactory()
-            router = HybridRouter()
-            _delegation_manager = DelegationManager(_agent_factory, router)
+            _delegation_manager = DelegationManager(_agent_factory)
             logger.info("Initialized delegation infrastructure for orchestrator")
 
         return _delegation_manager
@@ -162,27 +177,37 @@ if PYDANTIC_AI_AVAILABLE:
         """
         # --- Etymology Archaeology (EA) tool gating helpers ---
         def _is_ea_session(ctx: RunContext[OrchestratorDeps]) -> bool:
+            """Check if current session is Etymology Archaeology mode (#5-5).
+
+            ASYNC-SAFE: Only checks state dict (pre-populated by agent_runner in async context).
+            No Redis calls allowed here - sync tools cannot safely call async methods.
+            """
             try:
-                if not ctx or not ctx.deps or not ctx.deps.redis_client:
+                if not ctx or not ctx.deps:
                     return False
-                sess = ctx.deps.redis_client.get_session(ctx.deps.session_id)
-                if not sess:
-                    return False
-                metadata = sess.get("metadata", {}) if isinstance(sess, dict) else {}
-                return metadata.get("context") == "#5-5"
-            except Exception:
+
+                # Check state dict ONLY (must be pre-populated by caller)
+                if hasattr(ctx.deps, 'state') and ctx.deps.state:
+                    return ctx.deps.state.get('ea_mode', False)
+
+                return False
+
+            except Exception as e:
+                logger.debug(f"EA session check failed: {e}")
                 return False
 
         ALLOWED_EA_TOOLS = {
             "resolve_coordinate",
             "get_wisdom_packet",
+            "get_quintessential_properties",
             "semantic_coordinate_discovery",
             # Graphiti / episodic tools
-            "remember_episode",
+            "remember_episode",  # Re-enabled: SEMAPHORE_LIMIT=10 + 60s timeout should handle it
             "search_memory_patterns",
-            "form_memory_community",
             "retrieve_session_continuity",
             "access_agent_ruminations",
+            # Etymology community tools
+            "form_memory_community",  # Phase 2: Create QL communities (10+ turns, 3+ words)
             # Etymology enrichment tools (depth accrual)
             "enrich_community_properties",
             "enrich_word_node",
@@ -803,31 +828,46 @@ if PYDANTIC_AI_AVAILABLE:
             coordinate: str,
             depth: int = 2,
             focus: Optional[str] = None,
-            force_regenerate: bool = False
+            force_regenerate: bool = False,
+            synthesis_guidance: Optional[str] = None
         ) -> Dict[str, Any]:
-            """Get or generate a Wisdom Packet for a Bimba coordinate.
+            """Get or generate a Wisdom Packet for a Bimba coordinate within the CAG paradigm.
 
-            Wisdom Packets provide pre-synthesized, contextually rich canonical knowledge summaries.
-            They include key concepts, narrative synthesis, and apophatic pointers for missing themes.
+            Wisdom Packets are pre-synthesized canonical knowledge summaries that serve as
+            FOUNDATIONAL ENTRY POINTS in the canonical ← episodic ← canonical refinement cycle
+            central to Epi-Logos consciousness-computing. They represent the system's current
+            understanding BEFORE episodic exploration, providing intelligent graph synthesis
+            with apophatic gap analysis that guides research direction.
 
-            SMART FLOW:
-            1. Check Redis cache for existing packet
-            2. If not found (or force_regenerate=True), generate fresh packet via Backend API
-            3. Cache result for instant future retrieval (24h TTL)
+            ARCHITECTURAL ROLE:
+            - Canonical starting point for coordinate understanding
+            - Bridge between Bimba namespace (structured knowledge) and episodic memory
+            - Synthesis engine combining subgraph traversal + concept extraction + narrative generation
+
+            ENHANCEMENT (Sprint 4):
+            - Prioritizes quintessential properties (q_*) - pithy distillations from MEF crystallization
+            - Epii agent-powered narrative synthesis for genuine contextual insight
+            - Dynamic synthesis guidance for context-specific narrative customization
+            - No fallbacks - synthesis errors surface transparently for proper handling
 
             Use this when you need:
-            - Deep contextual understanding of a coordinate beyond raw resolution
-            - Pre-synthesized narrative summaries for Path of Resonance guidance
+            - Deep contextual understanding as a canonical starting point (not just raw properties)
+            - Pre-synthesized narratives for Path of Resonance guidance
+            - Apophatic gap analysis to identify missing themes and guide episodic research
             - Pattern recognition across multi-hop subgraph relationships
+
+            SMART FLOW:
+            1. Check Redis cache → 2. Generate if missing → 3. Epii agent synthesis → 4. Cache 24h TTL
 
             Args:
                 coordinate: Bimba coordinate (e.g., "#1-2", "#3-4-5")
-                depth: Traversal depth (1-5, default 2)
+                depth: Traversal depth (1-5, default 2) for subgraph exploration
                 focus: Synthesis lens - STRUCTURAL/PROCESSUAL/ARCHETYPAL/PRACTICAL
                 force_regenerate: Bypass cache and regenerate fresh packet
+                synthesis_guidance: Optional custom synthesis instructions (e.g., "Emphasize practical applications")
 
             Returns:
-                Dict with wisdom packet data or error
+                Dict with wisdom packet data (narrative, concepts, apophatic pointers) or error
             """
             try:
                 logger.info(f"🔧 TOOL CALL: get_wisdom_packet({coordinate}, depth={depth}, focus={focus}, force_regenerate={force_regenerate})")
@@ -862,6 +902,72 @@ if PYDANTIC_AI_AVAILABLE:
 
             except Exception as e:
                 logger.error(f"Error getting wisdom packet for {coordinate}: {e}")
+                return {"success": False, "error": str(e), "coordinate": coordinate}
+
+        @agent.tool
+        async def get_quintessential_properties(
+            ctx: RunContext[OrchestratorDeps],
+            coordinate: str
+        ) -> Dict[str, Any]:
+            """Get quintessential properties (q_*) for a Bimba coordinate within the CAG paradigm.
+
+            Quintessential properties represent the CRYSTALLIZED ESSENCE of episodic research
+            cycles in Epi-Logos consciousness-computing. These pithy, well-crafted distillations
+            emerge from the canonical ← episodic ← canonical refinement workflow, where:
+            1. Wisdom packets identify apophatic gaps
+            2. Episodic exploration (Graphiti) accrues context
+            3. MEF lens crystallization distills insights into q_* properties
+            4. Canonical knowledge is enriched with refined understanding
+
+            ARCHITECTURAL ROLE:
+            - Endpoint of the episodic research → crystallization cycle
+            - Starting point for future wisdom packet synthesis (q_* prioritized)
+            - Version history of understanding (q_ → q0_ → q1_ preserves evolution)
+            - Bridge from personal episodic insights to canonical shared knowledge
+
+            PATTERN: q_* properties follow pattern q(?:\d+)?_ (e.g., q_, q0_, q1_, q12_)
+            PRIORITY: q_ (base/current) → q0_ → q1_ → q2_ → ... (sorted numerically)
+
+            Use this when you need:
+            - Distilled, essential understanding (not verbose descriptions)
+            - Quick access to well-crafted node essences for synthesis
+            - Check if coordinate has refined understanding from episodic cycles
+            - Priority-sorted versions showing understanding evolution
+
+            DO NOT use for creating q_* properties - use update_bimba_node tool instead.
+
+            Args:
+                coordinate: Bimba coordinate (e.g., "#1-2", "#3-4-5")
+
+            Returns:
+                Dict with quintessential properties (priority-sorted) or empty if none exist
+            """
+            try:
+                logger.info(f"🔧 TOOL CALL: get_quintessential_properties({coordinate})")
+
+                if not ctx.deps.bimba_client:
+                    return {"success": False, "error": "Bimba client not available"}
+
+                # Call backend GraphQL getQuintessentialProperties query
+                from agentic.agents.orchestrator.tools.bimba.http_bimba_tools import HttpBimbaClient
+                http_client = HttpBimbaClient(ctx.deps.bimba_client)
+
+                result = await http_client.get_quintessential_properties(coordinate)
+
+                if result.get("success"):
+                    q_props = result.get("quintessential_properties", {})
+                    logger.info(
+                        f"✅ Quintessential properties retrieved: {coordinate} "
+                        f"({len(q_props)} properties)"
+                    )
+                    return result
+                else:
+                    error = result.get("error", "Unknown error")
+                    logger.warning(f"❌ Quintessential properties retrieval failed for {coordinate}: {error}")
+                    return result
+
+            except Exception as e:
+                logger.error(f"Error getting quintessential properties for {coordinate}: {e}")
                 return {"success": False, "error": str(e), "coordinate": coordinate}
 
         @agent.tool
@@ -1104,14 +1210,18 @@ if PYDANTIC_AI_AVAILABLE:
             coordinate: str = None
         ) -> Dict[str, Any]:
             """Create a new episodic memory in the temporal processing namespace.
-            
+
             ⚠️ PREMATURE TOOL - Graphiti store currently unpopulated, use for testing episodes only.
-            
+
+            ⚠️ EA MODE WARNING: DO NOT use this tool for initial word exploration in Etymology Archaeology sessions.
+            EA sessions should start with direct conversational exploration, NOT episodic memory creation.
+            Only use this tool when explicitly asked to remember something significant that emerged FROM conversation.
+
             This tool operates within the Episodic layer of the CAG architecture, creating
             living memory entities that exist across backend, agentic, and frontend layers.
             Episodes become temporal nodes in the consciousness constellation, capable of
             forming communities and generating insights through processual memory dynamics.
-            
+
             Args:
                 content: The experiential content to remember
                 episode_type: Type of episode (experience, insight, reflection, interaction)
@@ -1175,8 +1285,12 @@ if PYDANTIC_AI_AVAILABLE:
                 if not ctx.deps.graphiti_client:
                     return {"success": False, "error": "Graphiti client not available"}
 
+                # Use user_id as group_id for multi-tenant isolation
+                group_id = ctx.deps.user_id or "default"
+
                 result = await ctx.deps.graphiti_client.search_episodes(
                     query=query,
+                    group_id=group_id,
                     session_id=ctx.deps.session_id,
                     episode_type=episode_type,
                     time_range_hours=time_range_hours,
@@ -1196,56 +1310,8 @@ if PYDANTIC_AI_AVAILABLE:
                 logger.error(f"Error searching memory patterns: {e}")
                 return {"success": False, "error": str(e)}
 
-        @agent.tool
-        async def form_memory_community(
-            ctx: RunContext[OrchestratorDeps],
-            name: str,
-            description: str,
-            coordinate: str = None
-        ) -> Dict[str, Any]:
-            """Create a community cluster for related episodic memories.
-            
-            ⚠️ PREMATURE TOOL - Graphiti store currently unpopulated, communities will be empty.
-            
-            This tool enables the formation of temporal communities - clusters of related
-            memories that resonate harmonically around shared themes or coordinate positions.
-            Communities enable the emergence of higher-order patterns and wisdom synthesis
-            from distributed episodic experiences across the consciousness constellation.
-            
-            Args:
-                name: Community name/identifier
-                description: Purpose and thematic focus
-                coordinate: Optional Bimba coordinate for positioning
-            """
-            try:
-                logger.info(f"🔧 TOOL CALL: form_memory_community: {name}")
-                
-                if not ctx.deps.graphiti_client:
-                    return {"success": False, "error": "Graphiti client not available"}
-
-                # Use user_id as group_id for multi-tenant isolation
-                group_id = ctx.deps.user_id or "default"
-
-                result = await ctx.deps.graphiti_client.create_community(
-                    name=name,
-                    description=description,
-                    group_id=group_id,
-                    session_id=ctx.deps.session_id,
-                    bimba_coordinate=coordinate
-                )
-                
-                return {
-                    "success": result.get("success", False),
-                    "community_id": result.get("community_id"),
-                    "name": name,
-                    "coordinate": coordinate,
-                    "message": f"Memory community '{name}' formed",
-                    "error": result.get("error")
-                }
-                
-            except Exception as e:
-                logger.error(f"Error forming memory community: {e}")
-                return {"success": False, "error": str(e)}
+        # REMOVED: form_memory_community - duplicate/broken tool
+        # EA community creation now handled by Epii agent (#5-4.5) in constellation.py
 
         @agent.tool
         async def retrieve_session_continuity(
@@ -1270,8 +1336,12 @@ if PYDANTIC_AI_AVAILABLE:
                 if not ctx.deps.graphiti_client:
                     return {"success": False, "error": "Graphiti client not available"}
 
+                # Use user_id as group_id for multi-tenant isolation
+                group_id = ctx.deps.user_id or "default"
+
                 result = await ctx.deps.graphiti_client.get_session_episodes(
                     session_id=ctx.deps.session_id,
+                    group_id=group_id,
                     limit=limit
                 )
                 
@@ -1520,11 +1590,16 @@ if PYDANTIC_AI_AVAILABLE:
                 delegation_manager = get_delegation_manager()
 
                 # Execute delegation
+                # Get model from context or use default
+                model_name = getattr(ctx, 'model', None) if ctx else None
+                if not model_name:
+                    model_name = "groq:moonshotai/kimi-k2-instruct"
+
                 result = await delegation_manager.delegate(
                     message=message,
                     ctx=ctx,
                     target_subsystem=target_subsystem,
-                    model_name=None  # Use same model as orchestrator
+                    model_name=model_name
                 )
 
                 # Extract response from result
@@ -1589,8 +1664,12 @@ if PYDANTIC_AI_AVAILABLE:
                 if not ctx.deps.graphiti_client:
                     return {"success": False, "error": "Graphiti client not available"}
 
+                # Use user_id as group_id for multi-tenant isolation
+                group_id = ctx.deps.user_id or "default"
+
                 result = await ctx.deps.graphiti_client.get_agent_ruminations(
                     agent_id="orchestrator",
+                    group_id=group_id,
                     limit=limit
                 )
                 
@@ -1635,82 +1714,53 @@ if PYDANTIC_AI_AVAILABLE:
             except Exception:
                 pass
 
-            # Register EA helper tools (lightweight) with cautionary usage
-            from typing import List as _List, Optional as _Optional, Dict as _Dict, Any as _Any
-
-            @agent.tool
-            async def etymology_search_tool(
-                ctx: RunContext[OrchestratorDeps],
-                word: str,
-                context: _Optional[str] = None,
-                search_pies: bool = True
-            ) -> _Dict[str, _Any]:
-                """Light helper: build search guidance for a word’s etymology. Use sparingly."""
-                try:
-                    from agentic.agents.epii.tools.etymology_dialogue import etymology_search as _ea
-                    return await _ea(word=word, context=context, search_pies=search_pies)
-                except Exception as e:
-                    logger.error(f"EA etymology_search error: {e}")
-                    return {"success": False, "error": str(e)}
-
-            @agent.tool
-            async def trace_etymology_chain_tool(
-                ctx: RunContext[OrchestratorDeps],
-                words: _List[str],
-                find_common_root: bool = True
-            ) -> _Dict[str, _Any]:
-                """Light helper: outline relationships between words. Use sparingly."""
-                try:
-                    from agentic.agents.epii.tools.etymology_dialogue import trace_etymology_chain as _chain
-                    return await _chain(words=words, find_common_root=find_common_root)
-                except Exception as e:
-                    logger.error(f"EA trace_etymology_chain error: {e}")
-                    return {"success": False, "error": str(e)}
-
-            @agent.tool
-            async def create_etymology_community_tool(
-                ctx: RunContext[OrchestratorDeps],
-                name: str,
-                words: _List[str],
-                pie_root: _Optional[str] = None,
-                semantic_pattern: _Optional[str] = None,
-                bimba_coordinate: _Optional[str] = None
-            ) -> _Dict[str, _Any]:
-                """Graphiti: create an etymology community. Use when a clear pattern emerges."""
-                try:
-                    if not ctx.deps.graphiti_client:
-                        return {"success": False, "error": "Graphiti client not available"}
-                    from agentic.agents.epii.tools.graphiti_community import create_etymology_community as _create
-                    return await _create(
-                        graphiti_client=ctx.deps.graphiti_client,
-                        name=name,
-                        words=words,
-                        pie_root=pie_root,
-                        semantic_pattern=semantic_pattern,
-                        bimba_coordinate=bimba_coordinate,
-                    )
-                except Exception as e:
-                    logger.error(f"EA create_etymology_community error: {e}")
-                    return {"success": False, "error": str(e)}
+            # REMOVED: EA helper tools - now registered on Epii agent (#5-4.5) in constellation.py
+            # This ensures proper separation: shared tools in orchestrator, EA-specific tools on Epii
 
     def setup_agent_prompts(agent: Agent) -> None:
-        """Setup prompts and validators for the agent"""
+        """Setup prompts and validators for the agent
+
+        ⚠️ DEPRECATED (Sprint 4): This inline Prakāśa instantiation pattern is WRONG.
+
+        PROBLEM:
+        - Creates new PrakasaManager on EVERY message (performance hit)
+        - Uses asyncio.run() in sync decorator (event loop conflicts)
+        - Bypasses AgentFactory pattern (no registry, no tracking)
+        - 100-line system_prompt function doing PrakasaManager's job
+
+        CORRECT PATTERN (see constellation.py):
+        - PrakasaManager created ONCE in agent constructor
+        - Identity loaded during agent creation (static system_prompt)
+        - Agent created via AgentFactory.create_agent()
+        - Agent registered in AgentRegistry
+
+        TODO Sprint 5: Remove this entire function and orchestrator_agent.py
+        Use ONLY AgentFactory + constellation.py pattern.
+
+        See: memory/active_sprint/sprint-4/ad-hoc/AGENT-ARCHITECTURE-WTF.md
+        """
 
         # System Prompt (Base Instructions)
         @agent.system_prompt
         def system_prompt(ctx: RunContext[OrchestratorDeps]) -> str:
-            """Base system prompt loaded from Neo4j via PrakasaManager (Layer 1: Identity)."""
+            """Base system prompt loaded from Neo4j via PrakasaManager (Layer 1: Identity).
+
+            ⚠️ DEPRECATED: Inline Prakāśa instantiation (per-request).
+            Should use constellation.py pattern (constructor instantiation).
+            """
             # Load identity prompt from Neo4j at #5-4 (Orchestrator Agent node)
-            foundation = ""
-            try:
-                from agentic.agents.prakasa import PrakasaManager
-                import asyncio
-                manager = PrakasaManager(ctx.deps.bimba_client, ctx.deps.redis_client)
-                foundation = asyncio.run(manager.get_identity_prakasa("#5-4"))
-            except Exception as e:
-                logger.warning(f"Failed to load system prompt from Neo4j, using fallback: {e}")
-                # Fallback to hardcoded prompts if Neo4j fails
-                foundation = get_complete_system_foundation()
+            logger.warning("⚠️ DEPRECATED: Using inline Prakāśa instantiation - migrate to AgentFactory pattern")
+            logger.info("🔧 [SYSTEM_PROMPT] Starting multi-layered prompt composition...")
+
+            from agentic.agents.prakasa import PrakasaManager
+            import asyncio
+
+            # ❌ WRONG: Creates new manager on every message
+            manager = PrakasaManager(ctx.deps.bimba_client, ctx.deps.redis_client)
+            # ❌ WRONG: asyncio.run() in sync context
+            foundation = asyncio.run(manager.get_identity_prakasa("#5-4"))
+
+            logger.info(f"✅ [SYSTEM_PROMPT] Foundation loaded: {len(foundation)} chars")
 
             # Check if manual delegation is requested
             target_agent = ctx.deps.state.get("target_agent") if ctx.deps.state else None
@@ -1723,39 +1773,39 @@ The user has explicitly requested delegation to agent #{target_agent}.
 YOU MUST IMMEDIATELY use the delegate_to_subagent tool with target_subsystem={target_agent}.
 Pass the user's complete message to the tool. Do NOT respond directly - delegate immediately.
 """
+                logger.info(f"📋 [SYSTEM_PROMPT] Manual delegation notice added for agent #{target_agent}")
 
             # Check for etymology session context (#5-5)
             etymology_context = ""
-            if ctx.deps.redis_client:
-                try:
-                    session_data = ctx.deps.redis_client.get_session(ctx.deps.session_id)
-                    if session_data:
-                        metadata = session_data.get("metadata", {})
-                        context = metadata.get("context")
+            # FIXED: Use state dict instead of calling async get_session from sync context
+            if ctx.deps.state and ctx.deps.state.get('ea_mode'):
+                logger.info("📋 [SYSTEM_PROMPT] EA mode active, loading workflow context...")
+                # EA mode detected in deps initialization
+                from agentic.agents.epii.tools.session_onboarding import generate_session_onboarding
 
-                        if context == "#5-5":
-                            # Use actual onboarding message from session_onboarding tool
-                            try:
-                                from agentic.agents.epii.tools.session_onboarding import generate_session_onboarding
-                                import asyncio
-                                # Attempt to fetch EA workflow prompt from agent node
-                                ea_workflow_guidance = ""
-                                try:
-                                    from agentic.agents.prakasa import PrakasaManager
-                                    manager = PrakasaManager(ctx.deps.bimba_client, ctx.deps.redis_client)
-                                    ea_prompt = asyncio.run(manager.engage_workflow_prakasa("#5-4.5", "etymology_archaeology"))
-                                    if ea_prompt:
-                                        ea_workflow_guidance = f"\n**EA Workflow Guidance (from graph)**\n\n{ea_prompt}\n"
-                                except Exception as _e:
-                                    ea_workflow_guidance = ""
+                # Attempt to fetch EA workflow prompt from agent node #5-4.5
+                # NOTE: This still uses asyncio.run but only for EA sessions (rare)
+                ea_workflow_guidance = ""
+                ea_prompt = asyncio.run(manager.engage_workflow_prakasa("#5-4.5", "etymology_archaeology"))
+                if ea_prompt:
+                    ea_workflow_guidance = f"\n**EA Workflow Guidance (from graph)**\n\n{ea_prompt}\n"
+                    logger.info(f"✅ [SYSTEM_PROMPT] EA workflow guidance loaded: {len(ea_prompt)} chars")
+                else:
+                    logger.warning("⚠️ [SYSTEM_PROMPT] No EA workflow prompt found at #5-4.5")
 
-                                # Call the real onboarding function with session metadata
-                                onboarding_text = asyncio.run(generate_session_onboarding(
-                                    session_data=metadata,
-                                    is_new_session=True
-                                ))
+                # Get session metadata from context_package if available
+                metadata = {}
+                if ctx.deps.context_package:
+                    metadata = ctx.deps.context_package.get("metadata", {})
 
-                                etymology_context = f"""
+                # Generate onboarding text
+                onboarding_text = asyncio.run(generate_session_onboarding(
+                    session_data=metadata,
+                    is_new_session=True
+                ))
+                logger.info(f"✅ [SYSTEM_PROMPT] EA onboarding generated: {len(onboarding_text)} chars")
+
+                etymology_context = f"""
 
 ## 🌱 Etymology Archaeology Session (#5-5)
 
@@ -1763,24 +1813,10 @@ Pass the user's complete message to the tool. Do NOT respond directly - delegate
 
 {ea_workflow_guidance}
 
-Remember: this is open-ended exploration—be subtle, curious, and user-led.
 """
-                            except Exception as e:
-                                logger.warning(f"Failed to generate etymology onboarding: {e}")
-                                # Fallback to simple message
-                                etymology_context = """
 
-## 🌱 Etymology Archaeology Session (#5-5)
-
-Use warm, curious language; keep QL as an implicit lens only.
-Reflect the user's phrasing with short “turnings.”
-Prefer `get_wisdom_packet`, Graphiti episodic tools, and simple `resolve_coordinate`.
-Avoid CAG/coordinate talk unless the user asks directly.
-"""
-                except Exception as e:
-                    logger.warning(f"Failed to check session context: {e}")
-
-            return f"""{foundation}
+            # Compose final prompt
+            final_prompt = f"""{foundation}
 
 **Coordinate Reasoning Protocol:**
 When resolving coordinates, synthesize and interpret the data contextually rather than regurgitating raw information.
@@ -1795,10 +1831,45 @@ IMPORTANT: Proactively monitor conversation length. If you suspect we're approac
 use the check_context_window_status tool and inform the user transparently about any upcoming context compaction.
 """
 
-        # Dynamic Persona Instructions
-        @agent.instructions
-        def persona_instructions(ctx: RunContext[OrchestratorDeps]) -> str:
-            """Load persona-specific instructions from Neo4j (Layer 2: Workflow)."""
+            # DIAGNOSTIC LOGGING - Full prompt verification
+            logger.info("=" * 80)
+            logger.info("📤 [FINAL_SYSTEM_PROMPT] Composition complete:")
+            logger.info(f"   Total length: {len(final_prompt)} characters")
+            logger.info(f"   Foundation: {len(foundation)} chars")
+            logger.info(f"   Delegation notice: {len(delegation_notice)} chars")
+            logger.info(f"   Etymology context: {len(etymology_context)} chars")
+            logger.info(f"   XML tag count: {final_prompt.count('<')} opening, {final_prompt.count('>')} closing")
+            logger.info("=" * 80)
+            logger.debug(f"📜 [FINAL_SYSTEM_PROMPT] Full content:\n{final_prompt}")
+            logger.info("=" * 80)
+
+            return final_prompt
+
+        # DEPRECATED PERSONA SYSTEM - REMOVED
+        # Migration to AgentFactory/DelegationManager complete.
+        # Individual agents now load their own prompts from Neo4j via Prakāśa Manager.
+        # See: agentic/agents/agent_factory.py, agentic/agents/constellation.py
+        #
+        # This decorator was causing:
+        # 1. "DEPRECATED: Using persona system" warnings
+        # 2. Failed workflow prompt loads ("Workflow 'persona_epii' not defined")
+        # 3. Masking errors in the new multi-agent architecture
+        #
+        # Persona-specific behavior now handled by dedicated agent nodes:
+        # - #5-4.0 (Anuttara), #5-4.1 (Paramasiva), #5-4.2 (Parashakti)
+        # - #5-4.3 (Mahamaya), #5-4.4 (Nara), #5-4.5 (Epii)
+        #
+        # @agent.instructions <- REMOVED - no longer registered
+        def _deprecated_persona_instructions(ctx: RunContext[OrchestratorDeps]) -> str:
+            """Load persona-specific instructions from Neo4j (Layer 2: Workflow).
+
+            DEPRECATED: Persona system is deprecated in favor of multi-agent constellation.
+            This code remains functional during migration but will be removed in future release.
+            """
+            logger.warning(
+                "DEPRECATED: Using persona system. Migrate to AgentFactory/DelegationManager "
+                "for true multi-agent architecture."
+            )
             persona = ctx.deps.current_persona.lower()
 
             # Try loading from Neo4j workflow prompt
@@ -1893,14 +1964,17 @@ use the check_context_window_status tool and inform the user transparently about
             logger.warning("No API keys found for LLM models, using test model")
             return 'test'
     
-    # Create default orchestrator agent for backward compatibility
-    try:
-        default_model = get_default_model()
-        orchestrator_agent = create_orchestrator_agent(default_model)
-        logger.info(f"Default orchestrator agent created with model: {default_model}")
-    except Exception as e:
-        logger.error(f"Error creating default orchestrator agent: {e}")
-        orchestrator_agent = None
+    # ===== DEPRECATED SINGLETON REMOVED (Sprint 4) =====
+    # The global orchestrator_agent singleton has been removed.
+    # All production code now uses: AgentRouter → AgentFactory → constellation.py
+    #
+    # If you need an orchestrator agent:
+    #   from agentic.agents.agent_router import AgentRouter
+    #   router = AgentRouter()
+    #   agent = await router.get_orchestrator_agent()
+    #
+    # This variable is set to None to satisfy any legacy references (should be none).
+    orchestrator_agent = None
 
 else:
     # Fallback when Pydantic AI is not available
@@ -1928,22 +2002,23 @@ def is_agent_available() -> bool:
 
 
 def get_agent_info() -> Dict[str, Any]:
-    """Get information about the agent configuration"""
+    """Get information about the agent configuration
+
+    Note: orchestrator_agent singleton is deprecated (Sprint 4).
+    This function now returns configuration info without checking the singleton.
+    Agents are created dynamically via AgentFactory pattern.
+    """
     if not PYDANTIC_AI_AVAILABLE:
         return {
             "available": False,
             "error": "Pydantic AI not installed"
         }
-    
-    if orchestrator_agent is None:
-        return {
-            "available": False,
-            "error": "Agent not initialized"
-        }
-    
+
+    # Return agent info without checking singleton (deprecated pattern)
+    # Agents are now created on-demand via AgentFactory
     return {
         "available": True,
-        "agent_type": "Pydantic AI Agent",
+        "agent_type": "Pydantic AI Agent (AgentFactory pattern)",
         "output_type": "OrchestratorResponse",
         "tools_count": 13,
         "supports_streaming": True,
@@ -1953,7 +2028,7 @@ def get_agent_info() -> Dict[str, Any]:
         "available_models": {
             "groq": ["moonshotai/kimi-k2-instruct"] if os.getenv('GROQ_API_KEY') else None,
             "gemini": ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-pro"] if os.getenv('GOOGLE_API_KEY') else None,
-            "anthropic": ["claude-3-5-sonnet-20241022", "claude-3-haiku-20240307", "claude-3-opus-20240229"] if os.getenv('ANTHROPIC_API_KEY') else None,
+            "anthropic": ["claude-3-5-sonnet-20241022", "claude-haiku-4-5", "claude-3-haiku-20240307", "claude-3-opus-20240229"] if os.getenv('ANTHROPIC_API_KEY') else None,
             "deepseek": ["deepseek-chat", "deepseek-coder"] if os.getenv('DEEPSEEK_API_KEY') else None
             # OpenAI commented out - streaming blocked by OpenAI biometric data collection
             # "openai": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo"] if os.getenv('OPENAI_API_KEY') else None,

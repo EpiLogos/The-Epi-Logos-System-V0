@@ -297,6 +297,50 @@ class HttpBimbaClient:
                 "coordinate": coordinate
             }
 
+    async def get_quintessential_properties(self, coordinate: str) -> Dict[str, Any]:
+        """
+        Get quintessential properties (q_*) for a Bimba coordinate.
+
+        Quintessential properties are pithy, well-crafted distillations of a node's
+        essential nature. Priority-sorted: q_ (base) → q0_ → q1_ → q2_ → ...
+
+        Args:
+            coordinate: Bimba coordinate (e.g., "#1-2", "#3-4-5")
+
+        Returns:
+            Dict containing quintessential properties or error
+        """
+        try:
+            result = await self.client.get_quintessential_properties(coordinate)
+
+            if result.get("success"):
+                q_props = result.get("quintessential_properties", {})
+                logger.info(
+                    f"Retrieved quintessential properties for {coordinate}: "
+                    f"{len(q_props)} properties"
+                )
+                return {
+                    "success": True,
+                    "quintessential_properties": q_props,
+                    "coordinate": coordinate
+                }
+            else:
+                error_msg = result.get("error", "Unknown error")
+                logger.warning(f"Failed to get quintessential properties for {coordinate}: {error_msg}")
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "coordinate": coordinate
+                }
+
+        except Exception as e:
+            logger.error(f"Exception getting quintessential properties for {coordinate}: {e}")
+            return {
+                "success": False,
+                "error": f"HTTP request failed: {str(e)}",
+                "coordinate": coordinate
+            }
+
     async def get_node_relationships(self, coordinate: str) -> Dict[str, Any]:
         """
         Get all direct relationship connections for a Bimba coordinate.
@@ -430,51 +474,13 @@ class HttpBimbaClient:
         Returns:
             Dict containing pathLength, start/end nodes, and ordered components
         """
-        # Construct GraphQL request inline using the underlying client's POST
-        query = """
-        query GetPath($start: String!, $end: String!, $hops: Int) {
-          getPathBetweenCoordinates(startCoordinate: $start, endCoordinate: $end, maxHops: $hops) {
-            startNode { coordinate name subsystem }
-            endNode { coordinate name subsystem }
-            pathLength
-            pathComponents {
-              ... on PathNode { position coordinate name subsystem }
-              ... on PathRelationship { position type direction properties { key value } }
-            }
-          }
-        }
-        """
-
-        variables = {
-            "start": start_coordinate,
-            "end": end_coordinate,
-            "hops": max_hops,
-        }
-
         try:
-            logger.info(
-                "Requesting path between %s and %s (maxHops=%s)",
-                start_coordinate,
-                end_coordinate,
-                max_hops,
+            result = await self.client.get_path_between_coordinates(
+                start_coordinate=start_coordinate,
+                end_coordinate=end_coordinate,
+                max_hops=max_hops
             )
-            response = await self.client.post("/graphql", json_data={"query": query, "variables": variables})
-
-            if "data" in response and response["data"]:
-                path = response["data"].get("getPathBetweenCoordinates")
-                if path is None:
-                    return {
-                        "success": False,
-                        "error": "No path found within constraints",
-                        "path": None,
-                    }
-                return {"success": True, "path": path}
-
-            # GraphQL errors path
-            errors = response.get("errors", [])
-            error_msg = "; ".join([err.get("message", "Unknown error") for err in errors])
-            logger.warning("Path traversal GraphQL error: %s", error_msg)
-            return {"success": False, "error": error_msg or "GraphQL query failed", "path": None}
+            return result
 
         except Exception as e:
             logger.error("HTTP error during path traversal: %s", e)
