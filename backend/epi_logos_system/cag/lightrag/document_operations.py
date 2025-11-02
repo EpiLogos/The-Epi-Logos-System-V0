@@ -16,10 +16,11 @@ logger = logging.getLogger(__name__)
 
 class DocumentIngestionPipeline:
     """Document ingestion pipeline with coordinate metadata preservation"""
-    
+
     def __init__(self):
         self.service = get_lightrag_service()
         self.ingestion_history = []
+        self.default_batch_size = 150  # Default batch size for large documents
     
     async def ingest_document(
         self, 
@@ -70,14 +71,110 @@ class DocumentIngestionPipeline:
                 await self._track_document_relationships(doc, result)
             
             return result
-            
+
         except Exception as e:
             logger.error(f"Document ingestion pipeline error: {e}")
             if ingestion_record:
                 ingestion_record["status"] = "failed"
                 ingestion_record["error"] = str(e)
             return {"success": False, "error": str(e)}
-    
+
+    async def ingest_document_batched(
+        self,
+        content: str,
+        source_id: str,
+        source_coordinate: str,
+        section_coordinates: Optional[List[str]] = None,
+        namespace: str = "gnostic",
+        ontological_level: int = 4,
+        process_type: str = "dialogical-identity",
+        batch_size: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """
+        Ingest large document in batches to avoid timeout.
+
+        Splits content into batches and processes sequentially.
+        Each batch is ingested as a separate LightRAG operation.
+        """
+        try:
+            batch_size = batch_size or self.default_batch_size
+
+            # Split content into approximately equal chunks based on paragraph boundaries
+            paragraphs = content.split('\n\n')
+            total_paragraphs = len(paragraphs)
+
+            logger.info(f"Batched ingestion: {total_paragraphs} paragraphs, batch size ~{batch_size} paragraphs")
+
+            # Create batches
+            batches = []
+            current_batch = []
+            current_size = 0
+
+            for para in paragraphs:
+                current_batch.append(para)
+                current_size += 1
+
+                if current_size >= batch_size:
+                    batches.append('\n\n'.join(current_batch))
+                    current_batch = []
+                    current_size = 0
+
+            # Add remaining paragraphs as final batch
+            if current_batch:
+                batches.append('\n\n'.join(current_batch))
+
+            logger.info(f"Created {len(batches)} batches for ingestion")
+
+            # Process each batch
+            batch_results = []
+            for i, batch_content in enumerate(batches, 1):
+                logger.info(f"Processing batch {i}/{len(batches)}...")
+
+                # Create batch-specific source_id
+                batch_source_id = f"{source_id}_batch_{i}"
+
+                # Ingest batch
+                batch_result = await self.ingest_document(
+                    content=batch_content,
+                    source_id=batch_source_id,
+                    source_coordinate=source_coordinate,
+                    section_coordinates=section_coordinates,
+                    namespace=namespace,
+                    ontological_level=ontological_level,
+                    process_type=process_type
+                )
+
+                batch_results.append({
+                    "batch_number": i,
+                    "batch_source_id": batch_source_id,
+                    "success": batch_result.get("success"),
+                    "error": batch_result.get("error")
+                })
+
+                if not batch_result.get("success"):
+                    logger.error(f"Batch {i} failed: {batch_result.get('error')}")
+                    # Continue with remaining batches even if one fails
+
+            # Calculate overall success
+            successful_batches = sum(1 for r in batch_results if r["success"])
+            overall_success = successful_batches == len(batches)
+
+            logger.info(f"Batched ingestion complete: {successful_batches}/{len(batches)} successful")
+
+            return {
+                "success": overall_success,
+                "total_batches": len(batches),
+                "successful_batches": successful_batches,
+                "failed_batches": len(batches) - successful_batches,
+                "batch_results": batch_results,
+                "source_id": source_id,
+                "coordinate": source_coordinate
+            }
+
+        except Exception as e:
+            logger.error(f"Batched ingestion pipeline error: {e}")
+            return {"success": False, "error": str(e)}
+
     def ingest_document_sync(
         self, 
         content: str,

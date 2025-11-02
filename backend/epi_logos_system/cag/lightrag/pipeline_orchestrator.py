@@ -128,13 +128,28 @@ class PipelineOrchestrator:
                 chunk.wrapped_content for chunk in wrapped_chunks
             )
 
-            ingestion_result = await self.lightrag_pipeline.ingest_document(
-                content=combined_content,
-                source_id=document_id,
-                source_coordinate=coordinate,
-                namespace="gnostic",
-                ontological_level=subsystem or 4
-            )
+            # Use batched ingestion for large documents (> 1000 chunks)
+            # This prevents timeout on entity/relationship extraction
+            chunk_threshold = 1000
+            if len(wrapped_chunks) > chunk_threshold:
+                logger.info(f"Large document detected ({len(wrapped_chunks)} chunks), using batched ingestion")
+                ingestion_result = await self.lightrag_pipeline.ingest_document_batched(
+                    content=combined_content,
+                    source_id=document_id,
+                    source_coordinate=coordinate,
+                    namespace="gnostic",
+                    ontological_level=subsystem or 4,
+                    batch_size=150  # ~150 paragraphs per batch
+                )
+            else:
+                logger.info(f"Standard ingestion for {len(wrapped_chunks)} chunks")
+                ingestion_result = await self.lightrag_pipeline.ingest_document(
+                    content=combined_content,
+                    source_id=document_id,
+                    source_coordinate=coordinate,
+                    namespace="gnostic",
+                    ontological_level=subsystem or 4
+                )
 
             if not ingestion_result.get("success"):
                 raise ValueError(f"LightRAG ingestion failed: {ingestion_result.get('error')}")

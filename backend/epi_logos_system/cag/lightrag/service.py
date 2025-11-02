@@ -75,7 +75,7 @@ class LightRAGService:
         try:
             self.rag = LightRAG(
                 working_dir=self.working_dir,
-                workspace="",  # Empty workspace = no prefixes, collections: entities, relationships, chunks
+                workspace=self.workspace,  # Use configured workspace (gnostic in production, testing_archetypes in test mode)
                 llm_model_func=llm_func,  # Groq or Gemini based on config
                 llm_model_name=llm_model_name,
                 llm_model_kwargs={
@@ -84,6 +84,9 @@ class LightRAGService:
                 },
                 # Use Gemini embedding function
                 embedding_func=gemini_embedding_func,
+                # Increased timeouts for large document processing (10 minutes each)
+                default_llm_timeout=600,  # 10 minutes for LLM calls
+                default_embedding_timeout=600,  # 10 minutes for embedding calls
                 # Database storage backends - JSON KV + Neo4j + Qdrant
                 kv_storage="JsonKVStorage",  # Local JSON file storage
                 graph_storage="Neo4JStorage",
