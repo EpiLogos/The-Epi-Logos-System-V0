@@ -153,10 +153,6 @@ export default function AccountPage() {
     monochrome: false
   };
 
-  const gradientStyle = {
-    background: 'linear-gradient(180deg, rgba(0,0,0,1) 0%, rgba(116,201,104,0.12) 35%, rgba(2,6,23,1) 100%)',
-  } as React.CSSProperties;
-
   const overlayTint = 'rgba(116, 201, 104, 0.35)';
 
   return (
