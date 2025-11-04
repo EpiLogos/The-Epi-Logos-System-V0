@@ -94,6 +94,8 @@ html, body {
   --animate-swipeOut: swipeOut 100ms ease-out;
   --animate-fadeIn: fadeIn 150ms ease-in;
   --animate-fadeOut: fadeOut 150ms ease-out;
+  /* Aurora Background Animation */
+  --animate-aurora: aurora 60s linear infinite;
 
   /* Keyframes */
   @keyframes accordion-down {
@@ -154,6 +156,20 @@ html, body {
     }
     to {
       opacity: 0;
+    }
+  }
+
+  /* Aurora keyframes for background-position drift */
+  @keyframes aurora {
+    from {
+      background-position:
+        50% 50%,
+        50% 50%;
+    }
+    to {
+      background-position:
+        350% 50%,
+        350% 50%;
     }
   }
 

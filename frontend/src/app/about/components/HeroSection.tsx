@@ -1,14 +1,21 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { WavyBackground } from './WavyBackground';
 
-interface HeroSectionProps {
-  onCTAClick?: (cta: 'mef' | 'collaborate' | 'ql') => void;
-}
+const ASCIIText = dynamic(() => import('@/components/three/ASCIIText'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center h-full">
+      <h1 className="text-[36px] font-normal tracking-[4px] text-white text-center">
+        Epi-Logos
+      </h1>
+    </div>
+  )
+});
 
-export function HeroSection({ onCTAClick }: HeroSectionProps) {
+export function HeroSection() {
   return (
     <WavyBackground
       containerClassName="relative w-full h-screen overflow-hidden"
@@ -26,62 +33,34 @@ export function HeroSection({ onCTAClick }: HeroSectionProps) {
       waveOpacity={0.3}
     >
       {/* Hero Content */}
-      <div className="flex flex-col items-center justify-center px-8">
-        {/* Logo */}
-        <div className="mb-8">
-          <Image
-            src="/ui-system/epi-logos-logo-vibes.jpeg"
-            alt="Epi-Logos"
-            width={300}
-            height={300}
-            className="rounded-sm"
-            priority
+      <div className="flex flex-col items-center justify-center px-8 h-screen">
+        {/* Logo - Positioned top left with white color */}
+        <div className="absolute top-8 left-8">
+          <div
+            className="w-[120px] h-[120px]"
+            style={{
+              WebkitMaskImage: 'url(/ui-system/epi-logos-logo.svg)',
+              WebkitMaskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              maskImage: 'url(/ui-system/epi-logos-logo.svg)',
+              maskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              backgroundColor: '#f0f4ff'
+            }}
           />
         </div>
 
-        {/* Headline */}
-        <h1 className="text-[32px] font-normal tracking-[3px] text-white text-center mb-4 max-w-[900px]">
-          EPI-LOGOS: AN INSTRUMENT FOR INTEGRAL INTELLIGENCE
-        </h1>
-
-        {/* Subheadline */}
-        <p className="text-[14px] text-gray-300 text-center mb-10 max-w-[700px] leading-[1.8] tracking-[0.5px]">
-          We've built a reflexive map of how knowing works—so philosophy becomes a usable practice for everyone,
-          and AI serves <strong>purpose</strong>, not power.
-        </p>
-
-        {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          {/* Primary CTA */}
-          <button
-            onClick={() => onCTAClick?.('mef')}
-            className="px-8 py-3 bg-white text-black text-[12px] font-normal tracking-[2px] uppercase hover:bg-gray-200 transition-colors"
-          >
-            Read the MEF Essay →
-          </button>
-
-          {/* Secondary CTA */}
-          <button
-            onClick={() => onCTAClick?.('collaborate')}
-            className="px-8 py-3 border border-white text-white text-[12px] font-normal tracking-[2px] uppercase hover:bg-white hover:text-black transition-colors"
-          >
-            Collaborate →
-          </button>
+        {/* ASCII Text Title */}
+        <div className="relative w-full h-[300px] flex items-center justify-center">
+          <ASCIIText
+            text="Epi-Logos"
+            enableWaves={true}
+            asciiFontSize={4}
+            textFontSize={120}
+            textColor="#fdf9f3"
+            planeBaseHeight={6}
+          />
         </div>
-
-        {/* Tertiary Link */}
-        <button
-          onClick={() => onCTAClick?.('ql')}
-          className="text-[11px] text-gray-400 hover:text-white transition-colors tracking-[1px] underline"
-        >
-          What is Quaternal Logic?
-        </button>
-
-        {/* Trust cues */}
-        <p className="absolute bottom-8 text-[9px] text-gray-500 text-center max-w-[800px] leading-[1.6] tracking-[0.5px]">
-          With influences from Aristotle, Nāgārjuna, Whitehead, Jung/Pauli, Bohm, and Gödel—Epi-Logos turns reason upon itself
-          to make coherence a method, not a miracle.
-        </p>
       </div>
     </WavyBackground>
   );
