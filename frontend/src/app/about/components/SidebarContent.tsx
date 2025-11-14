@@ -6,15 +6,16 @@ import { ScrollingSections } from './ScrollingSections';
 interface SidebarContentProps {
   onEssayClick: (essay: string) => void;
   onSectionClick: (section: string) => void;
+  onSectionChange?: (index: number) => void;
 }
 
-export function SidebarContent({ onEssayClick, onSectionClick }: SidebarContentProps) {
+export function SidebarContent({ onEssayClick, onSectionClick, onSectionChange }: SidebarContentProps) {
   return (
     <div className="w-full h-full bg-black text-white">
-      {/* Scrolling Content Sections (includes hero as first section) */}
       <ScrollingSections
         onEssayClick={onEssayClick}
         onSectionClick={onSectionClick}
+        onSectionChange={onSectionChange}
       />
     </div>
   );

@@ -20,6 +20,8 @@ const nextConfig = {
       'framer-motion'
     ],
     // Note: optimizeCss removed as it requires critters package
+    // Fix for pdfjs-dist "Object.defineProperty" error in Next.js
+    esmExternals: 'loose',
   },
 
   // Turbopack configuration (moved from experimental.turbo)
@@ -113,7 +115,21 @@ const nextConfig = {
   },
 
   // Webpack configuration for performance
-  webpack: (config, { dev, isServer }) => {
+  webpack: (config, { dev, isServer, webpack }) => {
+    // Fix for pdfjs-dist "Object.defineProperty called on non-object" error
+    // Next.js forces 'eval-source-map' in dev, which breaks pdfjs-dist
+    // Use Object.defineProperty with no-op setter to override this behavior
+    if (dev && !isServer) {
+      Object.defineProperty(config, 'devtool', {
+        get() {
+          return 'source-map';
+        },
+        set() {
+          // No-op setter prevents Next.js from overriding
+        },
+      });
+    }
+
     // Optimize for development performance
     if (dev) {
       config.watchOptions = {
@@ -136,6 +152,24 @@ const nextConfig = {
       ...config.resolve.alias,
       'three/examples/jsm': 'three/examples/jsm',
     };
+
+    // Configure fallbacks for pdfjs-dist
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      canvas: false,
+      fs: false,
+      path: false,
+      crypto: false,
+    };
+
+    // Ignore canvas module in pdfjs-dist
+    config.externals = config.externals || {};
+    if (!isServer) {
+      config.externals = {
+        ...config.externals,
+        canvas: 'canvas',
+      };
+    }
 
     return config;
   },

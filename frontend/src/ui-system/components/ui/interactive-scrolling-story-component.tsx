@@ -22,36 +22,74 @@ interface ScrollingFeatureShowcaseProps {
   showButton?: boolean;
   buttonText?: string;
   buttonHref?: string;
+  hidePagination?: boolean;
+  onSectionChange?: (index: number) => void;
+  customNavigateEvent?: string;
 }
 
-export function ScrollingFeatureShowcase({
+export const ScrollingFeatureShowcase = React.forwardRef<
+  { navigateToSection: (index: number) => void },
+  ScrollingFeatureShowcaseProps
+>(function ScrollingFeatureShowcase({
   slides,
   showImages = false,
   showButton = false,
   buttonText = "Get Started",
-  buttonHref = "#"
-}: ScrollingFeatureShowcaseProps) {
+  buttonHref = "#",
+  hidePagination = false,
+  onSectionChange,
+  customNavigateEvent
+}, ref) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const stickyPanelRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
   const lastTriggerTimeRef = useRef(0);
 
-  // Initial page load splash screen
+  // Expose navigation method via ref
+  React.useImperativeHandle(ref, () => ({
+    navigateToSection: (index: number) => {
+      const container = scrollContainerRef.current;
+      if (container && index >= 0 && index < slides.length) {
+        lastTriggerTimeRef.current = Date.now();
+        const targetScroll = index * window.innerHeight + (window.innerHeight * 0.5);
+        container.scrollTo({ top: targetScroll, behavior: 'smooth' });
+        setActiveIndex(index);
+        onSectionChange?.(index);
+      }
+    }
+  }));
+
+  // Listen for custom navigation events (e.g., sidebarSectionNavigate)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1200);
-    return () => clearTimeout(timer);
-  }, []);
+    if (!customNavigateEvent) return;
+
+    const handleNavigateEvent = (event: Event) => {
+      const customEvent = event as CustomEvent<{ index: number }>;
+      const container = scrollContainerRef.current;
+      if (container && customEvent.detail && customEvent.detail.index >= 0 && customEvent.detail.index < slides.length) {
+        lastTriggerTimeRef.current = Date.now();
+        const targetScroll = customEvent.detail.index * window.innerHeight + (window.innerHeight * 0.5);
+        container.scrollTo({ top: targetScroll, behavior: 'smooth' });
+        setActiveIndex(customEvent.detail.index);
+        onSectionChange?.(customEvent.detail.index);
+      }
+    };
+
+    window.addEventListener(customNavigateEvent, handleNavigateEvent);
+    return () => window.removeEventListener(customNavigateEvent, handleNavigateEvent);
+  }, [customNavigateEvent, slides.length, onSectionChange]);
 
   // Set initial scroll position to center of first section
   useEffect(() => {
     const container = scrollContainerRef.current;
-    if (!container || isLoading) return;
-    container.scrollTop = window.innerHeight * 0.5;
-  }, [isLoading]);
+    if (!container) return;
+    // Small delay to ensure logo overlay is visible first
+    const timer = setTimeout(() => {
+      container.scrollTop = window.innerHeight * 0.5;
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Wheel-triggered section jumping
   useEffect(() => {
@@ -77,6 +115,7 @@ export function ScrollingFeatureShowcase({
         animationRafId = requestAnimationFrame(() => animate(startTime, startScroll, targetScroll, targetIndex));
       } else {
         setActiveIndex(targetIndex);
+        onSectionChange?.(targetIndex);
       }
     };
 
@@ -120,7 +159,7 @@ export function ScrollingFeatureShowcase({
 
       const sectionStart = currentIndex * viewportHeight;
       const scrollInSection = currentScroll - sectionStart;
-      const scrollProgress = (scrollInSection / viewportHeight) * 100;
+      const scrollProgress = Math.min(100, (scrollInSection / viewportHeight) * 100);
 
       const THRESHOLD = 15;
       let blur = 0;
@@ -128,9 +167,10 @@ export function ScrollingFeatureShowcase({
       const isFirst = currentIndex === 0;
       const isLast = currentIndex === slides.length - 1;
 
-      if (!isFirst && scrollProgress < THRESHOLD) {
+      // Only apply blur in valid transition zones
+      if (!isFirst && scrollProgress < THRESHOLD && scrollProgress >= 0) {
         blur = ((THRESHOLD - scrollProgress) / THRESHOLD) * 8;
-      } else if (!isLast && scrollProgress > (100 - THRESHOLD)) {
+      } else if (!isLast && scrollProgress > (100 - THRESHOLD) && scrollProgress <= 100) {
         blur = ((scrollProgress - (100 - THRESHOLD)) / THRESHOLD) * 8;
       }
 
@@ -164,29 +204,6 @@ export function ScrollingFeatureShowcase({
 
   return (
     <>
-      {/* Initial Loading Splash Screen */}
-      <motion.div
-        className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
-        initial={{ opacity: 1 }}
-        animate={{ opacity: isLoading ? 1 : 0 }}
-        transition={{ duration: 0.5, ease: 'easeInOut' }}
-        style={{ pointerEvents: isLoading ? 'auto' : 'none' }}
-      >
-        <motion.div
-          initial={{ scale: 1.2, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          <Image
-            src="/ui-system/epi-logos-logo-vibes.png"
-            alt="Epi-Logos"
-            width={450}
-            height={450}
-            priority
-          />
-        </motion.div>
-      </motion.div>
-
       <div
         ref={scrollContainerRef}
         className="h-screen w-full overflow-y-auto relative"
@@ -195,29 +212,32 @@ export function ScrollingFeatureShowcase({
           msOverflowStyle: 'none',
         }}
       >
-        {/* Tall inner container to create scroll space */}
-        <div style={{ height: `${slides.length * 100}vh` }} className="relative">
+        {/* Tall inner container to create scroll space - extra 100vh for last section positioning */}
+        <div style={{ height: `${(slides.length + 1) * 100}vh` }} className="relative">
           {/* Pagination Dots - Fixed top-left */}
-          <div className="fixed top-8 left-12 flex space-x-2 z-50">
-            {slides.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  const container = scrollContainerRef.current;
-                  if (container && (Date.now() - lastTriggerTimeRef.current >= 1200)) {
-                    lastTriggerTimeRef.current = Date.now();
-                    const targetScroll = index * window.innerHeight + (window.innerHeight * 0.5);
-                    container.scrollTo({ top: targetScroll, behavior: 'smooth' });
-                    setActiveIndex(index);
-                  }
-                }}
-                className={`h-1 rounded-full transition-colors duration-300 ${
-                  index === activeIndex ? 'w-12 bg-white/80' : 'w-6 bg-white/20 hover:bg-white/40'
-                }`}
-                aria-label={`Go to slide ${index + 1}`}
-              />
-            ))}
-          </div>
+          {!hidePagination && (
+            <div className="fixed top-8 left-12 flex space-x-2 z-50">
+              {slides.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    const container = scrollContainerRef.current;
+                    if (container && (Date.now() - lastTriggerTimeRef.current >= 1200)) {
+                      lastTriggerTimeRef.current = Date.now();
+                      const targetScroll = index * window.innerHeight + (window.innerHeight * 0.5);
+                      container.scrollTo({ top: targetScroll, behavior: 'smooth' });
+                      setActiveIndex(index);
+                      onSectionChange?.(index);
+                    }
+                  }}
+                  className={`h-1 rounded-full transition-colors duration-300 ${
+                    index === activeIndex ? 'w-12 bg-white/80' : 'w-6 bg-white/20 hover:bg-white/40'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Sticky panel that holds all slides */}
           <div ref={stickyPanelRef} className="sticky top-0 h-screen w-full">
@@ -233,7 +253,7 @@ export function ScrollingFeatureShowcase({
                     isActive ? "opacity-100 pointer-events-auto z-10" : "opacity-0 pointer-events-none z-0"
                   )}
                   style={{
-                    backgroundColor: slide.bgColor,
+                    backgroundColor: slide.overlay ? 'transparent' : slide.bgColor,
                     color: slide.textColor,
                     filter: isActive ? 'blur(var(--blur-amount, 0px))' : 'none',
                     '--blur-amount': '0px',
@@ -251,26 +271,39 @@ export function ScrollingFeatureShowcase({
                     <div className={`grid ${showImages && !slide.isHero ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} h-full w-full`}>
                       {/* Content Column */}
                       <div
-                        className={`relative z-10 flex flex-col ${showImages && !slide.isHero ? 'border-r border-gray-700/20' : ''} ${slide.isHero ? 'items-center text-center justify-center p-8 md:p-16' : ''} ${slide.title && !slide.isHero ? 'px-12 md:px-16 pt-12 md:pt-16 pb-12' : ''}`}
+                        className={`relative z-10 flex flex-col ${showImages && !slide.isHero ? 'border-r border-gray-700/20 items-center justify-start' : ''} ${slide.isHero ? 'items-center text-center justify-center p-8 md:p-16' : ''} ${slide.title && !slide.isHero ? 'pl-[15px] md:pl-[23px] pr-[12px] md:pr-[28px]' : ''}`}
                         style={{
                           opacity: 'var(--content-opacity, 1)',
                           transition: 'opacity 0.3s ease',
                         } as React.CSSProperties}
                       >
-                        {slide.title && (
-                          <h2 className="text-3xl md:text-4xl font-normal tracking-[3px] mb-10 text-white pl-2 pt-2">
-                            {slide.title}
-                          </h2>
+                        {showImages && !slide.isHero && slide.title ? (
+                          <div className="w-[85%] flex flex-col py-8 mt-12 mb-8">
+                            <h2 className="text-xl md:text-2xl font-normal tracking-[2px] mb-6 text-white flex-shrink-0">
+                              {slide.title}
+                            </h2>
+                            <div className="text-xs md:text-sm leading-[1.6] tracking-[0.3px] overflow-y-auto flex-1">
+                              {slide.content || <p>{slide.description}</p>}
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {slide.title && (
+                              <h2 className="text-2xl sm:text-3xl md:text-4xl font-normal tracking-[2px] md:tracking-[3px] mb-10 text-white pt-2 md:pt-3">
+                                {slide.title}
+                              </h2>
+                            )}
+                            <div className={`${slide.title ? 'text-sm sm:text-base md:text-lg max-w-5xl leading-relaxed md:leading-loose tracking-normal md:tracking-[0.5px] overflow-y-auto flex-1' : 'w-full h-full'}`}>
+                              {slide.content || <p>{slide.description}</p>}
+                            </div>
+                          </>
                         )}
-                        <div className={`${slide.title ? 'text-base md:text-lg max-w-5xl leading-[2] tracking-[0.5px] overflow-y-auto max-h-[calc(100vh-200px)]' : 'w-full h-full'}`}>
-                          {slide.content || <p>{slide.description}</p>}
-                        </div>
                       </div>
 
                       {/* Right Column: Image */}
                       {showImages && !slide.isHero && slide.image && (
-                        <div className="hidden md:flex items-center justify-center p-8" style={gridPatternStyle}>
-                          <div className="relative w-[80%] h-[80vh] rounded-sm overflow-hidden shadow-2xl border border-gray-700/20">
+                        <div className="hidden md:flex items-center justify-center p-8 -ml-[5px]" style={gridPatternStyle}>
+                          <div className="relative rounded-sm overflow-hidden shadow-2xl border border-gray-700/20 w-[80%] h-[80vh]">
                             <img
                               src={slide.image}
                               alt={slide.title}
@@ -289,4 +322,4 @@ export function ScrollingFeatureShowcase({
       </div>
     </>
   );
-}
+});

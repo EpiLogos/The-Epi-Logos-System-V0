@@ -6,7 +6,10 @@ import { useSidebar } from '@/contexts/SidebarContext';
 import { SidebarContent } from './components/SidebarContent';
 import { EssayReader } from './components/EssayReader';
 import { EssayScrollingSections } from './components/EssayScrollingSections';
+import { PromptPackageViewer } from './components/PromptPackageViewer';
 import { AuroraBackground } from '@/components/ui/aurora-background';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 /**
  * About / Landing Page
@@ -21,22 +24,72 @@ export default function AboutPage() {
   const { isCollapsed, toggle, collapse } = useSidebar();
   const [currentEssay, setCurrentEssay] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [essaySectionIndex, setEssaySectionIndex] = useState(0);
+  const [sidebarSectionIndex, setSidebarSectionIndex] = useState(0);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const [isLogoLoading, setIsLogoLoading] = useState(true);
+  const totalEssaySections = 6; // intro + 4 essays + 1 prompt package
+  const totalSidebarSections = 6; // hero + 5 content sections
 
-  // ESC key listener for sidebar toggle
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        toggle();
+        handleToggle();
+      }
+
+      // Arrow keys for section navigation
+      if (!currentEssay) {
+        if (event.key === 'ArrowDown') {
+          event.preventDefault();
+          if (isCollapsed) {
+            // Navigate essay sections
+            const nextIndex = Math.min(essaySectionIndex + 1, totalEssaySections - 1);
+            const navEvent = new CustomEvent('essaySectionNavigate', { detail: { index: nextIndex } });
+            window.dispatchEvent(navEvent);
+          } else {
+            // Navigate sidebar sections
+            const nextIndex = Math.min(sidebarSectionIndex + 1, totalSidebarSections - 1);
+            const navEvent = new CustomEvent('sidebarSectionNavigate', { detail: { index: nextIndex } });
+            window.dispatchEvent(navEvent);
+          }
+        } else if (event.key === 'ArrowUp') {
+          event.preventDefault();
+          if (isCollapsed) {
+            // Navigate essay sections
+            const prevIndex = Math.max(essaySectionIndex - 1, 0);
+            const navEvent = new CustomEvent('essaySectionNavigate', { detail: { index: prevIndex } });
+            window.dispatchEvent(navEvent);
+          } else {
+            // Navigate sidebar sections
+            const prevIndex = Math.max(sidebarSectionIndex - 1, 0);
+            const navEvent = new CustomEvent('sidebarSectionNavigate', { detail: { index: prevIndex } });
+            window.dispatchEvent(navEvent);
+          }
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggle]);
+  }, [isCollapsed, currentEssay, essaySectionIndex, sidebarSectionIndex, totalEssaySections, totalSidebarSections]);
+
+  const handleToggle = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      toggle();
+      setTimeout(() => setIsTransitioning(false), 400);
+    }, 300);
+  };
 
   const handleEssayClick = (essayId: string) => {
-    setCurrentEssay(essayId);
-    collapse(); // Collapse sidebar to reveal essay
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentEssay(essayId);
+      collapse(); // Collapse sidebar to reveal essay
+      setTimeout(() => setIsTransitioning(false), 400);
+    }, 300);
   };
 
   const handleSectionClick = () => {
@@ -45,47 +98,123 @@ export default function AboutPage() {
 
   useEffect(() => {
     if (!isCollapsed) {
-      setCurrentEssay(null);
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentEssay(null);
+        setTimeout(() => setIsTransitioning(false), 400);
+      }, 300);
     }
   }, [isCollapsed]);
 
   const handleCloseEssay = () => {
     setCurrentEssay(null);
+    // Trigger navigation back to the saved section index after a small delay
+    setTimeout(() => {
+      const event = new CustomEvent('essaySectionNavigate', { detail: { index: essaySectionIndex } });
+      window.dispatchEvent(event);
+    }, 100);
   };
 
-  // Show tooltip on page load for 4 seconds
+  // Logo overlay timing
   useEffect(() => {
-    setShowTooltip(true);
     const timer = setTimeout(() => {
-      setShowTooltip(false);
-    }, 4000);
+      setIsLogoLoading(false);
+    }, 1200);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Mark as loaded after logo overlay completes (1200ms) to prevent transition mask conflicts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setHasInitiallyLoaded(true);
+    }, 1300);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show tooltip after initial load state (1200ms) for 4 seconds
+  useEffect(() => {
+    const showTimer = setTimeout(() => {
+      setShowTooltip(true);
+      const hideTimer = setTimeout(() => {
+        setShowTooltip(false);
+      }, 4000);
+      return () => clearTimeout(hideTimer);
+    }, 1200);
+    return () => clearTimeout(showTimer);
   }, []);
 
   return (
     <div className="relative w-full min-h-screen bg-black overflow-hidden">
+      {/* Logo Overlay - Independent of sidebar/essay navigation */}
+      <motion.div
+        className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
+        initial={{ opacity: 1 }}
+        animate={{ opacity: isLogoLoading ? 1 : 0 }}
+        transition={{ duration: 0.5, ease: 'easeInOut' }}
+        style={{ pointerEvents: isLogoLoading ? 'auto' : 'none' }}
+      >
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isLogoLoading ? 1 : 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        >
+          <Image
+            src="/ui-system/epi-logos-logo-vibes.png"
+            alt="Epi-Logos"
+            width={450}
+            height={450}
+            priority
+          />
+        </motion.div>
+      </motion.div>
+
+      {/* Transition Mask - Only show after initial load to avoid conflict with logo overlay */}
+      {hasInitiallyLoaded && (
+        <div
+          className={cn(
+            'fixed inset-0 bg-black z-50 pointer-events-none transition-opacity duration-300',
+            isTransitioning ? 'opacity-100' : 'opacity-0'
+          )}
+        />
+      )}
+
       {/* Sidebar (Main Content) - Expanded by default */}
       <div
         className={cn(
-          'fixed top-0 left-0 h-screen bg-black z-30 transition-all duration-500 ease-in-out',
-          isCollapsed ? 'w-0 opacity-0' : 'w-full opacity-100'
+          'fixed top-0 left-0 h-screen bg-black z-30 transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          isCollapsed ? 'w-0' : 'w-full'
         )}
       >
-        <SidebarContent
-          onEssayClick={handleEssayClick}
-          onSectionClick={handleSectionClick}
-        />
+        <div
+          className={cn(
+            'h-full',
+            hasInitiallyLoaded && 'transition-opacity duration-300',
+            isTransitioning ? 'opacity-0' : isCollapsed ? 'opacity-0' : 'opacity-100'
+          )}
+        >
+          <SidebarContent
+            onEssayClick={handleEssayClick}
+            onSectionClick={handleSectionClick}
+            onSectionChange={setSidebarSectionIndex}
+          />
+        </div>
       </div>
 
       {/* Right Side (Essay/Document View) - Revealed when sidebar collapses */}
       <div
         className={cn(
-          'fixed top-0 right-0 h-screen bg-black transition-all duration-500 ease-in-out overflow-hidden',
-          isCollapsed ? 'w-full opacity-100' : 'w-0 opacity-0'
+          'fixed top-0 right-0 h-screen bg-black transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden',
+          isCollapsed ? 'w-full' : 'w-0'
         )}
       >
         {/* Persistent aurora background for essays area (all scrolled states + essay view) */}
-        <div className="absolute inset-0 z-0 pointer-events-none select-none">
+        <div
+          className={cn(
+            'absolute inset-0 z-0 pointer-events-none select-none',
+            hasInitiallyLoaded && 'transition-opacity duration-300',
+            isTransitioning ? 'opacity-0' : !isCollapsed ? 'opacity-0' : 'opacity-100'
+          )}
+        >
           <AuroraBackground
             fullScreen={true}
             centered={false}
@@ -95,42 +224,96 @@ export default function AboutPage() {
             <div />
           </AuroraBackground>
         </div>
-        <div className="relative z-10 h-full w-full">
-          {currentEssay ? (
+        <div
+          className={cn(
+            'relative z-40 h-full w-full',
+            hasInitiallyLoaded && 'transition-opacity duration-300',
+            isTransitioning ? 'opacity-0' : !isCollapsed ? 'opacity-0' : 'opacity-100'
+          )}
+        >
+          {currentEssay === 'prompt-packages' ? (
+            <PromptPackageViewer
+              onClose={handleCloseEssay}
+              onExampleSelect={(exampleId) => setCurrentEssay(exampleId)}
+            />
+          ) : currentEssay ? (
             <EssayReader essayId={currentEssay} onClose={handleCloseEssay} />
           ) : (
-            <EssayScrollingSections onEssaySelect={handleEssayClick} />
+            <EssayScrollingSections
+              onEssaySelect={handleEssayClick}
+              onSectionChange={setEssaySectionIndex}
+            />
           )}
         </div>
       </div>
 
-      {/* Logo Toggle Button (always visible in top-right) */}
-      <div className="fixed top-6 right-6 z-50 group">
-        <button
-          onClick={toggle}
-          className="transition-opacity duration-300 hover:opacity-80"
-          aria-label="Toggle sidebar"
-        >
-          <img
-            src="/ui-system/epi-logos-logo-vibes.png"
-            alt="Epi-Logos"
-            className="w-[58px] h-[58px]"
-          />
-        </button>
+      {/* Essay Section Pagination Dots - Outside overflow container */}
+      {isCollapsed && !currentEssay && (
+        <div className="fixed top-8 left-12 flex space-x-2 z-50">
+          {Array.from({ length: totalEssaySections }).map((_, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                // Trigger scroll in the essay sections component
+                const event = new CustomEvent('essaySectionNavigate', { detail: { index } });
+                window.dispatchEvent(event);
+              }}
+              className={`h-1 rounded-full transition-colors duration-300 ${
+                index === essaySectionIndex ? 'w-12 bg-white/80' : 'w-6 bg-white/20 hover:bg-white/40'
+              }`}
+              aria-label={`Go to essay section ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
 
-        {/* Tooltip */}
-        <div className={cn(
-          "absolute top-full right-0 mt-3 transition-opacity duration-300 pointer-events-none",
-          showTooltip || "opacity-0 group-hover:opacity-100"
-        )}>
-          <div className="bg-gray-900/95 border border-gray-700 rounded-sm px-4 py-3 text-xs text-gray-300 whitespace-nowrap backdrop-blur-sm">
-            <div className="space-y-1.5">
-              <p className="text-gray-300"><span className="text-gray-500">ESC</span> → Essays</p>
-              <p className="text-gray-300"><span className="text-gray-500">Click title</span> → The Gloss</p>
+      {/* Logo Toggle Button (hidden when viewing essays, prompt packages, or example conversations) */}
+      {!currentEssay && (
+        <div className="fixed top-6 right-6 z-50 group">
+          <button
+            onClick={handleToggle}
+            className="transition-opacity duration-300 hover:opacity-80"
+            aria-label="Toggle sidebar"
+          >
+            <img
+              src="/ui-system/epi-logos-logo-vibes.png"
+              alt="Epi-Logos"
+              className="w-[58px] h-[58px]"
+            />
+          </button>
+
+          {/* Legend - Always shows on hover, auto-shows briefly on startup */}
+          <div className={cn(
+            "absolute top-full right-0 mt-3 transition-opacity duration-300 pointer-events-none",
+            showTooltip ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}>
+            <div className="bg-gray-900/95 border border-gray-700 rounded-sm px-6 py-4 text-xs text-gray-300 backdrop-blur-sm min-w-[240px]">
+              <div className="space-y-2">
+                <div className="pb-2 mb-2 border-b border-gray-700">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Navigation</p>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-gray-300">
+                    <span className="text-gray-500 font-mono">ESC</span>
+                    <span className="text-gray-600 mx-2">→</span>
+                    Toggle Essays
+                  </p>
+                  <p className="text-gray-300">
+                    <span className="text-gray-500 font-mono">↑ ↓</span>
+                    <span className="text-gray-600 mx-2">→</span>
+                    Scroll Sections
+                  </p>
+                  <p className="text-gray-300">
+                    <span className="text-gray-500">Click Title</span>
+                    <span className="text-gray-600 mx-2">→</span>
+                    The Gloss
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

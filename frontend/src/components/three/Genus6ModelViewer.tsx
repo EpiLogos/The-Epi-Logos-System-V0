@@ -8,34 +8,34 @@ import * as THREE from 'three';
 
 function Model() {
   const ref = useRef<THREE.Group>(null!);
+  const obj = useLoader(OBJLoader, '/genus_6_3d_surface.obj');
 
+  // Apply material on every render to ensure it persists
   useEffect(() => {
-    console.log('Model component mounted');
-  }, []);
-
-  let obj;
-  try {
-    obj = useLoader(OBJLoader, '/genus_6_3d_surface.obj');
-    console.log('OBJ loaded successfully:', obj);
-  } catch (error) {
-    console.error('Failed to load OBJ:', error);
-    throw error;
-  }
-
-  const processedObj = useMemo(() => {
-    console.log('Processing obj...');
-    obj.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        console.log('Found mesh:', child);
-        child.material = new THREE.MeshStandardMaterial({
-          color: 0xC4A5C7,
-          roughness: 0.15,
-          metalness: 0.6,
-          envMapIntensity: 1.5,
+    console.log('Applying material to mesh...');
+    let meshCount = 0;
+    obj.traverse((child: any) => {
+      // Check by type string instead of instanceof due to Three.js version mismatch
+      if (child.type === 'Mesh' && child.geometry) {
+        meshCount++;
+        console.log('Found mesh #' + meshCount + ', applying MeshStandardMaterial');
+        const material = new THREE.MeshStandardMaterial({
+          color: 0x3D2A3E,
+          roughness: 0.2,
+          metalness: 0.8,
+          envMapIntensity: 2.0,
+        });
+        child.material = material;
+        child.material.needsUpdate = true;
+        console.log('Material applied:', {
+          color: material.color.getHexString(),
+          roughness: material.roughness,
+          metalness: material.metalness,
+          envMapIntensity: material.envMapIntensity
         });
       }
     });
-    return obj;
+    console.log('Traverse complete. Total meshes found:', meshCount);
   }, [obj]);
 
   useFrame((_, delta) => {
@@ -45,7 +45,7 @@ function Model() {
     }
   });
 
-  return <primitive ref={ref} object={processedObj} scale={0.65} position={[0, 0, 0]} />;
+  return <primitive ref={ref} object={obj} scale={0.65} position={[0, 0, 0]} />;
 }
 
 function ErrorFallback({ error }: { error: Error }) {
@@ -74,33 +74,23 @@ export function Genus6ModelViewer() {
     <div style={{
       width: '100%',
       height: '700px',
-      background: 'radial-gradient(ellipse at center, #251825 0%, #1A0F1C 50%, #0D070E 100%)',
+      background: 'radial-gradient(ellipse at center, #FEFEFE 0%, #F5F0EA 20%, #EDE6DC 100%)',
       position: 'relative'
     }}>
       <Canvas
         camera={{ position: [0, 0, 50], fov: 50 }}
         gl={{
-          alpha: true,
           antialias: true,
-          premultipliedAlpha: false,
-          preserveDrawingBuffer: true
-        }}
-        onCreated={({ gl, scene }) => {
-          console.log('Canvas created, setting clear color');
-          gl.setClearColor(0x000000, 0);
-          scene.background = null;
-          const canvas = gl.domElement;
-          canvas.style.background = 'transparent';
-          console.log('Canvas element:', canvas);
-          console.log('Clear color alpha:', gl.getClearAlpha());
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1
         }}
         onError={(error) => {
           console.error('Canvas error:', error);
           setError(error as Error);
         }}
       >
-        <ambientLight intensity={0.5} />
-        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
+        <ambientLight intensity={0.8} />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1.5} castShadow />
         <Model />
         <Environment resolution={256}>
           <group rotation={[-Math.PI / 3, 0, 0]}>

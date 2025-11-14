@@ -1,6 +1,11 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import { ScrollProgress } from '@/components/ui/scroll-progress';
 import { essays } from './essays';
 import { cn } from '@/lib/utils';
@@ -10,16 +15,10 @@ interface EssayReaderProps {
   onClose: () => void;
 }
 
-interface ParsedSection {
+interface HeadingData {
   id: string;
-  heading: string;
+  text: string;
   level: number;
-  html: string;
-}
-
-interface ParsedEssay {
-  sections: ParsedSection[];
-  allSections: ParsedSection[];
 }
 
 function slugify(value: string) {
@@ -30,112 +29,59 @@ function slugify(value: string) {
     .replace(/\s+/g, '-');
 }
 
-function convertInlineMarkdown(text: string) {
-  let converted = text;
-  converted = converted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  converted = converted.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  converted = converted.replace(/`([^`]+)`/g, '<code>$1</code>');
-  return converted;
-}
+// Preprocess markdown to wrap bare LaTeX in dollar signs for remark-math
+function preprocessLaTeX(markdown: string): string {
+  const lines = markdown.split('\n');
+  const processed: string[] = [];
+  let inCodeBlock = false;
 
-function blockToHtml(lines: string[]) {
-  if (lines.length === 0) {
-    return '';
-  }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
 
-  const trimmed = lines.map(line => line.trim());
-  const isUnorderedList = trimmed.every(line => /^[-*+]\s+/.test(line));
-  const isOrderedList = trimmed.every(line => /^\d+\.\s+/.test(line));
-
-  if (isUnorderedList) {
-    const items = trimmed
-      .map(line => line.replace(/^[-*+]\s+/, ''))
-      .map(item => `<li>${convertInlineMarkdown(item)}</li>`)
-      .join('');
-    return `<ul>${items}</ul>`;
-  }
-
-  if (isOrderedList) {
-    const items = trimmed
-      .map(line => line.replace(/^\d+\.\s+/, ''))
-      .map(item => `<li>${convertInlineMarkdown(item)}</li>`)
-      .join('');
-    return `<ol>${items}</ol>`;
-  }
-
-  const paragraph = convertInlineMarkdown(trimmed.join(' '));
-  return `<p>${paragraph}</p>`;
-}
-
-function parseMarkdown(markdown: string): ParsedEssay {
-  const lines = markdown.split(/\r?\n/);
-  const sections: ParsedSection[] = [];
-
-  let current: ParsedSection | null = null;
-  let blockBuffer: string[] = [];
-  const rootBlocks: string[] = [];
-
-  const flushBlock = () => {
-    if (blockBuffer.length === 0) {
-      return;
+    // Track code blocks
+    if (line.trim().startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      processed.push(line);
+      continue;
     }
 
-    const html = blockToHtml(blockBuffer);
-
-    if (current) {
-      current.html += html;
+    // Check if line contains LaTeX commands (not in code blocks, headings, or already in $)
+    // Look for lines with LaTeX backslash commands
+    if (
+      !inCodeBlock &&
+      line.trim().length > 0 &&
+      !line.trim().startsWith('#') &&
+      !line.includes('$') &&
+      !line.includes('`') &&
+      /\\[a-zA-Z{]/.test(line) && // Contains backslash followed by letter or brace
+      /\\(mathrm|frac|rightarrow|leftarrow|quad|;|text|,|\{|\})/.test(line)
+    ) {
+      // Wrap the entire line in display math
+      processed.push(`$$${line.trim()}$$`);
     } else {
-      rootBlocks.push(html);
+      processed.push(line);
     }
+  }
 
-    blockBuffer = [];
-  };
+  return processed.join('\n');
+}
+
+// Extract headings from markdown for TOC
+function extractHeadings(markdown: string): HeadingData[] {
+  const headings: HeadingData[] = [];
+  const lines = markdown.split('\n');
 
   lines.forEach(line => {
-    const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
-
-    if (headingMatch) {
-      flushBlock();
-
-      const level = headingMatch[1].length;
-      const headingText = headingMatch[2].trim();
-      const id = slugify(headingText);
-
-      current = {
-        id,
-        heading: headingText,
-        level,
-        html: ''
-      };
-
-      sections.push(current);
-    } else if (line.trim() === '') {
-      flushBlock();
-    } else {
-      blockBuffer.push(line);
+    const match = line.match(/^(#{1,6})\s+(.+)$/);
+    if (match) {
+      const level = match[1].length;
+      const text = match[2].trim();
+      const id = slugify(text);
+      headings.push({ id, text, level });
     }
   });
 
-  flushBlock();
-
-  if (sections.length === 0 && rootBlocks.length > 0) {
-    sections.push({
-      id: 'overview',
-      heading: 'Overview',
-      level: 2,
-      html: rootBlocks.join('')
-    });
-  } else if (rootBlocks.length > 0) {
-    // Attach introductory blocks to the first section
-    sections[0].html = rootBlocks.join('') + sections[0].html;
-  }
-
-  const tocSections = sections.filter(section => section.level <= 3);
-
-  return {
-    sections: tocSections,
-    allSections: sections
-  };
+  return headings;
 }
 
 export function EssayReader({ essayId, onClose }: EssayReaderProps) {
@@ -143,17 +89,12 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
 
   const essay = essayId ? essays[essayId] : null;
-
-  const parsed = useMemo(() => {
-    if (!essay) {
-      return { sections: [], allSections: [] };
-    }
-    return parseMarkdown(essay.markdown);
-  }, [essay]);
+  const processedMarkdown = essay ? preprocessLaTeX(essay.markdown) : '';
+  const headings = essay ? extractHeadings(essay.markdown) : [];
 
   useEffect(() => {
-    setActiveSectionId(parsed.sections[0]?.id ?? null);
-  }, [parsed]);
+    setActiveSectionId(headings[0]?.id ?? null);
+  }, [headings]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -161,11 +102,11 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
       return;
     }
 
-    const headings = Array.from(
-      container.querySelectorAll<HTMLElement>('[data-essay-heading="true"]')
+    const headingElements = Array.from(
+      container.querySelectorAll<HTMLElement>('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')
     );
 
-    if (headings.length === 0) {
+    if (headingElements.length === 0) {
       return;
     }
 
@@ -186,10 +127,10 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
       }
     );
 
-    headings.forEach(heading => observer.observe(heading));
+    headingElements.forEach(heading => observer.observe(heading));
 
     return () => observer.disconnect();
-  }, [parsed.allSections]);
+  }, [essay?.markdown]);
 
   if (!essay) {
     return (
@@ -231,9 +172,9 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
         ref={containerRef}
         className="relative h-full overflow-y-auto scroll-smooth"
       >
-        <div className="mx-auto w-full max-w-[1300px] px-6 md:px-12 lg:px-20 pt-8 pb-24 text-gray-200">
+        <div className="mx-auto w-full max-w-[1600px] px-6 md:px-12 lg:px-20 pt-8 pb-24 text-gray-200">
           <div className="relative">
-            <article className="space-y-16 lg:pr-[360px]">
+            <article className="space-y-16 lg:pr-[340px]">
               <div className="space-y-4 border-b border-gray-800 pb-8 lg:pb-10">
                 <p className="text-[11px] uppercase tracking-[0.42em] text-gray-500">
                   Essay
@@ -251,47 +192,56 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex items-center text-xs uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors lg:hidden"
+                className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors"
               >
-                Close
+                <span>←</span> Close Essay
               </button>
 
-              <div className="space-y-16 text-gray-200">
-                {parsed.allSections.map(section => (
-                  <section key={section.id}>
-                    <h2
-                      id={section.id}
-                      data-essay-heading="true"
-                      className={cn(
-                        'scroll-mt-24 text-[26px] md:text-[30px] font-light tracking-[0.24em] text-white mb-8',
-                        section.level === 3 && 'text-[22px] md:text-[26px]'
-                      )}
-                    >
-                      {section.heading}
-                    </h2>
-                    <div
-                      className="space-y-6 text-[15px] leading-[2] tracking-[0.02em] text-gray-200
-                      [&_p]:text-gray-200 [&_p]:leading-[2] [&_p]:tracking-[0.01em]
-                      [&_p_strong]:text-white [&_em]:text-gray-300 [&_code]:text-gray-100 [&_code]:bg-white/10 [&_code]:px-1 [&_code]:rounded-sm
-                      [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-3 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-3
-                      [&_li]:text-gray-200 [&_li>strong]:text-white"
-                      dangerouslySetInnerHTML={{ __html: section.html }}
-                    />
-                  </section>
-                ))}
+              <div className="prose prose-invert max-w-none
+                [&_h1]:text-[32px] [&_h1]:md:text-[36px] [&_h1]:font-light [&_h1]:tracking-[0.24em] [&_h1]:text-white [&_h1]:mb-8 [&_h1]:scroll-mt-24
+                [&_h2]:text-[26px] [&_h2]:md:text-[30px] [&_h2]:font-light [&_h2]:tracking-[0.24em] [&_h2]:text-white [&_h2]:mb-8 [&_h2]:scroll-mt-24
+                [&_h3]:text-[22px] [&_h3]:md:text-[26px] [&_h3]:font-light [&_h3]:tracking-[0.24em] [&_h3]:text-white [&_h3]:mb-8 [&_h3]:scroll-mt-24
+                [&_h4]:text-[18px] [&_h4]:md:text-[22px] [&_h4]:font-light [&_h4]:tracking-[0.24em] [&_h4]:text-white [&_h4]:mb-8 [&_h4]:scroll-mt-24
+                [&_h5]:text-[16px] [&_h5]:md:text-[18px] [&_h5]:font-light [&_h5]:tracking-[0.24em] [&_h5]:text-white [&_h5]:mb-8 [&_h5]:scroll-mt-24
+                [&_h6]:text-[14px] [&_h6]:md:text-[16px] [&_h6]:font-light [&_h6]:tracking-[0.24em] [&_h6]:text-white [&_h6]:mb-8 [&_h6]:scroll-mt-24
+                [&_p]:text-gray-200 [&_p]:leading-[2.2] [&_p]:tracking-[0.01em] [&_p]:mb-8 [&_p]:text-[15px]
+                [&_strong]:text-white [&_strong]:font-semibold
+                [&_em]:text-gray-300 [&_em]:italic
+                [&_code]:text-gray-100 [&_code]:bg-white/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-sm [&_code]:text-[14px]
+                [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-3 [&_ul]:my-8
+                [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-3 [&_ol]:my-8
+                [&_li]:text-gray-200 [&_li]:leading-[2] [&_li>strong]:text-white
+                [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-gray-800 [&_hr]:my-12
+                [&_.katex]:text-gray-100
+                [&_.katex-display]:my-8 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden
+              ">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm, remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
+                  components={{
+                    h1: ({ node, ...props }) => <h1 id={slugify(String(props.children))} {...props} />,
+                    h2: ({ node, ...props }) => <h2 id={slugify(String(props.children))} {...props} />,
+                    h3: ({ node, ...props }) => <h3 id={slugify(String(props.children))} {...props} />,
+                    h4: ({ node, ...props }) => <h4 id={slugify(String(props.children))} {...props} />,
+                    h5: ({ node, ...props }) => <h5 id={slugify(String(props.children))} {...props} />,
+                    h6: ({ node, ...props }) => <h6 id={slugify(String(props.children))} {...props} />,
+                  }}
+                >
+                  {processedMarkdown}
+                </ReactMarkdown>
               </div>
             </article>
           </div>
         </div>
       </div>
-      {parsed.sections.length > 0 && (
+      {headings.length > 0 && (
         <div className="hidden lg:block fixed top-[88px] right-0 z-40 group/toc">
           <div className="relative h-[calc(100vh-160px)]">
             <aside
-              className="pointer-events-auto relative z-10 flex h-full w-[320px] translate-x-[calc(100%-64px)] overflow-hidden rounded-l-sm border border-white/15 transition-transform duration-300 ease-out group-hover/toc:translate-x-0 group-focus-within/toc:translate-x-0"
+              className="pointer-events-auto relative z-10 flex h-full w-[320px] translate-x-[calc(100%-24px)] overflow-hidden rounded-l-sm border border-white/15 transition-transform duration-300 ease-out group-hover/toc:translate-x-0 group-focus-within/toc:translate-x-0"
             >
-              <div className="flex h-full w-16 items-center justify-center border-r border-white/10 bg-white/15 backdrop-blur-md">
-                <span className="rotate-90 text-[10px] uppercase tracking-[0.55em] text-white/70">
+              <div className="flex h-full w-6 items-center justify-center border-r border-gray-700/50 bg-transparent">
+                <span className="rotate-90 text-[9px] uppercase tracking-[0.6em] text-white/40">
                   Contents
                 </span>
               </div>
@@ -308,18 +258,18 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
                   </button>
                 </div>
                 <div className="px-6 pb-6 overflow-y-auto space-y-2 scrollbar-thin-custom">
-                  {parsed.sections.map(section => (
+                  {headings.map(heading => (
                     <button
-                      key={section.id}
+                      key={heading.id}
                       type="button"
-                      onClick={() => handleTocClick(section.id)}
-                    className={cn(
-                      'block w-full text-left text-[11px] tracking-[0.32em] uppercase transition-colors py-1.5 text-gray-400 hover:text-gray-100',
-                      activeSectionId === section.id && 'text-white'
-                    )}
-                      style={{ paddingLeft: `${(section.level - 1) * 10}px` }}
+                      onClick={() => handleTocClick(heading.id)}
+                      className={cn(
+                        'block w-full text-left text-[11px] tracking-[0.32em] uppercase transition-colors py-1.5 text-gray-400 hover:text-gray-100',
+                        activeSectionId === heading.id && 'text-white'
+                      )}
+                      style={{ paddingLeft: `${(heading.level - 1) * 10}px` }}
                     >
-                      {section.heading}
+                      {heading.text}
                     </button>
                   ))}
                 </div>
