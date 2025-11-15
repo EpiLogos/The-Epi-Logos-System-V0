@@ -114,16 +114,6 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
           <p className="text-[10px] md:text-[11px]  text-gray-100 leading-[1.7] md:leading-[1.9] italic mt-6">
             Philosophy stops being abstract when you observe your own thinking in motion. The practice is the insight—the moment you see how ideas move through you, and you through them.
           </p>
-
-          <a
-            href="https://github.com/EpiLogos/The-Epi-Logos-System-V0"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 border border-gray-700 text-gray-300 text-[10px] md:text-[11px]  font-normal tracking-[1.5px] md:tracking-[2px] uppercase hover:bg-gray-900 hover:text-white transition-colors mt-4"
-          >
-            <Github className="w-5 h-5" />
-            View on GitHub
-          </a>
         </div>
       ),
     },
@@ -241,12 +231,23 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
             The project is still early, open, unfolding. It's not finished—it's finding its people. If any of this feels like home, reach out. The network is already forming.
           </p>
 
-          <a
-            href="mailto:frank.g.taylor97@gmail.com"
-            className="inline-block px-6 md:px-10 py-3 md:py-4 bg-white text-black text-[10px] md:text-[11px]  font-normal tracking-[1.5px] md:tracking-[2px] uppercase hover:bg-gray-200 transition-colors mt-4"
-          >
-            Get in Touch →
-          </a>
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4">
+            <a
+              href="mailto:frank.g.taylor97@gmail.com"
+              className="inline-block px-6 md:px-10 py-3 md:py-4 bg-white text-black text-[10px] md:text-[11px]  font-normal tracking-[1.5px] md:tracking-[2px] uppercase hover:bg-gray-200 transition-colors"
+            >
+              Get in Touch →
+            </a>
+            <a
+              href="https://github.com/EpiLogos/The-Epi-Logos-System-V0"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-4 md:px-6 py-3 md:py-4 border border-gray-700 text-gray-300 text-[10px] md:text-[11px]  font-normal tracking-[1.5px] md:tracking-[2px] uppercase hover:bg-gray-900 hover:text-white transition-colors"
+            >
+              <Github className="w-5 h-5" />
+              View on GitHub
+            </a>
+          </div>
         </div>
       ),
     },
