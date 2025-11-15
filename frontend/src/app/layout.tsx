@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   title: 'The Epi-Logos',
   description: 'Integral Philosophy for the age of AI.',
   icons: {
-    icon: '/ui-system/epi-logos-logo.svg',
+    icon: '/ui-system/epi-logos-logo-vibes.png',
     apple: '/ui-system/epi-logos-logo-vibes.png',
   },
   openGraph: {
