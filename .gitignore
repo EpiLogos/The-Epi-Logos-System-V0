@@ -102,9 +102,9 @@ out/
 .nuxt
 dist
 
-# Gatsby files
+# Gatsby files (NOT Next.js - Next.js public/ folder should be committed)
 .cache/
-public
+# public  # DISABLED - breaks Next.js static assets
 
 # Vuepress build output
 .vuepress/dist
