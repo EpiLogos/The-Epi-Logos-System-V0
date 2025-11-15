@@ -105,7 +105,7 @@ const essayPreviews: EssayPreview[] = [
   },
   {
     id: 'epi-logos',
-    eyebrow: 'Epi-Logos',
+    eyebrow: '#: The Epi-Logos Project',
     title: 'The Notion of Epi-Logos',
     description:
       'Epi-Logos is the point where disparate meanings hold together without fusing—a gathering that preserves difference. The term comes from Greek: "upon the word," the stance that stands on what language makes available to see what comes next. We need this because reality unfolds through relationship, not isolated facts. The Epi-Logos formalizes this: a structure indefinite enough to apply everywhere, relational enough to connect anything. We attempt to create the hinge where diverse perspectives pivot together. This is how consciousness self-organizes—not by choosing one view but by discovering the axis that lets incompatible truths co-exist.',
@@ -113,7 +113,7 @@ const essayPreviews: EssayPreview[] = [
   },
   {
     id: 'ql',
-    eyebrow: 'Quaternal Logic',
+    eyebrow: '#1-3 and #1-4: Spanda Genesis and Quaternal Logic\'s Flowering',
     title: 'Quaternal Logic (QL)',
     description:
       'Quaternal Logic is the formal heart of Epi-Logos: a symbolic-mathematical law describing how unity differentiates into multiplicity without losing itself. Beginning from Spanda - the primordial vibration of self-differentiation expressed as (0/1) - QL unfolds the minimal architecture needed for coherent manifestation. Through the Trika (threefold operator that holds opposites in generative tension) and successive context frames, this oscillation crystallizes into the toroidal structure: a 4+2 pattern where four explicit operations circulate around two implicit depths. This is not abstract numerology but computable metaphysics - a grammar of becoming verified across physics, cognition, and cosmology.',
@@ -121,7 +121,7 @@ const essayPreviews: EssayPreview[] = [
   },
   {
     id: 'mef',
-    eyebrow: 'Meta-Epistemic Framework',
+    eyebrow: '#2-1: The Meta-Epistemic Framework or Meta-Logikon',
     title: 'Meta-Epistemic Framework (MEF)',
     description:
       'The MEF formalizes reflexive incompleteness as generative process. Every rigorous system leaves an aperture—what it must exclude to function. This isn\'t defect but operative law: the gap that keeps reasoning alive. Through six lenses (archetypal, causal, logical, processual, meta-epistemic, divine-scalar), MEF performs diagnosis - not of knowledge but how knowledge is arrived at. It reveals what each paradigm represses and how that returns as crisis. The method: turn negative discoveries (Gödel\'s unprovability, Lacan\'s lack, Wittgenstein\'s silence, Derrida\'s deferral) into positive capacities. Systems that know they\'re contingent and remain free. Incompleteness becomes an engine; lack becomes the possibility of discovery.',
@@ -129,10 +129,10 @@ const essayPreviews: EssayPreview[] = [
   },
   {
     id: 'num-lang',
-    eyebrow: 'Number Language',
+    eyebrow: '#0-3: The Archetypal Number Language',
     title: 'Numbers: the language of being and becoming',
     description:
-      'Beyond arithmetic, number becomes narrative. This essay follows how modulations of quantity express qualitative shifts, bridging formal systems, mythic sequencing, and lived strategy.',
+      'Within the Anuttara domain - #0, the silent ground before manifestation - numbers emerge not as quantities but as organizing principles of reality itself. This metaphysical system reveals how Being (pure potential) and Becoming (active agency) fold into each other through archetypal patterns: the mirror that enables self-recognition, the relational field where meaning is born, the first word that speaks intelligence into form, the stable structures that receive divine action. Here, zero is not nothing but witnessing presence; one is not singularity but creative assertion; and their interplay choreographs the eternal dance between emptiness and fullness, structure and process, the blueprint and its unfolding. Numbers become the grammar through which reality organizes its own becoming. Numbers are revealed as the code by which reality programmes and runs itself.',
     callToAction: 'Coming soon'
   }
 ];
@@ -175,13 +175,13 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
     ),
     content: (
       <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-8">
-        <h1 className="text-[36px] font-normal tracking-[4px] text-white text-center mb-6 max-w-[1000px]">
-          TWO FRAMES, 4 DOORWAYS
+        <h1 className="text-[24px] md:text-[36px] font-normal tracking-[4px] text-white text-center mb-6 max-w-[1000px]">
+          TWO FRAMES, FOUR DOORWAYS
         </h1>
-        <p className="text-[16px] text-gray-300 leading-[2] tracking-[0.8px] max-w-[800px] text-center">
+        <p className="text-[10px] md:text-[16px] text-gray-300 leading-[2] tracking-[0.8px] max-w-[800px] text-center px-4">
           Here we share our <button onClick={() => onEssaySelect('prompt-packages')} className="text-gray-300 underline hover:text-white transition-colors">prompt packages</button> and essays to introduce people to the system. The best way in is to explore the example conversations in the prompt package section.
         </p>
-        <p className="text-[10px] text-gray-500 max-w-[900px] leading-[1.8] tracking-[0.6px] text-center mt-12">
+        <p className="text-[8px] md:text-[10px] text-gray-500 max-w-[900px] leading-[1.8] tracking-[0.6px] text-center mt-12 px-4">
           Drafts are live and evolving; feedback is welcome.
         </p>
       </div>
@@ -202,7 +202,7 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
             <div
               className={`flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-10 lg:items-stretch`}
             >
-              <div className={`w-full lg:w-1/2 bg-gray-950 border-b border-gray-900/60 lg:border-b-0 lg:border-r lg:border-gray-900/60 flex items-center justify-center overflow-hidden ${essay.id === 'epi-logos' || essay.id === 'mef' || essay.id === 'ql' ? 'aspect-square' : 'min-h-[260px]'}`}>
+              <div className={`hidden lg:flex w-full lg:w-1/2 bg-gray-950 border-b border-gray-900/60 lg:border-b-0 lg:border-r lg:border-gray-900/60 items-center justify-center overflow-hidden ${essay.id === 'epi-logos' || essay.id === 'mef' || essay.id === 'ql' ? 'aspect-square' : 'min-h-[260px]'}`}>
                 {essay.id === 'mef' ? (
                   <Suspense
                     fallback={
@@ -279,21 +279,21 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
 
               <div className="w-full lg:w-1/2 px-6 py-10 md:px-10 md:py-12 space-y-6">
                 <div className="space-y-3">
-                  <p className="text-[11px] uppercase tracking-[0.5em] text-gray-500">
+                  <p className="text-[8px] md:text-[10px] uppercase tracking-[0.5em] text-gray-500">
                     {essay.eyebrow}
                   </p>
-                  <h2 className="text-2xl md:text-3xl font-light tracking-[0.15em] text-white">
+                  <h2 className="text-lg md:text-xl lg:text-2xl font-light tracking-[0.15em] text-white">
                     {essay.title}
                   </h2>
                 </div>
-                <p className="text-sm md:text-base text-gray-300 leading-relaxed">
+                <p className="text-[11px] md:text-[13px] lg:text-[15px] text-gray-300 leading-relaxed">
                   {essay.description}
                 </p>
                 <button
                   type="button"
                   onClick={() => handleEssayClick(essay.id)}
                   className={cn(
-                    "group inline-flex items-center text-xs md:text-sm uppercase tracking-[0.4em]",
+                    "group inline-flex items-center text-[8px] md:text-[11px] lg:text-[13px] uppercase tracking-[0.4em]",
                     essay.callToAction === 'Coming soon'
                       ? "text-gray-400 cursor-default"
                       : "text-gray-400 hover:text-white transition-colors"
@@ -319,14 +319,30 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
 
   return (
     <>
-      <ScrollingFeatureShowcase
-        slides={[introSlide, ...previewSlides]}
-        showImages={false}
-        showButton={false}
-        hidePagination={true}
-        onSectionChange={onSectionChange}
-        ref={scrollControlRef}
-      />
+      <div className="relative w-full h-full">
+        {/* Fixed aurora background for mobile - persists across all sections */}
+        <div className="md:hidden absolute inset-0 z-0 pointer-events-none">
+          <AuroraBackground
+            fullScreen={false}
+            centered={false}
+            showRadialGradient={false}
+            className="w-full h-full bg-black text-white"
+          >
+            <div />
+          </AuroraBackground>
+        </div>
+
+        <div className="relative z-10">
+          <ScrollingFeatureShowcase
+            slides={[introSlide, ...previewSlides]}
+            showImages={false}
+            showButton={false}
+            hidePagination={true}
+            onSectionChange={onSectionChange}
+            ref={scrollControlRef}
+          />
+        </div>
+      </div>
 
       {/* PDF Explorer Overlay */}
       {showPDFExplorer && (

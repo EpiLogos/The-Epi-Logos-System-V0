@@ -3,6 +3,38 @@
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/700.css";
 
+/* Mobile landscape: same mobile text sizes, tighter spacing, HIDE images */
+@media (max-width: 767px) and (orientation: landscape) {
+  /* Hide images in landscape - keep single column */
+  .grid-cols-1.md\:grid-cols-2 {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  /* Compress vertical spacing */
+  .space-y-4, .space-y-6 {
+    row-gap: 0.5rem !important;
+  }
+
+  /* Tighten line-height */
+  p {
+    line-height: 1.4 !important;
+  }
+
+  /* Reduce vertical padding EXCEPT top padding on main containers */
+  [class*="py-"]:not([class*="pt-"]) {
+    padding-bottom: 0.35rem !important;
+  }
+
+  /* Reduce margins */
+  [class*="my-"], [class*="mb-"] {
+    margin-bottom: 0.35rem !important;
+  }
+
+  [class*="mt-"]:not(.mt-10):not(.mt-12) {
+    margin-top: 0.35rem !important;
+  }
+}
+
 /* Ranade Thin font-face: use local bundle asset (Next processes relative URLs) */
 @font-face {
   font-family: 'Ranade Thin';

@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.12.4",
+    "@fontsource/ibm-plex-mono": "^5.2.7",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@heroicons/react": "^2.2.0",
     "@mdxeditor/editor": "^3.47.0",

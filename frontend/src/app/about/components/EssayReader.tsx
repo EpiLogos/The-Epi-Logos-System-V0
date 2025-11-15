@@ -87,10 +87,30 @@ function extractHeadings(markdown: string): HeadingData[] {
 export function EssayReader({ essayId, onClose }: EssayReaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [markdown, setMarkdown] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(true);
 
   const essay = essayId ? essays[essayId] : null;
-  const processedMarkdown = essay ? preprocessLaTeX(essay.markdown) : '';
-  const headings = essay ? extractHeadings(essay.markdown) : [];
+
+  // Fetch markdown content
+  useEffect(() => {
+    if (!essay) return;
+
+    setLoading(true);
+    fetch(essay.markdownUrl)
+      .then(res => res.text())
+      .then(text => {
+        setMarkdown(text);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('Failed to load essay:', err);
+        setLoading(false);
+      });
+  }, [essay]);
+
+  const processedMarkdown = markdown ? preprocessLaTeX(markdown) : '';
+  const headings = markdown ? extractHeadings(markdown) : [];
 
   useEffect(() => {
     setActiveSectionId(headings[0]?.id ?? null);
@@ -130,12 +150,20 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
     headingElements.forEach(heading => observer.observe(heading));
 
     return () => observer.disconnect();
-  }, [essay?.markdown]);
+  }, [markdown]);
 
   if (!essay) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-black text-gray-600">
         <p className="text-[11px] tracking-[2px]">SELECT AN ESSAY OR DOCUMENT</p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-black text-gray-400">
+        <p className="text-[11px] tracking-[2px]">LOADING ESSAY...</p>
       </div>
     );
   }
@@ -170,12 +198,13 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
 
       <div
         ref={containerRef}
-        className="relative h-full overflow-y-auto scroll-smooth"
+        className="relative h-full w-full overflow-y-auto scroll-smooth"
       >
-        <div className="mx-auto w-full max-w-[1600px] px-6 md:px-12 lg:px-20 pt-8 pb-24 text-gray-200">
-          <div className="relative">
-            <article className="space-y-16 lg:pr-[340px]">
-              <div className="space-y-4 border-b border-gray-800 pb-8 lg:pb-10">
+        <div className="w-full px-6 md:px-12 lg:px-20 pt-8 pb-24 text-gray-200">
+          <div className="relative max-w-[1600px] mx-auto">
+            {/* Header with close button */}
+            <div className="flex items-start justify-between mb-8 border-b border-gray-800 pb-8 lg:pb-10">
+              <div className="flex-1 space-y-4">
                 <p className="text-[11px] uppercase tracking-[0.42em] text-gray-500">
                   Essay
                 </p>
@@ -188,14 +217,16 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
                   </p>
                 )}
               </div>
-
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors"
+                className="ml-8 text-xs uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors flex-shrink-0"
               >
-                <span>←</span> Close Essay
+                Close
               </button>
+            </div>
+
+            <article className="space-y-16 lg:pr-[340px]">
 
               <div className="prose prose-invert max-w-none
                 [&_h1]:text-[32px] [&_h1]:md:text-[36px] [&_h1]:font-light [&_h1]:tracking-[0.24em] [&_h1]:text-white [&_h1]:mb-8 [&_h1]:scroll-mt-24
@@ -248,14 +279,6 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
               <div className="flex-1 h-full bg-black/80 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.65)] flex flex-col">
                 <div className="flex items-center justify-between px-6 pt-6 pb-4 text-[11px] uppercase tracking-[0.4em] text-white/60">
                   <span>Sections</span>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="text-white/50 hover:text-white transition-colors"
-                    aria-label="Close essay view"
-                  >
-                    ✕
-                  </button>
                 </div>
                 <div className="px-6 pb-6 overflow-y-auto space-y-2 scrollbar-thin-custom">
                   {headings.map(heading => (

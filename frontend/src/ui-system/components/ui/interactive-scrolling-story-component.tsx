@@ -250,7 +250,9 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                   ref={el => slideRefs.current[idx] = el}
                   className={cn(
                     "absolute inset-0 w-full h-full transition-opacity duration-700",
-                    isActive ? "opacity-100 pointer-events-auto z-10" : "opacity-0 pointer-events-none z-0"
+                    isActive ? "opacity-100 pointer-events-auto z-10" : "opacity-0 pointer-events-none z-0",
+                    // Mobile transparent backgrounds for non-hero slides
+                    !slide.isHero && "max-md:!bg-transparent"
                   )}
                   style={{
                     backgroundColor: slide.overlay ? 'transparent' : slide.bgColor,
@@ -268,32 +270,32 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                   )}
 
                   <div className="relative h-full w-full">
-                    <div className={`grid ${showImages && !slide.isHero ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'} h-full w-full`}>
+                    <div className={`grid ${showImages && !slide.isHero ? 'grid-cols-1 md:grid-cols-2 ' : 'grid-cols-1'} h-full w-full`}>
                       {/* Content Column */}
                       <div
-                        className={`relative z-10 flex flex-col ${showImages && !slide.isHero ? 'border-r border-gray-700/20 items-center justify-start' : ''} ${slide.isHero ? 'items-center text-center justify-center p-8 md:p-16' : ''} ${slide.title && !slide.isHero ? 'pl-[15px] md:pl-[23px] pr-[12px] md:pr-[28px]' : ''}`}
+                        className={`relative z-10 flex flex-col ${showImages && !slide.isHero ? 'border-r border-gray-700/20 items-center justify-start' : ''} ${slide.isHero ? 'items-center text-center justify-center p-8 md:p-16 ' : ''} ${slide.title && !slide.isHero ? 'px-6 md:pl-[23px]  md:pr-[28px] ' : ''}`}
                         style={{
                           opacity: 'var(--content-opacity, 1)',
                           transition: 'opacity 0.3s ease',
                         } as React.CSSProperties}
                       >
                         {showImages && !slide.isHero && slide.title ? (
-                          <div className="w-[85%] flex flex-col py-8 mt-12 mb-8">
-                            <h2 className="text-xl md:text-2xl font-normal tracking-[2px] mb-6 text-white flex-shrink-0">
+                          <div className="w-full md:w-[85%]  flex flex-col py-4 md:py-8  mt-10 md:mt-12  mb-4 md:mb-8 ">
+                            <h2 className="text-base md:text-xl  font-normal tracking-[2px]  mb-4 md:mb-6  text-white flex-shrink-0">
                               {slide.title}
                             </h2>
-                            <div className="text-xs md:text-sm leading-[1.6] tracking-[0.3px] overflow-y-auto flex-1">
+                            <div className="overflow-y-auto flex-1">
                               {slide.content || <p>{slide.description}</p>}
                             </div>
                           </div>
                         ) : (
                           <>
                             {slide.title && (
-                              <h2 className="text-2xl sm:text-3xl md:text-4xl font-normal tracking-[2px] md:tracking-[3px] mb-10 text-white pt-2 md:pt-3">
+                              <h2 className="text-2xl sm:text-3xl md:text-4xl  font-normal tracking-[2px] md:tracking-[3px]  mb-10 text-white pt-2 md:pt-3 ">
                                 {slide.title}
                               </h2>
                             )}
-                            <div className={`${slide.title ? 'text-sm sm:text-base md:text-lg max-w-5xl leading-relaxed md:leading-loose tracking-normal md:tracking-[0.5px] overflow-y-auto flex-1' : 'w-full h-full'}`}>
+                            <div className={`${slide.title ? 'max-w-5xl overflow-y-auto flex-1' : 'w-full h-full'}`}>
                               {slide.content || <p>{slide.description}</p>}
                             </div>
                           </>
@@ -302,7 +304,7 @@ export const ScrollingFeatureShowcase = React.forwardRef<
 
                       {/* Right Column: Image */}
                       {showImages && !slide.isHero && slide.image && (
-                        <div className="hidden md:flex items-center justify-center p-8 -ml-[5px]" style={gridPatternStyle}>
+                        <div className=" flex items-center justify-center p-8 -ml-[5px]" style={gridPatternStyle}>
                           <div className="relative rounded-sm overflow-hidden shadow-2xl border border-gray-700/20 w-[80%] h-[80vh]">
                             <img
                               src={slide.image}

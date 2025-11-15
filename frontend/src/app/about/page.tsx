@@ -39,6 +39,23 @@ export default function AboutPage() {
         handleToggle();
       }
 
+      // Left/Right arrows for sidebar toggle
+      if (!currentEssay) {
+        if (event.key === 'ArrowRight') {
+          event.preventDefault();
+          if (!isCollapsed) {
+            // Close sidebar (collapse it) to reveal essays
+            handleToggle();
+          }
+        } else if (event.key === 'ArrowLeft') {
+          event.preventDefault();
+          if (isCollapsed) {
+            // Open sidebar (expand it)
+            handleToggle();
+          }
+        }
+      }
+
       // Arrow keys for section navigation
       if (!currentEssay) {
         if (event.key === 'ArrowDown') {
@@ -249,7 +266,7 @@ export default function AboutPage() {
 
       {/* Essay Section Pagination Dots - Outside overflow container */}
       {isCollapsed && !currentEssay && (
-        <div className="fixed top-8 left-12 flex space-x-2 z-50">
+        <div className="fixed top-4 left-4 md:top-8 md:left-12 flex space-x-2 z-50">
           {Array.from({ length: totalEssaySections }).map((_, index) => (
             <button
               key={index}
@@ -269,7 +286,7 @@ export default function AboutPage() {
 
       {/* Logo Toggle Button (hidden when viewing essays, prompt packages, or example conversations) */}
       {!currentEssay && (
-        <div className="fixed top-6 right-6 z-50 group">
+        <div className="fixed bottom-1 right-1 z-50 group">
           <button
             onClick={handleToggle}
             className="transition-opacity duration-300 hover:opacity-80"
@@ -278,13 +295,13 @@ export default function AboutPage() {
             <img
               src="/ui-system/epi-logos-logo-vibes.png"
               alt="Epi-Logos"
-              className="w-[58px] h-[58px]"
+              className="w-12 h-12 md:w-[58px] md:h-[58px]"
             />
           </button>
 
-          {/* Legend - Always shows on hover, auto-shows briefly on startup */}
+          {/* Legend - Always shows on hover, auto-shows briefly on startup - Fixed to top-right corner */}
           <div className={cn(
-            "absolute top-full right-0 mt-3 transition-opacity duration-300 pointer-events-none",
+            "hidden md:block fixed top-4 right-4 transition-opacity duration-300 pointer-events-none",
             showTooltip ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}>
             <div className="bg-gray-900/95 border border-gray-700 rounded-sm px-6 py-4 text-xs text-gray-300 backdrop-blur-sm min-w-[240px]">
@@ -294,7 +311,7 @@ export default function AboutPage() {
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-gray-300">
-                    <span className="text-gray-500 font-mono">ESC</span>
+                    <span className="text-gray-500 font-mono">← →</span>
                     <span className="text-gray-600 mx-2">→</span>
                     Toggle Essays
                   </p>

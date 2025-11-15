@@ -45,7 +45,7 @@ export const AuroraBackground = ({
                [background-image:var(--white-gradient),var(--aurora)]
                [background-size:260%,_220%]
                [background-position:50%_50%,50%_50%]
-               opacity-50 blur-[20px] filter will-change-transform
+               opacity-80 blur-[20px] filter will-change-transform
                [--aurora:repeating-linear-gradient(110deg,#0b0e11_8%,#12161b_10%,#1a1f26_12%,#232a33_14%,#4a4f57_16%)]
                [--dark-gradient:repeating-linear-gradient(100deg,#000_0%,#000_7%,transparent_10%,transparent_12%,#000_16%)]
                [--white-gradient:repeating-linear-gradient(100deg,#fff_0%,#fff_7%,transparent_10%,transparent_12%,#fff_16%)]

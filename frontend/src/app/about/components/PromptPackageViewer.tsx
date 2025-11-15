@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { ExampleConversationViewer } from './ExampleConversationViewer';
 import { ciaConversation } from './conversations/cia-democracy';
 import { quantumConsciousnessConversation } from './conversations/quantum-consciousness';
+import { godAndConversation } from './conversations/god-and';
 
 interface PromptPackageViewerProps {
   onClose: () => void;
@@ -63,6 +64,12 @@ const exampleInquiries: ExampleInquiry[] = [
     title: 'Quantum Mechanics & Consciousness',
     description: 'Exploring why quantum civilization has not emerged despite a century of discovery, and consciousness trauma as institutional resistance',
     framework: 'Both'
+  },
+  {
+    id: 'god-and',
+    title: 'But What About God Tho?',
+    description: 'A two-part theological investigation: first examining whether mathematical frameworks can capture divine reality through toroidal topology, then pivoting to analyze "god" as a live cultural-psychological phenomenon across traditions',
+    framework: 'Both'
   }
 ];
 
@@ -116,6 +123,18 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
         description={quantumConsciousnessConversation.description}
         framework={quantumConsciousnessConversation.framework}
         turns={quantumConsciousnessConversation.turns}
+        onClose={() => setSelectedConversation(null)}
+      />
+    );
+  }
+
+  if (selectedConversation === 'god-and') {
+    return (
+      <ExampleConversationViewer
+        title={godAndConversation.title}
+        description={godAndConversation.description}
+        framework={godAndConversation.framework}
+        turns={godAndConversation.turns}
         onClose={() => setSelectedConversation(null)}
       />
     );
@@ -225,7 +244,7 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
                 className="border border-gray-800 bg-black/40 backdrop-blur-sm hover:border-gray-700 transition-colors"
               >
                 <div className="p-8 md:p-10">
-                  <div className="flex items-start justify-between gap-6">
+                  <div className="space-y-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-4 mb-3">
                         <span className="text-[10px] tracking-[0.4em] text-gray-600 uppercase">
@@ -235,7 +254,7 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
                       <h3 className="text-[20px] md:text-[24px] font-light tracking-[0.15em] text-white mb-4">
                         {file.title}
                       </h3>
-                      <p className="text-[13px] leading-[1.9] text-gray-200 max-w-[700px]">
+                      <p className="text-[13px] leading-[1.9] text-gray-200">
                         {file.description}
                       </p>
                       <p className="text-[11px] text-gray-500 mt-4 font-mono">
@@ -244,7 +263,7 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
                     </div>
                     <button
                       onClick={() => handleDownload(file)}
-                      className="flex items-center gap-2 px-6 py-3 border border-gray-700 text-gray-300 text-[10px] font-normal tracking-[2px] uppercase hover:bg-gray-900 hover:text-white transition-colors whitespace-nowrap"
+                      className="flex items-center gap-2 px-6 py-3 border border-gray-700 text-gray-300 text-[10px] font-normal tracking-[2px] uppercase hover:bg-gray-900 hover:text-white transition-colors w-fit"
                     >
                       <Download className="w-3.5 h-3.5" />
                       Download

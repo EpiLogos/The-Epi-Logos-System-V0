@@ -88,7 +88,7 @@ class AsciiFilter {
     this.domElement.appendChild(this.pre);
 
     this.canvas = document.createElement('canvas');
-    this.context = this.canvas.getContext('2d');
+    this.context = this.canvas.getContext('2d', { willReadFrequently: true });
     this.domElement.appendChild(this.canvas);
 
     this.deg = 0;
@@ -98,7 +98,6 @@ class AsciiFilter {
     this.charset = charset ?? ' .\'`^",:;Il!i~+_-?][}{1)(|/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$';
 
     if (this.context) {
-      this.context.imageSmoothingEnabled = false;
       this.context.imageSmoothingEnabled = false;
     }
 
@@ -220,7 +219,7 @@ class CanvasTxt {
   color: string;
   font: string;
 
-  constructor(txt: string, { fontSize = 200, fontFamily = 'Arial', color = '#fdf9f3' }: CanvasTxtOptions = {}) {
+  constructor(txt: string, { fontSize = 200, fontFamily = 'JetBrains Mono', color = '#fdf9f3' }: CanvasTxtOptions = {}) {
     this.canvas = document.createElement('canvas');
     this.context = this.canvas.getContext('2d');
     this.txt = txt;
@@ -333,7 +332,7 @@ class CanvAscii {
   setMesh() {
     this.textCanvas = new CanvasTxt(this.textString, {
       fontSize: this.textFontSize,
-      fontFamily: 'IBM Plex Mono',
+      fontFamily: 'JetBrains Mono',
       color: this.textColor
     });
     this.textCanvas.resize();
@@ -370,7 +369,7 @@ class CanvAscii {
     this.renderer.setClearColor(0x000000, 0);
 
     this.filter = new AsciiFilter(this.renderer, {
-      fontFamily: 'IBM Plex Mono',
+      fontFamily: 'JetBrains Mono',
       fontSize: this.asciiFontSize,
       invert: true
     });
@@ -486,71 +485,80 @@ export default function ASCIIText({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const { width, height } = containerRef.current.getBoundingClientRect();
-
-    if (width === 0 || height === 0) {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting && entry.boundingClientRect.width > 0 && entry.boundingClientRect.height > 0) {
-            const { width: w, height: h } = entry.boundingClientRect;
-
-            asciiRef.current = new CanvAscii(
-              {
-                text,
-                asciiFontSize,
-                textFontSize,
-                textColor,
-                planeBaseHeight,
-                enableWaves
-              },
-              containerRef.current!,
-              w,
-              h
-            );
-            asciiRef.current.load();
-
-            observer.disconnect();
-          }
+    const initializeAscii = (container: HTMLElement, w: number, h: number) => {
+      asciiRef.current = new CanvAscii(
+        {
+          text,
+          asciiFontSize,
+          textFontSize,
+          textColor,
+          planeBaseHeight,
+          enableWaves
         },
-        { threshold: 0.1 }
+        container,
+        w,
+        h
       );
+      asciiRef.current.load();
+    };
 
-      observer.observe(containerRef.current);
+    // Wait for JetBrains Mono font to load before initializing
+    const fontLoadPromise = document.fonts.ready.then(() => {
+      // Double-check JetBrains Mono is actually loaded
+      return document.fonts.check('400 12px "JetBrains Mono"');
+    });
+
+    fontLoadPromise.then((fontLoaded) => {
+      if (!fontLoaded) {
+        console.warn('JetBrains Mono font not loaded, ASCII text may render incorrectly');
+      }
+
+      if (!containerRef.current) return;
+
+      const { width, height } = containerRef.current.getBoundingClientRect();
+
+      if (width === 0 || height === 0) {
+        const observer = new IntersectionObserver(
+          ([entry]) => {
+            if (entry.isIntersecting && entry.boundingClientRect.width > 0 && entry.boundingClientRect.height > 0) {
+              const { width: w, height: h } = entry.boundingClientRect;
+              initializeAscii(containerRef.current!, w, h);
+              observer.disconnect();
+            }
+          },
+          { threshold: 0.1 }
+        );
+
+        observer.observe(containerRef.current);
+
+        return () => {
+          observer.disconnect();
+          if (asciiRef.current) {
+            asciiRef.current.dispose();
+          }
+        };
+      }
+
+      initializeAscii(containerRef.current, width, height);
+
+      const ro = new ResizeObserver(entries => {
+        if (!entries[0] || !asciiRef.current) return;
+        const { width: w, height: h } = entries[0].contentRect;
+        if (w > 0 && h > 0) {
+          asciiRef.current.setSize(w, h);
+        }
+      });
+      ro.observe(containerRef.current);
 
       return () => {
-        observer.disconnect();
+        ro.disconnect();
         if (asciiRef.current) {
           asciiRef.current.dispose();
         }
       };
-    }
-
-    asciiRef.current = new CanvAscii(
-      {
-        text,
-        asciiFontSize,
-        textFontSize,
-        textColor,
-        planeBaseHeight,
-        enableWaves
-      },
-      containerRef.current,
-      width,
-      height
-    );
-    asciiRef.current.load();
-
-    const ro = new ResizeObserver(entries => {
-      if (!entries[0] || !asciiRef.current) return;
-      const { width: w, height: h } = entries[0].contentRect;
-      if (w > 0 && h > 0) {
-        asciiRef.current.setSize(w, h);
-      }
     });
-    ro.observe(containerRef.current);
 
     return () => {
-      ro.disconnect();
       if (asciiRef.current) {
         asciiRef.current.dispose();
       }
@@ -568,13 +576,6 @@ export default function ASCIIText({
       }}
     >
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&display=swap');
-
-        body {
-          margin: 0;
-          padding: 0;
-        }
-
         .ascii-text-container canvas {
           position: absolute;
           left: 0;
@@ -595,15 +596,11 @@ export default function ASCIIText({
           user-select: none;
           padding: 0;
           line-height: 1em;
-          text-align: left;
-          position: absolute;
-          left: 0;
-          top: 0;
+          text-align: center;
           background-image: radial-gradient(circle, #ff6188 0%, #fc9867 50%, #ffd866 100%);
           background-attachment: fixed;
           -webkit-text-fill-color: transparent;
           -webkit-background-clip: text;
-          z-index: 9;
           mix-blend-mode: difference;
         }
       `}</style>
