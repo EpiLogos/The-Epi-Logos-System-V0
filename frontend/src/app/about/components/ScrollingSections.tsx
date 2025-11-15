@@ -98,7 +98,7 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
           </p>
 
           <p className="text-[9px] md:text-[12px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-            Our frameworks act like a coordinate system for tracing how thought moves. Here, we introduce the conceptual foundations and prompt packages - these aren't just prompts, but executable logics designed to be the operating logics of the coming Epi-Logos AI agent.
+            Here we introduce our core frameworks, Quaternal Logic and the Meta-Epistemic Framework, which aim to act like a coordinate system for tracing how thought arrives at itself. These conceptual of the Epi-Logos project we provide as foundational essays and prompt packages - we hope to provide executable logics, which are designed to form part of operating system of the coming Epi-Logos AI agent.
           </p>
 
           <p className="text-[9px] md:text-[12px]  text-gray-300 leading-[1.7] md:leading-[1.9]">
