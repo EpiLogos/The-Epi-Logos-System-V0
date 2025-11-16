@@ -10,10 +10,28 @@ interface LightModeContextType {
 const LightModeContext = createContext<LightModeContextType | undefined>(undefined);
 
 export function LightModeProvider({ children }: { children: ReactNode }) {
-  const [isLightMode, setIsLightMode] = useState(false);
+  const [isLightMode, setIsLightMode] = useState(true);
+  const [showFadeMask, setShowFadeMask] = useState(false);
+  const [fadeMaskColor, setFadeMaskColor] = useState<'white' | 'black'>('white');
 
   const toggleLightMode = () => {
-    setIsLightMode(prev => !prev);
+    // Set fade mask color based on where we're going
+    // Going TO light mode = white mask, Going TO dark mode = black mask
+    const goingToLightMode = !isLightMode;
+    setFadeMaskColor(goingToLightMode ? 'white' : 'black');
+
+    // Show the fade mask
+    setShowFadeMask(true);
+
+    // Toggle the mode after fade-in
+    setTimeout(() => {
+      setIsLightMode(prev => !prev);
+    }, 250);
+
+    // Hide the fade mask after transition completes
+    setTimeout(() => {
+      setShowFadeMask(false);
+    }, 500);
   };
 
   // Keyboard shortcuts for light mode toggle
@@ -45,6 +63,12 @@ export function LightModeProvider({ children }: { children: ReactNode }) {
   return (
     <LightModeContext.Provider value={{ isLightMode, toggleLightMode }}>
       {children}
+      {/* Fade mask overlay */}
+      <div
+        className={`fixed inset-0 z-[99999] pointer-events-none transition-opacity duration-[250ms] ${
+          fadeMaskColor === 'white' ? 'bg-white' : 'bg-black'
+        } ${showFadeMask ? 'opacity-100' : 'opacity-0'}`}
+      />
     </LightModeContext.Provider>
   );
 }

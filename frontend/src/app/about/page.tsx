@@ -319,42 +319,29 @@ function AboutPageContent() {
             "hidden md:block fixed top-4 right-4 transition-opacity duration-300 pointer-events-none",
             showTooltip ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}>
-            <div className={cn(
-              "border rounded-sm px-6 py-4 text-xs backdrop-blur-sm min-w-[240px]",
-              isLightMode
-                ? "bg-gray-100/95 border-gray-300 text-gray-700"
-                : "bg-gray-900/95 border-gray-700 text-gray-300"
-            )}>
+            <div className="px-6 py-4 text-xs min-w-[240px]">
               <div className="space-y-2">
-                <div className={cn(
-                  "pb-2 mb-2 border-b",
-                  isLightMode ? "border-gray-300" : "border-gray-700"
-                )}>
+                <div className="pb-2 mb-2">
                   <p className={cn(
                     "text-[10px] uppercase tracking-wider font-medium",
                     isLightMode ? "text-gray-500" : "text-gray-500"
                   )}>Navigation</p>
                 </div>
                 <div className="space-y-1.5">
-                  <p className={isLightMode ? "text-gray-700" : "text-gray-300"}>
-                    <span className={cn("font-mono", isLightMode ? "text-gray-500" : "text-gray-500")}>← →</span>
-                    <span className={cn("mx-2", isLightMode ? "text-gray-400" : "text-gray-600")}>→</span>
+                  <p className={isLightMode ? "text-gray-900" : "text-white"}>
+                    <span className={cn("font-mono", isLightMode ? "text-gray-600" : "text-gray-400")}>← →</span>
+                    <span className="mx-2"></span>
                     Toggle Essays
                   </p>
-                  <p className={isLightMode ? "text-gray-700" : "text-gray-300"}>
-                    <span className={cn("font-mono", isLightMode ? "text-gray-500" : "text-gray-500")}>↑ ↓</span>
-                    <span className={cn("mx-2", isLightMode ? "text-gray-400" : "text-gray-600")}>→</span>
+                  <p className={isLightMode ? "text-gray-900" : "text-white"}>
+                    <span className={cn("font-mono", isLightMode ? "text-gray-600" : "text-gray-400")}>↑ ↓</span>
+                    <span className="mx-2"></span>
                     Scroll Sections
                   </p>
-                  <p className={isLightMode ? "text-gray-700" : "text-gray-300"}>
-                    <span className={cn("font-mono", isLightMode ? "text-gray-500" : "text-gray-500")}>L</span>
-                    <span className={cn("mx-2", isLightMode ? "text-gray-400" : "text-gray-600")}>→</span>
-                    Light Mode
-                  </p>
-                  <p className={isLightMode ? "text-gray-700" : "text-gray-300"}>
-                    <span className={isLightMode ? "text-gray-500" : "text-gray-500"}>Click Title</span>
-                    <span className={cn("mx-2", isLightMode ? "text-gray-400" : "text-gray-600")}>→</span>
-                    The Gloss
+                  <p className={isLightMode ? "text-gray-900" : "text-white"}>
+                    <span className={cn("font-mono", isLightMode ? "text-gray-600" : "text-gray-400")}>L</span>
+                    <span className="mx-2"></span>
+                    Dark Mode
                   </p>
                 </div>
               </div>
