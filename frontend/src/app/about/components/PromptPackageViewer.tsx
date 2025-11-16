@@ -218,13 +218,13 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
               <div>
                 <h3 className={cn("font-light mb-3", isLightMode ? "text-slate-900" : "text-white")}>2. Guide the Agent Back:</h3>
                 <p className={cn("text-[12px] leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
-                  AI naturally drifts from framework discipline over long conversations. When responses become generic or lose structure, redirect: "Return to the QL modeling" or "Apply CMEA here." It's also recommended to give style guidance in your prompts: as there's a tendency for responses to be given as lists, so you might want to specify "flowing prose" or "conversationally" in your prompt, depending on the kind of output that speaks to you. The packages don't beat the indeterminism of AI - they require some amount of active engagement to maintain paradigm coherence.
+                  AI naturally drifts from framework discipline over long conversations. When responses become generic or lose structure, redirect: "Return to the QL modeling" or "Apply CMEA here." It's also recommended to give style guidance in your prompts. There's a tendency for responses to be given as lists, so you might want to specify "flowing prose" or "conversationally" in your prompt, depending on the kind of output that speaks to you. The packages don't beat the indeterminism of AI - they require some amount of active engagement to maintain paradigm coherence.
                 </p>
               </div>
               <div>
                 <h3 className={cn("font-light mb-3", isLightMode ? "text-slate-900" : "text-white")}>3. Let Frameworks Transform Thinking:</h3>
                 <p className={cn("text-[12px] leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
-                  Some amount of implicit "going along with it" is implied here. If there's confusion or something isn't clear, ask the agent to clarify or specify details. Our wager; QL offers a glimpse into a way to structure reasoning coherently and ensure the whole is considered as much as the part in each inquiry; the MEF reveals hidden angles on the knowledge we already have. Whether applied to personal or institutional conception, the intent is to find a way of approaching complexity that genuinely helps to reduce it and alchemise it into clarity, through the discovery of underlying patterns of integration that operate across differences. If, in the dialogues they help generate, the theories serve this intent we'll be happy with what we're providing.
+                  Some amount of implicit "going along with it" is implied here. If there's confusion or something isn't clear, ask the agent to clarify or specify details. Our wager; whether applied to personal or institutional conception, the intent is to alchemise paradox and complexity into clarity. If, in the dialogues they help generate, the theories serve this intent we'll be happy with what we're providing.
                 </p>
               </div>
             </div>

@@ -101,7 +101,7 @@ const essayPreviews: EssayPreview[] = [
     eyebrow: 'Prompt Packages',
     title: 'Epi-Logos Philosophical Frameworks',
     description:
-      'These are structured prompt packages that embed the core philosophical systems of the Epi-Logos project, the Meta-Epistemic Framework and Quaternal Logic into AI conversations. These are born of philosophical theory but aim toward AI as the medium of engagement - they\'re working tools designed to guide language systems toward reflexive and balanced reasoning, demonstrating what the theories define. It is our attempt to give a paradigm that can be learned and audited conversationally. Download, test, and help us refine.',
+      'These are structured prompt packages that embed the core philosophical systems of the Epi-Logos project, the Meta-Epistemic Framework and Quaternal Logic into AI conversations. These are philosophical and theoretical in nature, but our intent is practical. We want to explore AI as a medium of philosophical engagement. Thus, we\'re providing prompts designed to get AI to demonstrate what the theories define - theory can be in process now in a totally novel way. This is our attempt to give a paradigm that can be learned and audited conversationally, in order to display its utility. Download, test, and help us refine.',
     callToAction: 'View the prompt packages'
   },
   {

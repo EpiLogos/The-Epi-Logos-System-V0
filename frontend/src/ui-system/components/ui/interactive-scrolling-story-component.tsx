@@ -278,7 +278,7 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                     <div className={`grid ${showImages && !slide.isHero ? 'grid-cols-1 md:grid-cols-2 ' : 'grid-cols-1'} h-full w-full`}>
                       {/* Content Column */}
                       <div
-                        className={`relative z-10 flex flex-col ${showImages && !slide.isHero ? 'border-r border-gray-700/20 items-center justify-start' : ''} ${slide.isHero ? 'items-center text-center justify-center p-8 md:p-16 ' : ''} ${slide.title && !slide.isHero ? 'px-6 md:pl-[23px]  md:pr-[28px] ' : ''}`}
+                        className={`relative z-10 flex flex-col ${showImages && !slide.isHero ? 'border-r border-gray-700/20 items-center justify-start' : ''} ${slide.isHero ? 'items-center text-center justify-center p-8 md:p-16 ' : ''} ${slide.title && !slide.isHero ? 'px-4 md:pl-[16px]  md:pr-[20px] ' : ''}`}
                         style={{
                           opacity: 'var(--content-opacity, 1)',
                           transition: 'opacity 0.3s ease',
