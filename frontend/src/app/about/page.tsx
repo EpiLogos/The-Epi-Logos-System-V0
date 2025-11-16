@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/ui-system/utils/cn';
 import { useSidebar } from '@/contexts/SidebarContext';
+import { LightModeProvider, useLightMode } from '@/contexts/LightModeContext';
 import { SidebarContent } from './components/SidebarContent';
 import { EssayReader } from './components/EssayReader';
 import { EssayScrollingSections } from './components/EssayScrollingSections';
@@ -20,8 +21,9 @@ import Image from 'next/image';
  *
  * Pattern: Two-page side-by-side where sidebar IS the main content page
  */
-export default function AboutPage() {
+function AboutPageContent() {
   const { isCollapsed, toggle, collapse } = useSidebar();
+  const { isLightMode } = useLightMode();
   const [currentEssay, setCurrentEssay] = useState<string | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
@@ -161,10 +163,16 @@ export default function AboutPage() {
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen bg-black overflow-hidden">
+    <div className={cn(
+      "relative w-full min-h-screen overflow-hidden transition-colors duration-500",
+      isLightMode ? "bg-white" : "bg-black"
+    )}>
       {/* Logo Overlay - Independent of sidebar/essay navigation */}
       <motion.div
-        className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
+        className={cn(
+          "fixed inset-0 z-[9999] flex items-center justify-center transition-colors duration-500",
+          isLightMode ? "bg-white" : "bg-black"
+        )}
         initial={{ opacity: 1 }}
         animate={{ opacity: isLogoLoading ? 1 : 0 }}
         transition={{ duration: 0.5, ease: 'easeInOut' }}
@@ -189,7 +197,8 @@ export default function AboutPage() {
       {hasInitiallyLoaded && (
         <div
           className={cn(
-            'fixed inset-0 bg-black z-50 pointer-events-none transition-opacity duration-300',
+            'fixed inset-0 z-50 pointer-events-none transition-opacity duration-300',
+            isLightMode ? 'bg-white' : 'bg-black',
             isTransitioning ? 'opacity-100' : 'opacity-0'
           )}
         />
@@ -198,7 +207,8 @@ export default function AboutPage() {
       {/* Sidebar (Main Content) - Expanded by default */}
       <div
         className={cn(
-          'fixed top-0 left-0 h-screen bg-black z-30 transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          'fixed top-0 left-0 h-screen z-30 transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          isLightMode ? 'bg-white' : 'bg-black',
           isCollapsed ? 'w-0' : 'w-full'
         )}
       >
@@ -220,7 +230,8 @@ export default function AboutPage() {
       {/* Right Side (Essay/Document View) - Revealed when sidebar collapses */}
       <div
         className={cn(
-          'fixed top-0 right-0 h-screen bg-black transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden',
+          'fixed top-0 right-0 h-screen transition-all duration-700 ease-[cubic-bezier(0.4,0,0.2,1)] overflow-hidden',
+          isLightMode ? 'bg-white' : 'bg-black',
           isCollapsed ? 'w-full' : 'w-0'
         )}
       >
@@ -237,6 +248,7 @@ export default function AboutPage() {
             centered={false}
             showRadialGradient={false}
             className="w-full h-full bg-transparent"
+            isLightMode={isLightMode}
           >
             <div />
           </AuroraBackground>
@@ -275,9 +287,12 @@ export default function AboutPage() {
                 const event = new CustomEvent('essaySectionNavigate', { detail: { index } });
                 window.dispatchEvent(event);
               }}
-              className={`h-1 rounded-full transition-colors duration-300 ${
-                index === essaySectionIndex ? 'w-12 bg-white/80' : 'w-6 bg-white/20 hover:bg-white/40'
-              }`}
+              className={cn(
+                'h-1 rounded-full transition-colors duration-300',
+                index === essaySectionIndex
+                  ? cn('w-12', isLightMode ? 'bg-gray-800/80' : 'bg-white/80')
+                  : cn('w-6', isLightMode ? 'bg-gray-800/20 hover:bg-gray-800/40' : 'bg-white/20 hover:bg-white/40')
+              )}
               aria-label={`Go to essay section ${index + 1}`}
             />
           ))}
@@ -304,25 +319,41 @@ export default function AboutPage() {
             "hidden md:block fixed top-4 right-4 transition-opacity duration-300 pointer-events-none",
             showTooltip ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}>
-            <div className="bg-gray-900/95 border border-gray-700 rounded-sm px-6 py-4 text-xs text-gray-300 backdrop-blur-sm min-w-[240px]">
+            <div className={cn(
+              "border rounded-sm px-6 py-4 text-xs backdrop-blur-sm min-w-[240px]",
+              isLightMode
+                ? "bg-gray-100/95 border-gray-300 text-gray-700"
+                : "bg-gray-900/95 border-gray-700 text-gray-300"
+            )}>
               <div className="space-y-2">
-                <div className="pb-2 mb-2 border-b border-gray-700">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium">Navigation</p>
+                <div className={cn(
+                  "pb-2 mb-2 border-b",
+                  isLightMode ? "border-gray-300" : "border-gray-700"
+                )}>
+                  <p className={cn(
+                    "text-[10px] uppercase tracking-wider font-medium",
+                    isLightMode ? "text-gray-500" : "text-gray-500"
+                  )}>Navigation</p>
                 </div>
                 <div className="space-y-1.5">
-                  <p className="text-gray-300">
-                    <span className="text-gray-500 font-mono">← →</span>
-                    <span className="text-gray-600 mx-2">→</span>
+                  <p className={isLightMode ? "text-gray-700" : "text-gray-300"}>
+                    <span className={cn("font-mono", isLightMode ? "text-gray-500" : "text-gray-500")}>← →</span>
+                    <span className={cn("mx-2", isLightMode ? "text-gray-400" : "text-gray-600")}>→</span>
                     Toggle Essays
                   </p>
-                  <p className="text-gray-300">
-                    <span className="text-gray-500 font-mono">↑ ↓</span>
-                    <span className="text-gray-600 mx-2">→</span>
+                  <p className={isLightMode ? "text-gray-700" : "text-gray-300"}>
+                    <span className={cn("font-mono", isLightMode ? "text-gray-500" : "text-gray-500")}>↑ ↓</span>
+                    <span className={cn("mx-2", isLightMode ? "text-gray-400" : "text-gray-600")}>→</span>
                     Scroll Sections
                   </p>
-                  <p className="text-gray-300">
-                    <span className="text-gray-500">Click Title</span>
-                    <span className="text-gray-600 mx-2">→</span>
+                  <p className={isLightMode ? "text-gray-700" : "text-gray-300"}>
+                    <span className={cn("font-mono", isLightMode ? "text-gray-500" : "text-gray-500")}>L</span>
+                    <span className={cn("mx-2", isLightMode ? "text-gray-400" : "text-gray-600")}>→</span>
+                    Light Mode
+                  </p>
+                  <p className={isLightMode ? "text-gray-700" : "text-gray-300"}>
+                    <span className={isLightMode ? "text-gray-500" : "text-gray-500"}>Click Title</span>
+                    <span className={cn("mx-2", isLightMode ? "text-gray-400" : "text-gray-600")}>→</span>
                     The Gloss
                   </p>
                 </div>
@@ -332,5 +363,13 @@ export default function AboutPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AboutPage() {
+  return (
+    <LightModeProvider>
+      <AboutPageContent />
+    </LightModeProvider>
   );
 }

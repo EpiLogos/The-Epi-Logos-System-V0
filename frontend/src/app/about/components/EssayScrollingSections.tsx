@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { AuroraBackground } from '@/components/ui/aurora-background';
 import { ScrollingFeatureShowcase } from '@/ui-system/components/ui/interactive-scrolling-story-component';
 import { cn } from '@/lib/utils';
+import { useLightMode } from '@/contexts/LightModeContext';
 
 const Genus6ModelViewer = dynamic(
   () => import('@/components/three/Genus6ModelViewer').then(mod => ({ default: mod.Genus6ModelViewer })),
@@ -98,9 +99,9 @@ const essayPreviews: EssayPreview[] = [
   {
     id: 'prompt-packages',
     eyebrow: 'Prompt Packages',
-    title: 'MEF & QL Ready for Use',
+    title: 'Epi-Logos Philosophical Frameworks',
     description:
-      'Structured prompt packages that embed the MEF and QL frameworks into AI conversations. These aren\'t theory - they\'re working tools designed to guide systems toward reflexive, balanced reasoning. Download, test, and help us refine them.',
+      'These are structured prompt packages that embed the core philosophical systems of the Epi-Logos project, the Meta-Epistemic Framework and Quaternal Logic into AI conversations. These are born of philosophical theory but aim toward AI as the medium of engagement - they\'re working tools designed to guide language systems toward reflexive and balanced reasoning, demonstrating what the theories define. It is our attempt to give a paradigm that can be learned and audited conversationally. Download, test, and help us refine.',
     callToAction: 'View the prompt packages'
   },
   {
@@ -108,7 +109,7 @@ const essayPreviews: EssayPreview[] = [
     eyebrow: '#: The Epi-Logos Project',
     title: 'The Notion of Epi-Logos',
     description:
-      'Epi-Logos is the point where disparate meanings hold together without fusing—a gathering that preserves difference. The term comes from Greek: "upon the word," the stance that stands on what language makes available to see what comes next. We need this because reality unfolds through relationship, not isolated facts. The Epi-Logos formalizes this: a structure indefinite enough to apply everywhere, relational enough to connect anything. We attempt to create the hinge where diverse perspectives pivot together. This is how consciousness self-organizes—not by choosing one view but by discovering the axis that lets incompatible truths co-exist.',
+      'Epi-Logos is the point where disparate meanings hold together without fusing - a gathering that preserves difference. The term comes from Greek: "upon the word," the stance that stands on what language has made available to us, to see what we can make of the fallout. We need this because reality unfolds through relationship, not isolated facts. The Epi-Logos formalizes this through a structure indefinite enough to apply everywhere, relational enough to connect anything. Topology supplies the symbolic language that makes this possible. This essay attempts to make clear the hinge by which diverse perspectives pivot together. This is how understanding self-organizes - not by choosing one view but by discovering the axis that lets divergent truths co-exist.',
     callToAction: 'Read the Epi-Logos essay'
   },
   {
@@ -116,7 +117,7 @@ const essayPreviews: EssayPreview[] = [
     eyebrow: '#1-3 and #1-4: Spanda Genesis and Quaternal Logic\'s Flowering',
     title: 'Quaternal Logic (QL)',
     description:
-      'Quaternal Logic is the formal heart of Epi-Logos: a symbolic-mathematical law describing how unity differentiates into multiplicity without losing itself. Beginning from Spanda - the primordial vibration of self-differentiation expressed as (0/1) - QL unfolds the minimal architecture needed for coherent manifestation. Through the Trika (threefold operator that holds opposites in generative tension) and successive context frames, this oscillation crystallizes into the toroidal structure: a 4+2 pattern where four explicit operations circulate around two implicit depths. This is not abstract numerology but computable metaphysics - a grammar of becoming verified across physics, cognition, and cosmology.',
+      'Quaternal Logic is the formal heart of Epi-Logos: a symbolic-mathematical law describing how unity differentiates into multiplicity without losing itself. Beginning from Spanda - the primordial vibration of self-differentiation expressed as (0/1) - QL unfolds the minimal architecture needed for coherent becoming. Through a logical series of part-metaphysical, part-mathematical developments, this oscillation crystallizes into the basic formula for the toroidal structure: a 4 sided shape folded twice, forming a tube then a ring, producing 2 loops. Quaternal Logic takes the torus and its 4+2 formula as primary symbols for systems that transcend and include themselves, the example par excellence being consciousness. A knowledge that includes the knower in its account must, we argue, hold this form.',
     callToAction: 'Read the QL essay'
   },
   {
@@ -124,7 +125,7 @@ const essayPreviews: EssayPreview[] = [
     eyebrow: '#2-1: The Meta-Epistemic Framework or Meta-Logikon',
     title: 'Meta-Epistemic Framework (MEF)',
     description:
-      'The MEF formalizes reflexive incompleteness as generative process. Every rigorous system leaves an aperture—what it must exclude to function. This isn\'t defect but operative law: the gap that keeps reasoning alive. Through six lenses (archetypal, causal, logical, processual, meta-epistemic, divine-scalar), MEF performs diagnosis - not of knowledge but how knowledge is arrived at. It reveals what each paradigm represses and how that returns as crisis. The method: turn negative discoveries (Gödel\'s unprovability, Lacan\'s lack, Wittgenstein\'s silence, Derrida\'s deferral) into positive capacities. Systems that know they\'re contingent and remain free. Incompleteness becomes an engine; lack becomes the possibility of discovery.',
+      'Every rigorous system leaves an aperture - that which it must exclude to function. This isn\'t a defect but an operative law. All things are limited, and limitation is the condition for uniqueness, specificity. This helps us to make knowledge, but at the cost of becoming, often, one sided in our knowing. Through six lenses (archetypal, causal, logical, processual, meta-epistemic, divine-scalar), MEF performs diagnosis - not of knowledge itself but how knowledge is arrived at within a field of conditions. The process of knowing operates within a set of dimensions which are already uniquely meaningful. Thus the MEF aims to help define the field and apply it, in order to reveal in our knowledge systems and personal thought the latent paradigm, the limits it sets, what it represses in order to function, and in what ways the excluded portion returns - whether as grace or crisis.',
     callToAction: 'Read the MEF essay'
   },
   {
@@ -138,6 +139,7 @@ const essayPreviews: EssayPreview[] = [
 ];
 
 export function EssayScrollingSections({ onEssaySelect, onSectionChange }: EssayScrollingSectionsProps) {
+  const { isLightMode } = useLightMode();
   const [showPDFExplorer, setShowPDFExplorer] = useState(false);
   const scrollControlRef = useRef<{ navigateToSection: (index: number) => void } | null>(null);
 
@@ -163,25 +165,41 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
   const introSlide = {
     title: '',
     description: '',
-    bgColor: '#000000',
-    textColor: '#FFFFFF',
+    bgColor: isLightMode ? '#ffffff' : '#000000',
+    textColor: isLightMode ? '#1a1a1a' : '#FFFFFF',
     isHero: true,
     overlay: (
       <AuroraBackground
         fullScreen={false}
         centered={false}
-        className="w-full h-full bg-black text-white opacity-80"
+        className={cn(
+          "w-full h-full opacity-80",
+          isLightMode ? "bg-white text-gray-800" : "bg-black text-white"
+        )}
+        isLightMode={isLightMode}
       />
     ),
     content: (
       <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-8">
-        <h1 className="text-[24px] md:text-[36px] font-normal tracking-[4px] text-white text-center mb-6 max-w-[1000px]">
+        <h1 className={cn(
+          "text-[24px] md:text-[36px] font-normal tracking-[4px] text-center mb-6 max-w-[1000px]",
+          isLightMode ? "text-slate-900" : "text-white"
+        )}>
           TWO FRAMES, FOUR DOORWAYS
         </h1>
-        <p className="text-[10px] md:text-[16px] text-gray-300 leading-[2] tracking-[0.8px] max-w-[800px] text-center px-4">
-          Here we share our <button onClick={() => onEssaySelect('prompt-packages')} className="text-gray-300 underline hover:text-white transition-colors">prompt packages</button> and essays to introduce people to the system. The best way in is to explore the example conversations in the prompt package section.
+        <p className={cn(
+          "text-[10px] md:text-[16px] leading-[2] tracking-[0.8px] max-w-[800px] text-center px-4",
+          isLightMode ? "text-slate-700" : "text-gray-300"
+        )}>
+          Here we share our <button onClick={() => onEssaySelect('prompt-packages')} className={cn(
+            "underline transition-colors",
+            isLightMode ? "text-slate-700 hover:text-slate-900" : "text-gray-300 hover:text-white"
+          )}>prompt packages</button> and essays to introduce people to the system. The best way in is to explore the example conversations in the prompt package section.
         </p>
-        <p className="text-[8px] md:text-[10px] text-gray-500 max-w-[900px] leading-[1.8] tracking-[0.6px] text-center mt-12 px-4">
+        <p className={cn(
+          "text-[8px] md:text-[10px] max-w-[900px] leading-[1.8] tracking-[0.6px] text-center mt-12 px-4",
+          isLightMode ? "text-gray-500" : "text-gray-500"
+        )}>
           Drafts are live and evolving; feedback is welcome.
         </p>
       </div>
@@ -194,15 +212,21 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
     return {
       title: '',
       description: '',
-      bgColor: '#000000',
-      textColor: '#FFFFFF',
+      bgColor: isLightMode ? '#ffffff' : '#000000',
+      textColor: isLightMode ? '#1a1a1a' : '#FFFFFF',
       content: (
         <div className="w-full h-full flex items-center justify-center px-6 md:px-12 lg:px-24">
-          <div className="w-full max-w-[1100px] border border-gray-900/60 bg-black/40 backdrop-blur-sm">
+          <div className={cn(
+            "w-full max-w-[1100px] border backdrop-blur-sm",
+            isLightMode ? "border-slate-300/60 bg-white/40" : "border-gray-900/60 bg-black/40"
+          )}>
             <div
               className={`flex flex-col ${isEven ? 'lg:flex-row' : 'lg:flex-row-reverse'} gap-10 lg:items-stretch`}
             >
-              <div className={`hidden lg:flex w-full lg:w-1/2 bg-gray-950 border-b border-gray-900/60 lg:border-b-0 lg:border-r lg:border-gray-900/60 items-center justify-center overflow-hidden ${essay.id === 'epi-logos' || essay.id === 'mef' || essay.id === 'ql' ? 'aspect-square' : 'min-h-[260px]'}`}>
+              <div className={cn(
+                `hidden lg:flex w-full lg:w-1/2 border-b lg:border-b-0 lg:border-r items-center justify-center overflow-hidden ${essay.id === 'epi-logos' || essay.id === 'mef' || essay.id === 'ql' ? 'aspect-square' : 'min-h-[260px]'}`,
+                isLightMode ? "bg-slate-50 border-slate-300/60" : "bg-gray-950 border-gray-900/60"
+              )}>
                 {essay.id === 'mef' ? (
                   <Suspense
                     fallback={
@@ -218,7 +242,10 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
                     <SketchfabTorusViewer />
                   </div>
                 ) : essay.id === 'ql' ? (
-                  <div className="w-full h-full bg-black flex items-center justify-center p-4">
+                  <div className={cn(
+                    "w-full h-full flex items-center justify-center p-4",
+                    isLightMode ? "bg-slate-100" : "bg-black"
+                  )}>
                     <video
                       autoPlay
                       loop
@@ -230,7 +257,10 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
                     </video>
                   </div>
                 ) : essay.id === 'num-lang' ? (
-                  <div className="w-full h-full flex items-center justify-center bg-black">
+                  <div className={cn(
+                    "w-full h-full flex items-center justify-center",
+                    isLightMode ? "bg-slate-100" : "bg-black"
+                  )}>
                     <video
                       autoPlay
                       loop
@@ -254,7 +284,10 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
                     </video>
                   </div>
                 ) : essay.id === 'prompt-packages' ? (
-                  <div className="w-full h-full bg-black flex items-center justify-center p-4">
+                  <div className={cn(
+                    "w-full h-full flex items-center justify-center p-4",
+                    isLightMode ? "bg-slate-100" : "bg-black"
+                  )}>
                     <video
                       autoPlay
                       loop
@@ -279,14 +312,23 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
 
               <div className="w-full lg:w-1/2 px-6 py-10 md:px-10 md:py-12 space-y-6">
                 <div className="space-y-3">
-                  <p className="text-[8px] md:text-[10px] uppercase tracking-[0.5em] text-gray-500">
+                  <p className={cn(
+                    "text-[8px] md:text-[10px] uppercase tracking-[0.5em]",
+                    isLightMode ? "text-gray-500" : "text-gray-500"
+                  )}>
                     {essay.eyebrow}
                   </p>
-                  <h2 className="text-lg md:text-xl lg:text-2xl font-light tracking-[0.15em] text-white">
+                  <h2 className={cn(
+                    "text-lg md:text-xl lg:text-2xl font-light tracking-[0.15em]",
+                    isLightMode ? "text-slate-900" : "text-white"
+                  )}>
                     {essay.title}
                   </h2>
                 </div>
-                <p className="text-[11px] md:text-[13px] lg:text-[15px] text-gray-300 leading-relaxed">
+                <p className={cn(
+                  "text-[11px] md:text-[13px] lg:text-[15px] leading-relaxed",
+                  isLightMode ? "text-slate-700" : "text-gray-300"
+                )}>
                   {essay.description}
                 </p>
                 <button
@@ -295,16 +337,16 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
                   className={cn(
                     "group inline-flex items-center text-[8px] md:text-[11px] lg:text-[13px] uppercase tracking-[0.4em]",
                     essay.callToAction === 'Coming soon'
-                      ? "text-gray-400 cursor-default"
-                      : "text-gray-400 hover:text-white transition-colors"
+                      ? cn(isLightMode ? "text-slate-400 cursor-default" : "text-gray-400 cursor-default")
+                      : cn("transition-colors", isLightMode ? "text-slate-600 hover:text-slate-900" : "text-gray-400 hover:text-white")
                   )}
                 >
                   {essay.callToAction}
                   <span className={cn(
                     "ml-4",
                     essay.callToAction === 'Coming soon'
-                      ? "text-gray-600"
-                      : "text-gray-600 group-hover:text-white"
+                      ? cn(isLightMode ? "text-slate-400" : "text-gray-600")
+                      : cn(isLightMode ? "text-slate-400 group-hover:text-slate-900" : "text-gray-600 group-hover:text-white")
                   )}>
                     →
                   </span>
@@ -326,7 +368,11 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
             fullScreen={false}
             centered={false}
             showRadialGradient={false}
-            className="w-full h-full bg-black text-white"
+            className={cn(
+              "w-full h-full",
+              isLightMode ? "bg-white text-gray-800" : "bg-black text-white"
+            )}
+            isLightMode={isLightMode}
           >
             <div />
           </AuroraBackground>
@@ -340,6 +386,7 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
             hidePagination={true}
             onSectionChange={onSectionChange}
             ref={scrollControlRef}
+            isLightMode={isLightMode}
           />
         </div>
       </div>

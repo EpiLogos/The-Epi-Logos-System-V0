@@ -25,6 +25,7 @@ interface ScrollingFeatureShowcaseProps {
   hidePagination?: boolean;
   onSectionChange?: (index: number) => void;
   customNavigateEvent?: string;
+  isLightMode?: boolean;
 }
 
 export const ScrollingFeatureShowcase = React.forwardRef<
@@ -38,7 +39,8 @@ export const ScrollingFeatureShowcase = React.forwardRef<
   buttonHref = "#",
   hidePagination = false,
   onSectionChange,
-  customNavigateEvent
+  customNavigateEvent,
+  isLightMode = false
 }, ref) {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -194,7 +196,7 @@ export const ScrollingFeatureShowcase = React.forwardRef<
   }, [slides.length]);
 
   const gridPatternStyle = {
-    '--grid-color': 'rgba(255, 255, 255, 0.05)',
+    '--grid-color': isLightMode ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.05)',
     backgroundImage: `
       linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
       linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px)
@@ -230,9 +232,12 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                       onSectionChange?.(index);
                     }
                   }}
-                  className={`h-1 rounded-full transition-colors duration-300 ${
-                    index === activeIndex ? 'w-12 bg-white/80' : 'w-6 bg-white/20 hover:bg-white/40'
-                  }`}
+                  className={cn(
+                    "h-1 rounded-full transition-colors duration-300",
+                    index === activeIndex
+                      ? isLightMode ? "w-12 bg-gray-800/80" : "w-12 bg-white/80"
+                      : isLightMode ? "w-6 bg-gray-800/20 hover:bg-gray-800/40" : "w-6 bg-white/20 hover:bg-white/40"
+                  )}
                   aria-label={`Go to slide ${index + 1}`}
                 />
               ))}
@@ -281,7 +286,10 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                       >
                         {showImages && !slide.isHero && slide.title ? (
                           <div className="w-full md:w-[85%]  flex flex-col py-4 md:py-8  mt-10 md:mt-12  mb-4 md:mb-8 ">
-                            <h2 className="text-base md:text-xl  font-normal tracking-[2px]  mb-4 md:mb-6  text-white flex-shrink-0">
+                            <h2 className={cn(
+                              "text-base md:text-xl  font-normal tracking-[2px]  mb-2 md:mb-4  flex-shrink-0",
+                              isLightMode ? "text-slate-900" : "text-white"
+                            )}>
                               {slide.title}
                             </h2>
                             <div className="overflow-y-auto flex-1">
@@ -291,7 +299,10 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                         ) : (
                           <>
                             {slide.title && (
-                              <h2 className="text-2xl sm:text-3xl md:text-4xl  font-normal tracking-[2px] md:tracking-[3px]  mb-10 text-white pt-2 md:pt-3 ">
+                              <h2 className={cn(
+                                "text-2xl sm:text-3xl md:text-4xl  font-normal tracking-[2px] md:tracking-[3px]  mb-10 pt-2 md:pt-3",
+                                isLightMode ? "text-slate-900" : "text-white"
+                              )}>
                                 {slide.title}
                               </h2>
                             )}
@@ -304,8 +315,11 @@ export const ScrollingFeatureShowcase = React.forwardRef<
 
                       {/* Right Column: Image */}
                       {showImages && !slide.isHero && slide.image && (
-                        <div className=" flex items-center justify-center p-8 -ml-[5px]" style={gridPatternStyle}>
-                          <div className="relative rounded-sm overflow-hidden shadow-2xl border border-gray-700/20 w-[80%] h-[80vh]">
+                        <div className=" flex items-center justify-center p-8 -ml-[5px]" style={isLightMode ? {} : gridPatternStyle}>
+                          <div className={cn(
+                            "relative rounded-sm overflow-hidden w-[80%] h-[80vh]",
+                            isLightMode ? "" : "shadow-2xl border border-gray-700/20"
+                          )}>
                             <img
                               src={slide.image}
                               alt={slide.title}

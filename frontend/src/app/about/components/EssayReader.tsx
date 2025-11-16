@@ -9,6 +9,7 @@ import 'katex/dist/katex.min.css';
 import { ScrollProgress } from '@/components/ui/scroll-progress';
 import { essays } from './essays';
 import { cn } from '@/lib/utils';
+import { useLightMode } from '@/contexts/LightModeContext';
 
 interface EssayReaderProps {
   essayId: string | null;
@@ -85,6 +86,7 @@ function extractHeadings(markdown: string): HeadingData[] {
 }
 
 export function EssayReader({ essayId, onClose }: EssayReaderProps) {
+  const { isLightMode } = useLightMode();
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [markdown, setMarkdown] = useState<string>('');
@@ -154,7 +156,10 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
 
   if (!essay) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-black text-gray-600">
+      <div className={cn(
+        "w-full h-screen flex items-center justify-center",
+        isLightMode ? "bg-white text-slate-600" : "bg-black text-gray-600"
+      )}>
         <p className="text-[11px] tracking-[2px]">SELECT AN ESSAY OR DOCUMENT</p>
       </div>
     );
@@ -162,7 +167,10 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
 
   if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-black text-gray-400">
+      <div className={cn(
+        "w-full h-screen flex items-center justify-center",
+        isLightMode ? "bg-white text-gray-600" : "bg-black text-gray-400"
+      )}>
         <p className="text-[11px] tracking-[2px]">LOADING ESSAY...</p>
       </div>
     );
@@ -185,14 +193,23 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
   };
 
   return (
-    <div className="relative w-full h-screen bg-black text-white overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black via-black/70 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black via-black/70 to-transparent" />
+    <div className={cn(
+      "relative w-full h-screen overflow-hidden transition-colors duration-500",
+      isLightMode ? "bg-white text-gray-800" : "bg-black text-white"
+    )}>
+      <div className={cn(
+        "pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b to-transparent",
+        isLightMode ? "from-white via-white/70" : "from-black via-black/70"
+      )} />
+      <div className={cn(
+        "pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t to-transparent",
+        isLightMode ? "from-white via-white/70" : "from-black via-black/70"
+      )} />
 
       <div className="absolute inset-x-0 top-0 z-40">
         <ScrollProgress
           containerRef={containerRef}
-          className="h-[2px] bg-white/70"
+          className={cn("h-[2px]", isLightMode ? "bg-slate-800/70" : "bg-white/70")}
         />
       </div>
 
@@ -200,19 +217,34 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
         ref={containerRef}
         className="relative h-full w-full overflow-y-auto scroll-smooth"
       >
-        <div className="w-full px-6 md:px-12 lg:px-20 pt-8 pb-24 text-gray-200">
+        <div className={cn(
+          "w-full px-6 md:px-12 lg:px-20 pt-8 pb-24",
+          isLightMode ? "text-slate-700" : "text-gray-200"
+        )}>
           <div className="relative max-w-[1600px] mx-auto">
             {/* Header with close button */}
-            <div className="flex items-start justify-between mb-8 border-b border-gray-800 pb-8 lg:pb-10">
+            <div className={cn(
+              "flex items-start justify-between mb-8 border-b pb-8 lg:pb-10",
+              isLightMode ? "border-slate-300" : "border-gray-800"
+            )}>
               <div className="flex-1 space-y-4">
-                <p className="text-[11px] uppercase tracking-[0.42em] text-gray-500">
+                <p className={cn(
+                  "text-[11px] uppercase tracking-[0.42em]",
+                  isLightMode ? "text-gray-500" : "text-gray-500"
+                )}>
                   Essay
                 </p>
-                <h1 className="text-[34px] md:text-[40px] font-light tracking-[0.32em] text-white">
+                <h1 className={cn(
+                  "text-[34px] md:text-[40px] font-light tracking-[0.32em]",
+                  isLightMode ? "text-slate-900" : "text-white"
+                )}>
                   {essay.title}
                 </h1>
                 {essay.subtitle && (
-                  <p className="text-[12px] text-gray-400 tracking-[0.28em] uppercase">
+                  <p className={cn(
+                    "text-[12px] tracking-[0.28em] uppercase",
+                    isLightMode ? "text-slate-600" : "text-gray-400"
+                  )}>
                     {essay.subtitle}
                   </p>
                 )}
@@ -220,7 +252,10 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
               <button
                 type="button"
                 onClick={onClose}
-                className="ml-8 text-xs uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors flex-shrink-0"
+                className={cn(
+                  "ml-8 text-xs uppercase tracking-[0.4em] transition-colors flex-shrink-0",
+                  isLightMode ? "text-gray-500 hover:text-slate-900" : "text-gray-500 hover:text-white"
+                )}
               >
                 Close
               </button>
@@ -228,24 +263,36 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
 
             <article className="space-y-16 lg:pr-[340px]">
 
-              <div className="prose prose-invert max-w-none
-                [&_h1]:text-[32px] [&_h1]:md:text-[36px] [&_h1]:font-light [&_h1]:tracking-[0.24em] [&_h1]:text-white [&_h1]:mb-8 [&_h1]:scroll-mt-24
-                [&_h2]:text-[26px] [&_h2]:md:text-[30px] [&_h2]:font-light [&_h2]:tracking-[0.24em] [&_h2]:text-white [&_h2]:mb-8 [&_h2]:scroll-mt-24
-                [&_h3]:text-[22px] [&_h3]:md:text-[26px] [&_h3]:font-light [&_h3]:tracking-[0.24em] [&_h3]:text-white [&_h3]:mb-8 [&_h3]:scroll-mt-24
-                [&_h4]:text-[18px] [&_h4]:md:text-[22px] [&_h4]:font-light [&_h4]:tracking-[0.24em] [&_h4]:text-white [&_h4]:mb-8 [&_h4]:scroll-mt-24
-                [&_h5]:text-[16px] [&_h5]:md:text-[18px] [&_h5]:font-light [&_h5]:tracking-[0.24em] [&_h5]:text-white [&_h5]:mb-8 [&_h5]:scroll-mt-24
-                [&_h6]:text-[14px] [&_h6]:md:text-[16px] [&_h6]:font-light [&_h6]:tracking-[0.24em] [&_h6]:text-white [&_h6]:mb-8 [&_h6]:scroll-mt-24
-                [&_p]:text-gray-200 [&_p]:leading-[2.2] [&_p]:tracking-[0.01em] [&_p]:mb-8 [&_p]:text-[15px]
-                [&_strong]:text-white [&_strong]:font-semibold
-                [&_em]:text-gray-300 [&_em]:italic
-                [&_code]:text-gray-100 [&_code]:bg-white/10 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-sm [&_code]:text-[14px]
+              <div className={cn(
+                "prose max-w-none",
+                isLightMode ? "prose-gray" : "prose-invert",
+                `[&_h1]:text-[32px] [&_h1]:md:text-[36px] [&_h1]:font-light [&_h1]:tracking-[0.24em] [&_h1]:mb-8 [&_h1]:scroll-mt-24
+                [&_h2]:text-[26px] [&_h2]:md:text-[30px] [&_h2]:font-light [&_h2]:tracking-[0.24em] [&_h2]:mb-8 [&_h2]:scroll-mt-24
+                [&_h3]:text-[22px] [&_h3]:md:text-[26px] [&_h3]:font-light [&_h3]:tracking-[0.24em] [&_h3]:mb-8 [&_h3]:scroll-mt-24
+                [&_h4]:text-[18px] [&_h4]:md:text-[22px] [&_h4]:font-light [&_h4]:tracking-[0.24em] [&_h4]:mb-8 [&_h4]:scroll-mt-24
+                [&_h5]:text-[16px] [&_h5]:md:text-[18px] [&_h5]:font-light [&_h5]:tracking-[0.24em] [&_h5]:mb-8 [&_h5]:scroll-mt-24
+                [&_h6]:text-[14px] [&_h6]:md:text-[16px] [&_h6]:font-light [&_h6]:tracking-[0.24em] [&_h6]:mb-8 [&_h6]:scroll-mt-24
+                [&_p]:leading-[2.2] [&_p]:tracking-[0.01em] [&_p]:mb-8 [&_p]:text-[15px]
+                [&_strong]:font-semibold
+                [&_em]:italic
+                [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-sm [&_code]:text-[14px]
                 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-3 [&_ul]:my-8
                 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-3 [&_ol]:my-8
-                [&_li]:text-gray-200 [&_li]:leading-[2] [&_li>strong]:text-white
-                [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-gray-800 [&_hr]:my-12
-                [&_.katex]:text-gray-100
-                [&_.katex-display]:my-8 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden
-              ">
+                [&_li]:leading-[2]
+                [&_hr]:border-0 [&_hr]:border-t [&_hr]:my-12
+                [&_.katex-display]:my-8 [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden`,
+                isLightMode ? `
+                  [&_h1]:text-slate-900 [&_h2]:text-slate-900 [&_h3]:text-slate-900 [&_h4]:text-slate-900 [&_h5]:text-slate-900 [&_h6]:text-slate-900
+                  [&_p]:text-slate-700 [&_strong]:text-slate-900 [&_em]:text-slate-700
+                  [&_code]:text-slate-800 [&_code]:bg-slate-200
+                  [&_li]:text-slate-700 [&_li>strong]:text-slate-900
+                  [&_hr]:border-slate-300 [&_.katex]:text-slate-800` : `
+                  [&_h1]:text-white [&_h2]:text-white [&_h3]:text-white [&_h4]:text-white [&_h5]:text-white [&_h6]:text-white
+                  [&_p]:text-gray-200 [&_strong]:text-white [&_em]:text-gray-300
+                  [&_code]:text-gray-100 [&_code]:bg-white/10
+                  [&_li]:text-gray-200 [&_li>strong]:text-white
+                  [&_hr]:border-gray-800 [&_.katex]:text-gray-100`
+              )}>
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm, remarkMath]}
                   rehypePlugins={[rehypeKatex]}
@@ -269,15 +316,30 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
         <div className="hidden lg:block fixed top-[88px] right-0 z-40 group/toc">
           <div className="relative h-[calc(100vh-160px)]">
             <aside
-              className="pointer-events-auto relative z-10 flex h-full w-[320px] translate-x-[calc(100%-24px)] overflow-hidden rounded-l-sm border border-white/15 transition-transform duration-300 ease-out group-hover/toc:translate-x-0 group-focus-within/toc:translate-x-0"
+              className={cn(
+                "pointer-events-auto relative z-10 flex h-full w-[320px] translate-x-[calc(100%-24px)] overflow-hidden rounded-l-sm border transition-transform duration-300 ease-out group-hover/toc:translate-x-0 group-focus-within/toc:translate-x-0",
+                isLightMode ? "border-slate-300/40" : "border-white/15"
+              )}
             >
-              <div className="flex h-full w-6 items-center justify-center border-r border-gray-700/50 bg-transparent">
-                <span className="rotate-90 text-[9px] uppercase tracking-[0.6em] text-white/40">
+              <div className={cn(
+                "flex h-full w-6 items-center justify-center border-r bg-transparent",
+                isLightMode ? "border-slate-300/50" : "border-gray-700/50"
+              )}>
+                <span className={cn(
+                  "rotate-90 text-[9px] uppercase tracking-[0.6em]",
+                  isLightMode ? "text-slate-600/60" : "text-white/40"
+                )}>
                   Contents
                 </span>
               </div>
-              <div className="flex-1 h-full bg-black/80 backdrop-blur-xl shadow-[0_0_40px_rgba(0,0,0,0.65)] flex flex-col">
-                <div className="flex items-center justify-between px-6 pt-6 pb-4 text-[11px] uppercase tracking-[0.4em] text-white/60">
+              <div className={cn(
+                "flex-1 h-full backdrop-blur-xl flex flex-col",
+                isLightMode ? "bg-white/80 shadow-[0_0_40px_rgba(0,0,0,0.1)]" : "bg-black/80 shadow-[0_0_40px_rgba(0,0,0,0.65)]"
+              )}>
+                <div className={cn(
+                  "flex items-center justify-between px-6 pt-6 pb-4 text-[11px] uppercase tracking-[0.4em]",
+                  isLightMode ? "text-slate-600/60" : "text-white/60"
+                )}>
                   <span>Sections</span>
                 </div>
                 <div className="px-6 pb-6 overflow-y-auto space-y-2 scrollbar-thin-custom">
@@ -287,8 +349,10 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
                       type="button"
                       onClick={() => handleTocClick(heading.id)}
                       className={cn(
-                        'block w-full text-left text-[11px] tracking-[0.32em] uppercase transition-colors py-1.5 text-gray-400 hover:text-gray-100',
-                        activeSectionId === heading.id && 'text-white'
+                        'block w-full text-left text-[11px] tracking-[0.32em] uppercase transition-colors py-1.5',
+                        activeSectionId === heading.id
+                          ? isLightMode ? 'text-slate-900' : 'text-white'
+                          : isLightMode ? 'text-slate-600 hover:text-slate-900' : 'text-gray-400 hover:text-gray-100'
                       )}
                       style={{ paddingLeft: `${(heading.level - 1) * 10}px` }}
                     >

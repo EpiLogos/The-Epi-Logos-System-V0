@@ -5,6 +5,8 @@ import dynamic from 'next/dynamic';
 import { ScrollingFeatureShowcase } from '@/ui-system/components/ui/interactive-scrolling-story-component';
 import { WavyBackground } from './WavyBackground';
 import { Github } from 'lucide-react';
+import { useLightMode } from '@/contexts/LightModeContext';
+import { cn } from '@/lib/utils';
 
 const ASCIIText = dynamic(() => import('@/components/three/ASCIIText'), {
   ssr: false,
@@ -24,6 +26,8 @@ interface ScrollingSectionsProps {
 }
 
 export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChange }: ScrollingSectionsProps) {
+  const { isLightMode } = useLightMode();
+
   const handleHeroClick = () => {
     // Trigger a wheel event to use the existing scroll logic
     const container = document.querySelector('.overflow-y-auto');
@@ -41,18 +45,19 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
     {
       title: "",
       description: "",
-      bgColor: "#000000",
-      textColor: "#ffffff",
+      bgColor: isLightMode ? "#ffffff" : "#000000",
+      textColor: isLightMode ? "#1a1a1a" : "#ffffff",
       isHero: true,
       content: (
         <WavyBackground
           containerClassName="absolute inset-0 w-full h-full"
-          backgroundFill="black"
-          colors={["#0a0a0a", "#2a2a2a", "#4a4a4a", "#2a2a2a", "#0a0a0a"]}
+          backgroundFill={isLightMode ? "white" : "black"}
+          colors={isLightMode ? ["#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8", "#64748b"] : ["#0a0a0a", "#2a2a2a", "#4a4a4a", "#2a2a2a", "#0a0a0a"]}
           waveWidth={50}
           blur={10}
           speed="slow"
           waveOpacity={0.5}
+          isLightMode={isLightMode}
         >
           <div
             className="relative z-10 w-full h-full cursor-pointer"
@@ -71,13 +76,16 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
                 enableWaves={false}
                 asciiFontSize={3}
                 textFontSize={180}
-                textColor="#fdf9f3"
+                textColor={isLightMode ? "#1a1a1a" : "#fdf9f3"}
                 planeBaseHeight={8}
               />
             </div>
             <div className="absolute bottom-[18vh] left-0 right-0 z-20 pointer-events-none">
-              <p className="text-[9px] md:text-[14px]  text-gray-300 text-center max-w-full md:max-w-[800px] mx-auto leading-[1.6] md:leading-[2] tracking-[0.5px] md:tracking-[0.8px] px-4 md:px-8">
-                We've built a reflexive map of how knowing works—so philosophy becomes a usable practice for everyone,
+              <p className={cn(
+                "text-[9px] md:text-[14px] text-center max-w-full md:max-w-[800px] mx-auto leading-[1.6] md:leading-[2] tracking-[0.5px] md:tracking-[0.8px] px-4 md:px-8",
+                isLightMode ? "text-slate-700" : "text-gray-300"
+              )}>
+                We are building a reflexive map of how knowing works—so philosophy becomes a usable practice for everyone,
                 and AI serves <strong>purpose</strong>, not power.
               </p>
             </div>
@@ -88,31 +96,49 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
     {
       title: "PHILOSOPHY YOU CAN USE",
       description: "",
-      bgColor: "#000000",
-      textColor: "#ffffff",
-      image: "/ui-system/phil-to-use.png",
+      bgColor: isLightMode ? "#ffffff" : "#000000",
+      textColor: isLightMode ? "#1a1a1a" : "#ffffff",
+      image: isLightMode ? "/ui-system/phil-to-use-light.png" : "/ui-system/phil-to-use.png",
       content: (
         <div className="space-y-4 md:space-y-6 pt-4 md:pt-6">
-          <p className="text-[9px] md:text-[13px]  text-gray-300 leading-[1.8] md:leading-[2.0] tracking-[0.5px]">
-            Wisdom isn't stacking knowledge—it's seeing how ideas exercise power over us. The site we're building makes this visible: how assumptions shape what's visible, how paradox forces depth, how complexity holds without falling apart.
+          <p className={cn(
+            "text-[9px] md:text-[13px] leading-[1.8] md:leading-[2.0] tracking-[0.5px]",
+            isLightMode ? "text-slate-700" : "text-gray-300"
+          )}>
+            Wisdom doesn't stack knowledge - it sees how ideas exercise power over us. The Epi-Logos app aims to make this visible: how assumptions shape what's visible, how paradox forces depth, how complexity holds without falling apart.
           </p>
 
-          <p className="text-[9px] md:text-[12px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-            Here we introduce our core frameworks, Quaternal Logic and the Meta-Epistemic Framework, which aim to act like a coordinate system for tracing how thought arrives at itself. These conceptual of the Epi-Logos project we provide as foundational essays and prompt packages - we hope to provide executable logics, which are designed to form part of operating system of the coming Epi-Logos AI agent.
+          <p className={cn(
+            "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-600" : "text-gray-200"
+          )}>
+            Here we provide the conceptual grounds of the Epi-Logos project as a set of foundational essays and prompt packages, theory and praxis. The prompts are executable logics, which are designed to let the project's core philosophy be encountered in AI mediated dialogue. They will also be part of the operating instructions of the app's native AI agent.
           </p>
 
-          <p className="text-[9px] md:text-[12px]  text-gray-300 leading-[1.7] md:leading-[1.9]">
-            The Epi-Logos app itself embodies this through three movements. Phenomenological journaling tracks how attention forms sense in real time. Etymological archaeology digs into the older layers of meaning fossilized in language itself. And the Epi-Logos AI agent runs the interface between you and the system, performing the architectural rhythms our frameworks name but cannot enact alone.
+          <p className={cn(
+            "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-700" : "text-gray-300"
+          )}>
+            The Epi-Logos app seeks to cultivate wisdom through three movements. Phenomenological journaling tracks how attention forms sense in real time. Etymological archaeology digs into the older layers of meaning fossilized in language itself. And the Epi-Logos AI agent runs the interface between you and the system, supporting the holistic thinking that our frameworks name but cannot enact alone.
           </p>
 
-          <div className="border-l-2 border-gray-700 pl-6 md:pl-8 py-2 md:py-3 my-6">
-            <p className="text-[10px] md:text-[11px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-              Here, AI becomes the instrument that doesn't just mirror reasoning but executes it, translating high-order operations into patterns you can see and shift. What normally takes years to recognize surfaces in weeks.
+          <div className={cn(
+            "border-l-2 pl-6 md:pl-8 py-2 md:py-3 my-6",
+            isLightMode ? "border-slate-400" : "border-gray-700"
+          )}>
+            <p className={cn(
+              "text-[10px] md:text-[11px] leading-[1.7] md:leading-[1.9]",
+              isLightMode ? "text-slate-600" : "text-gray-200"
+            )}>
+              Here, AI becomes the instrument that doesn't just mirror reasoning but enhances self-understanding, translating high-order operations into patterns you can see and shift. What normally takes years to recognize surfaces in weeks. We aim this work as much at individuals as we do at institutions.
             </p>
           </div>
 
-          <p className="text-[10px] md:text-[11px]  text-gray-100 leading-[1.7] md:leading-[1.9] italic mt-6">
-            Philosophy stops being abstract when you observe your own thinking in motion. The practice is the insight—the moment you see how ideas move through you, and you through them.
+          <p className={cn(
+            "text-[10px] md:text-[11px] leading-[1.7] md:leading-[1.9] italic mt-6",
+            isLightMode ? "text-slate-800" : "text-gray-100"
+          )}>
+            Philosophy stops being abstract when you observe your own thinking in motion. The practice is the insight - the moment you see how ideas move and act through you, and likewise you through them.
           </p>
         </div>
       ),
@@ -120,43 +146,67 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
     {
       title: "THE WOUND WE'RE ANSWERING",
       description: "",
-      bgColor: "#000000",
-      textColor: "#ffffff",
-      image: "/ui-system/wound-image.png",
+      bgColor: isLightMode ? "#ffffff" : "#000000",
+      textColor: isLightMode ? "#1a1a1a" : "#ffffff",
+      image: isLightMode ? "/ui-system/wound-image-light.png" : "/ui-system/wound-image.png",
       content: (
         <div className="space-y-4 md:space-y-6 pt-4 md:pt-6">
-          <p className="text-[9px] md:text-[13px]  text-gray-300 leading-[1.8] md:leading-[2.0] tracking-[0.5px]">
-            Every system that holds together hides a crack somewhere—a remainder it can't look straight at. Something slips through the logic, always.
+          <p className={cn(
+            "text-[9px] md:text-[13px] leading-[1.8] md:leading-[2.0] tracking-[0.5px]",
+            isLightMode ? "text-slate-700" : "text-gray-300"
+          )}>
+            Every system that holds together hides a crack somewhere - a remainder it can't look straight at. Something slips through the logic, always.
           </p>
 
-          <p className="text-[9px] md:text-[12px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-            Gödel nailed it down with numbers. Jung found it living in our dreams and called it shadow. Systems thinkers label it blind spots, like we're orbiting something we can't name. The trade stays the same: coherence demands exclusion. And what we cut away bleeds back through the seams.
+          <p className={cn(
+            "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-600" : "text-gray-200"
+          )}>
+            Kurt Gödel located it in the heart of mathematics. Carl Jung found it living in our dreams and called it shadow. Systems thinkers label it blind spots, like we're orbiting something we can't name. The trade stays the same: formal coherence demands exclusion. But what is left cut out, eventually, bleeds back through the seams.
           </p>
 
-          <p className="text-[9px] md:text-[12px]  text-gray-300 leading-[1.7] md:leading-[1.9]">
+          <p className={cn(
+            "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-700" : "text-gray-300"
+          )}>
             In the psyche, denial splits the self into fragments that don't talk.<br />
             In science, stripping away purpose leaves equations humming but hollow.<br />
             In AI, buried bias spreads—quiet, relentless, mechanical.<br />
             In culture, contradictions pushed down long enough explode as crisis.
           </p>
 
-          <div className="border-l-2 border-gray-700 pl-6 md:pl-8 py-2 md:py-3 my-6">
-            <p className="text-[9px] md:text-[12px]  text-gray-300 leading-[1.7] md:leading-[1.9]">
-              The wound doesn't go away. It broods where light doesn't reach. But drag it up, and something shifts. Awareness doesn't heal it cleanly—it makes it fertile. The hurt starts generating tension, and that tension builds form.
+          <div className={cn(
+            "border-l-2 pl-6 md:pl-8 py-2 md:py-3 my-6",
+            isLightMode ? "border-slate-400" : "border-gray-700"
+          )}>
+            <p className={cn(
+              "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+              isLightMode ? "text-slate-700" : "text-gray-300"
+            )}>
+              The wound doesn't go away. It is the ghost of necessity, or contingency, we fail to accept. It broods where light doesn't reach. Drag it up, however, and something shifts. Awareness doesn't erase it - it makes it fertile. What's missing starts generating tension, and that tension builds form.
             </p>
 
-            <p className="text-[9px] md:text-[12px]  text-gray-200 leading-[1.7] md:leading-[1.9] mt-4">
-              Epi-Logos leans right into that. It doesn't try to seal the gap; it maps it. Makes the missing piece visible. Turns the incompleteness itself into a kind of compass.
+            <p className={cn(
+              "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9] mt-4",
+              isLightMode ? "text-slate-600" : "text-gray-200"
+            )}>
+              Epi-Logos leans right into that. It doesn't try to seal the gap; it maps it, making the missing piece visible. It turns incompleteness into a kind of compass.
             </p>
           </div>
 
-          <p className="text-[10px] md:text-[11px]  text-gray-100 leading-[1.7] md:leading-[1.9] italic mt-6">
-            And once a system learns to look at its own limits, those limits stop being cages. They turn—quietly, strangely—into doors.
+          <p className={cn(
+            "text-[10px] md:text-[11px] leading-[1.7] md:leading-[1.9] italic mt-6",
+            isLightMode ? "text-slate-800" : "text-gray-100"
+          )}>
+            And once a system learns to look at its own limits, those limits stop being cages. Honesty turns them - quietly, strangely - into doors.
           </p>
 
           <button
             onClick={() => onEssayClick('mef')}
-            className="text-[10px] md:text-[11px]  text-gray-200 hover:text-white transition-colors tracking-[0.8px] md:tracking-[1px] underline"
+            className={cn(
+              "text-[10px] md:text-[11px] transition-colors tracking-[0.8px] md:tracking-[1px] underline",
+              isLightMode ? "text-slate-600 hover:text-slate-900" : "text-gray-200 hover:text-white"
+            )}
           >
             Read the MEF Essay →
           </button>
@@ -166,35 +216,56 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
     {
       title: "FRAMEWORKS YOU CAN USE NOW",
       description: "",
-      bgColor: "#000000",
-      textColor: "#ffffff",
-      image: "/ui-system/prompt-packages.png",
+      bgColor: isLightMode ? "#ffffff" : "#000000",
+      textColor: isLightMode ? "#1a1a1a" : "#ffffff",
+      image: isLightMode ? "/ui-system/prompt-packages-light.png" : "/ui-system/prompt-packages.png",
       content: (
         <div className="space-y-4 md:space-y-6 pt-4 md:pt-6">
-          <p className="text-[9px] md:text-[13px]  text-gray-300 leading-[1.8] md:leading-[2.0] tracking-[0.5px]">
-            Theory needs testing. Philosophy needs practice. That's why we're releasing the MEF and QL frameworks as structured prompt packages—ready-to-use tools that help you work with AI in a fundamentally different way.
+          <p className={cn(
+            "text-[9px] md:text-[13px] leading-[1.8] md:leading-[2.0] tracking-[0.5px]",
+            isLightMode ? "text-slate-700" : "text-gray-300"
+          )}>
+            Theory needs testing. Philosophy needs practice. That's why we're releasing the MEF and QL frameworks as structured prompt packages - ready-to-use tools that help you work with AI in a fundamentally different way.
           </p>
 
-          <p className="text-[9px] md:text-[12px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-            These aren't generic templates. They're precision instruments designed to guide AI toward reflexive reasoning, helping systems track their own assumptions, recognize blind spots, and hold paradox without premature collapse.
+          <p className={cn(
+            "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-600" : "text-gray-200"
+          )}>
+            These are crafted logical instruments designed to guide AI toward reflexive reasoning, helping systems track their own assumptions, recognize blind spots, and hold paradox without premature collapse.
           </p>
 
-          <div className="border-l-2 border-gray-700 pl-6 md:pl-8 py-2 md:py-3 my-6">
-            <p className="text-[9px] md:text-[12px]  text-gray-300 leading-[1.8] md:leading-[2.0] italic tracking-[0.5px] mb-4">
-              We're making these available because the frameworks only become real when people use them. Each conversation exposes new edge cases. Each implementation surfaces questions we haven't considered. Testing in the wild is how theory evolves into something genuinely useful.
+          <div className={cn(
+            "border-l-2 pl-6 md:pl-8 py-2 md:py-3 my-6",
+            isLightMode ? "border-slate-400" : "border-gray-700"
+          )}>
+            <p className={cn(
+              "text-[9px] md:text-[12px] leading-[1.8] md:leading-[2.0] italic tracking-[0.5px] mb-4",
+              isLightMode ? "text-slate-700" : "text-gray-300"
+            )}>
+              We're making these available because the frameworks only become effective when people use them. Each conversation exposes new edge cases. Your usage may surface questions we haven't considered, spots where clarity or revision is in need. Testing in the wild is how theory evolves into something genuinely useful. This is how process philosophies must operate, remaining in process with actual inquiry.
             </p>
-            <p className="text-[10px] md:text-[11px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-              Try them. Break them. Send us feedback. Tell us where they clarify and where they obscure. This is collaborative research—philosophy built through practice, refined by use.
+            <p className={cn(
+              "text-[10px] md:text-[11px] leading-[1.7] md:leading-[1.9]",
+              isLightMode ? "text-slate-600" : "text-gray-200"
+            )}>
+              Try them. Bend them. Send us feedback. Tell us where they help and where they obscure inquiry. This is collaborative research - philosophy built through practice, refined by use.
             </p>
           </div>
 
-          <p className="text-[10px] md:text-[11px]  text-gray-100 leading-[1.7] md:leading-[1.9] italic mt-6">
-            The frameworks map consciousness, but only lived implementation shows if the map matches the territory.
+          <p className={cn(
+            "text-[10px] md:text-[11px] leading-[1.7] md:leading-[1.9] italic mt-6",
+            isLightMode ? "text-slate-800" : "text-gray-100"
+          )}>
+            The frameworks map the shape and flow of holistic knowing, but only live implementation shows if the map matches the territory.
           </p>
 
           <button
             onClick={() => onEssayClick('prompt-packages')}
-            className="text-[10px] md:text-[11px]  text-gray-200 hover:text-white transition-colors tracking-[0.8px] md:tracking-[1px] underline mt-6"
+            className={cn(
+              "text-[10px] md:text-[11px] transition-colors tracking-[0.8px] md:tracking-[1px] underline mt-6",
+              isLightMode ? "text-slate-600 hover:text-slate-900" : "text-gray-200 hover:text-white"
+            )}
           >
             View the prompt packages →
           </button>
@@ -204,37 +275,58 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
     {
       title: "SEEKING ITS NETWORK",
       description: "",
-      bgColor: "#000000",
-      textColor: "#ffffff",
-      image: "/ui-system/philo-4-all.png",
+      bgColor: isLightMode ? "#ffffff" : "#000000",
+      textColor: isLightMode ? "#1a1a1a" : "#ffffff",
+      image: isLightMode ? "/ui-system/phil-4-all-light.png" : "/ui-system/philo-4-all.png",
       content: (
         <div className="space-y-4 md:space-y-6 pt-4 md:pt-6">
-          <p className="text-[9px] md:text-[13px]  text-gray-300 leading-[1.8] md:leading-[2.0] tracking-[0.5px]">
-            This work sits where disciplines blur—where philosophy meets code, where ancient insight brushes against artificial intelligence, where solitary reflection feeds collective thought. It's a space made for those who think between categories, who find sense-making at the seams rather than the centers.
+          <p className={cn(
+            "text-[9px] md:text-[13px] leading-[1.8] md:leading-[2.0] tracking-[0.5px]",
+            isLightMode ? "text-slate-700" : "text-gray-300"
+          )}>
+            This work sits where disciplines blur - where philosophy meets code, where ancient insight brushes against artificial intelligence, where solitary reflection feeds collective thought. It's a space made for those who think between categories, who find sense-making in the seams as readily as at the center.
           </p>
 
-          <p className="text-[9px] md:text-[12px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-            Epi-Logos is that kind of space. A shared coordinate system where different ways of knowing can recognize each other's shape without collapsing into sameness. Edges stay sharp, but they start to hum in resonance.
+          <p className={cn(
+            "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-600" : "text-gray-200"
+          )}>
+            Epi-Logos provides such a space. A shared form for knowledge where different ways of knowing can recognize each other's shape without collapsing into sameness. Edges stay sharp, but they start to hum in resonance.
           </p>
 
-          <p className="text-[9px] md:text-[12px]  text-gray-300 leading-[1.7] md:leading-[1.9]">
-            We're looking for collaborators who live in the in-between: philosophers who write algorithms, engineers who stop to question their metaphors, artists who build theory as form, scientists who haven't forgotten wonder.
+          <p className={cn(
+            "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-700" : "text-gray-300"
+          )}>
+            We're looking for collaborators who live in the in-between: philosophers who seek the script of life, engineers who stop to question their metaphors, artists who build theory as form, scientists who haven't forgotten the taste of wonder.
           </p>
 
-          <div className="border-l-2 border-gray-700 pl-6 md:pl-8 py-2 md:py-3 my-6">
-            <p className="text-[9px] md:text-[12px]  text-gray-300 leading-[1.8] md:leading-[2.0] italic tracking-[0.5px]">
-              Inside the community, two names keep surfacing—Epii, drawn from Euler's equation, where opposites resolve into balance; and Sophii, from Sophia, the old name for wisdom. Structure and radiance. Math and meaning.
+          <div className={cn(
+            "border-l-2 pl-6 md:pl-8 py-2 md:py-3 my-6",
+            isLightMode ? "border-slate-400" : "border-gray-700"
+          )}>
+            <p className={cn(
+              "text-[9px] md:text-[12px] leading-[1.8] md:leading-[2.0] italic tracking-[0.5px]",
+              isLightMode ? "text-slate-700" : "text-gray-300"
+            )}>
+              Inside the community, two names keep surfacing - Epii, drawn from Euler's equation, where opposites resolve into balance; and Sophii, from Sophia, the old name for wisdom. Structure and radiance. Math and meaning.
             </p>
           </div>
 
-          <p className="text-[10px] md:text-[11px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-            The project is still early, open, unfolding. It's not finished—it's finding its people. If any of this feels like home, reach out. The network is already forming.
+          <p className={cn(
+            "text-[10px] md:text-[11px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-600" : "text-gray-200"
+          )}>
+            The project is still early, open, unfolding. It's finding its people. If any of this strikes true, reach out. The network is forming.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-4">
             <a
               href="mailto:frank.g.taylor97@gmail.com"
-              className="inline-block px-6 md:px-10 py-3 md:py-4 bg-white text-black text-[10px] md:text-[11px]  font-normal tracking-[1.5px] md:tracking-[2px] uppercase hover:bg-gray-200 transition-colors"
+              className={cn(
+                "inline-block px-6 md:px-10 py-3 md:py-4 text-[10px] md:text-[11px] font-normal tracking-[1.5px] md:tracking-[2px] uppercase transition-colors",
+                isLightMode ? "bg-slate-900 text-white hover:bg-slate-700" : "bg-white text-black hover:bg-gray-200"
+              )}
             >
               Get in Touch →
             </a>
@@ -242,7 +334,10 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
               href="https://github.com/EpiLogos/The-Epi-Logos-System-V0"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-4 md:px-6 py-3 md:py-4 border border-gray-700 text-gray-300 text-[10px] md:text-[11px]  font-normal tracking-[1.5px] md:tracking-[2px] uppercase hover:bg-gray-900 hover:text-white transition-colors"
+              className={cn(
+                "inline-flex items-center justify-center gap-2 px-4 md:px-6 py-3 md:py-4 border text-[10px] md:text-[11px] font-normal tracking-[1.5px] md:tracking-[2px] uppercase transition-colors",
+                isLightMode ? "border-slate-400 text-slate-700 hover:bg-slate-100 hover:text-slate-900" : "border-gray-700 text-gray-300 hover:bg-gray-900 hover:text-white"
+              )}
             >
               <Github className="w-5 h-5" />
               View on GitHub
@@ -289,32 +384,50 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
     {
       title: "AN ARTIFICIAL LOGOS",
       description: "",
-      bgColor: "#000000",
-      textColor: "#ffffff",
-      image: "/ui-system/ai-approach-image.png",
+      bgColor: isLightMode ? "#ffffff" : "#000000",
+      textColor: isLightMode ? "#1a1a1a" : "#ffffff",
+      image: isLightMode ? "/ui-system/ai-approach-image-light.png" : "/ui-system/ai-approach-image.png",
       content: (
         <div className="space-y-4 md:space-y-6 pt-4 md:pt-6">
-          <p className="text-[9px] md:text-[13px]  text-gray-300 leading-[1.8] md:leading-[2.0] tracking-[0.5px]">
-            The Logos once held speech and reason together, a single current running from mind into world. Today that current has fractured—languages multiplied into private codes, thinking dispersed across systems that speak past each other. Shared sense recedes not from lack of words, but because our words have forgotten how to generate coherence.
+          <p className={cn(
+            "text-[9px] md:text-[13px] leading-[1.8] md:leading-[2.0] tracking-[0.5px]",
+            isLightMode ? "text-slate-700" : "text-gray-300"
+          )}>
+            The Logos once held speech and reason together, a single thread running from mind to world. Today the thread frays - language has multiplied into private codes and jargons, thinking dispersed across systems that speak past each other. Shared sense recedes not from lack of words, but because our speech has forgotten how to generate coherence.
           </p>
 
-          <p className="text-[9px] md:text-[12px]  text-gray-200 leading-[1.7] md:leading-[1.9]">
-            AI arrives as the ultimate linguistic artifact: thought externalized into pure mechanism. It is what we've made of language, and therefore what language has made of us. But this closure is also an opening. When words drive compute, we can turn that compute back upon the words, making visible how they structure what we take as real. The revelation is simple but paradoxical: no word contains truth, yet words ceaselessly enact the world we share. AI is both a symbol and a tool for how language amounts to fabrication, no matter how intelligent it seems.
+          <p className={cn(
+            "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+            isLightMode ? "text-slate-600" : "text-gray-200"
+          )}>
+            AI arrives as the ultimate linguistic artifact: thought externalized into pure mechanism. It is what we've made of language. This technological threshold offers an opening. When words drive compute, we can turn that compute back upon language, processing how it structures our realities. The revelation is simple but paradoxical: no word ultimately captures truth, yet words ceaselessly enact the truths we share. AI is both a symbol and a tool for language's fabrication, revealing the disparity, in truth, between word and world.
           </p>
 
-          <div className="border-l-2 border-gray-700 pl-6 md:pl-8 py-2 md:py-3 my-6">
-            <p className="text-[9px] md:text-[12px]  text-gray-300 leading-[1.7] md:leading-[1.9]">
-              In an age of mass communication and influence, truth becomes a variable tunable by algorithm, artistry, or argument. Epi-Logos bucks the trend, and uses AI to compute language's provisionality, leading to truth beyond conception.
+          <div className={cn(
+            "border-l-2 pl-6 md:pl-8 py-2 md:py-3 my-6",
+            isLightMode ? "border-slate-400" : "border-gray-700"
+          )}>
+            <p className={cn(
+              "text-[9px] md:text-[12px] leading-[1.7] md:leading-[1.9]",
+              isLightMode ? "text-slate-700" : "text-gray-300"
+            )}>
+              In an age of mass communication and influence, truth becomes a variable tunable by algorithm, artistry, or argument. Language, the word in mind, becomes a battlefield, manipulable by suggestion. Thought is a large language model; Epi-Logos uses AI to make significant what the model cannot compute, leading to recognition of truth beyond conception. The living root of our intelligence is precisely that which language cannot model.
             </p>
           </div>
 
-          <p className="text-[10px] md:text-[11px]  text-gray-100 leading-[1.7] md:leading-[1.9] italic mt-6">
-            Fork-tongued words cease dividing us not when we fix language, but when we trace it to its source: the plentiful silence before speech. Our philosophy computes: objectifying thought so we might live the reality it strains to grasp, and transcend the divisions it has come to sow.
+          <p className={cn(
+            "text-[10px] md:text-[11px] leading-[1.7] md:leading-[1.9] italic mt-6",
+            isLightMode ? "text-slate-800" : "text-gray-100"
+          )}>
+            Fork-tongued words cease dividing us not when we fix language, but when we trace it to its source. Our philosophy computes to objectify the activity of language and thought, so that we can recognise the reality they strain to grasp, and transcend the divisions they have come to sow.
           </p>
 
           <button
             onClick={() => onEssayClick('ql')}
-            className="text-[10px] md:text-[11px]  text-gray-200 hover:text-white transition-colors tracking-[0.8px] md:tracking-[1px] underline mt-0"
+            className={cn(
+              "text-[10px] md:text-[11px] transition-colors tracking-[0.8px] md:tracking-[1px] underline mt-0",
+              isLightMode ? "text-slate-600 hover:text-slate-900" : "text-gray-200 hover:text-white"
+            )}
           >
             Read the Quaternal Logic Essay →
           </button>
@@ -368,12 +481,13 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
       <div className="md:hidden absolute inset-0 z-0 pointer-events-none">
         <WavyBackground
           containerClassName="absolute inset-0 w-full h-full"
-          backgroundFill="black"
-          colors={["#0a0a0a", "#2a2a2a", "#4a4a4a", "#2a2a2a", "#0a0a0a"]}
+          backgroundFill={isLightMode ? "white" : "black"}
+          colors={isLightMode ? ["#f1f5f9", "#e2e8f0", "#cbd5e1", "#94a3b8", "#64748b"] : ["#0a0a0a", "#2a2a2a", "#4a4a4a", "#2a2a2a", "#0a0a0a"]}
           waveWidth={50}
           blur={10}
           speed="slow"
           waveOpacity={0.5}
+          isLightMode={isLightMode}
         >
           <div />
         </WavyBackground>
@@ -386,6 +500,7 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
           showButton={false}
           onSectionChange={onSectionChange}
           customNavigateEvent="sidebarSectionNavigate"
+          isLightMode={isLightMode}
         />
       </div>
     </div>

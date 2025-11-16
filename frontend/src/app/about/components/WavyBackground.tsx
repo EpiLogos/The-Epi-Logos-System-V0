@@ -14,6 +14,7 @@ export const WavyBackground = ({
   blur = 10,
   speed = "fast",
   waveOpacity = 0.5,
+  isLightMode = false,
   ...props
 }: {
   children?: any;
@@ -25,6 +26,7 @@ export const WavyBackground = ({
   blur?: number;
   speed?: "slow" | "fast";
   waveOpacity?: number;
+  isLightMode?: boolean;
   [key: string]: any;
 }) => {
   const noise = createNoise3D();
@@ -69,14 +71,20 @@ export const WavyBackground = ({
     render();
   };
 
-  // Monochrome grayscale palette
-  const waveColors = colors ?? [
+  // Monochrome grayscale palette - clean slate tones for light mode
+  const waveColors = colors ?? (isLightMode ? [
+    "#f1f5f9", // slate-100
+    "#e2e8f0", // slate-200
+    "#cbd5e1", // slate-300
+    "#94a3b8", // slate-400
+    "#64748b", // slate-500
+  ] : [
     "#1a1a1a",
     "#2a2a2a",
     "#3a3a3a",
     "#4a4a4a",
     "#5a5a5a",
-  ];
+  ]);
 
   const drawWave = (n: number) => {
     nt += getSpeed();
@@ -95,7 +103,7 @@ export const WavyBackground = ({
 
   let animationId: number;
   const render = () => {
-    ctx.fillStyle = backgroundFill || "black";
+    ctx.fillStyle = backgroundFill || (isLightMode ? "white" : "black");
     ctx.globalAlpha = waveOpacity || 0.5;
     ctx.fillRect(0, 0, w, h);
     drawWave(5);
@@ -107,7 +115,7 @@ export const WavyBackground = ({
     return () => {
       cancelAnimationFrame(animationId);
     };
-  }, []);
+  }, [isLightMode, backgroundFill, colors]);
 
   const [isSafari, setIsSafari] = useState(false);
   useEffect(() => {

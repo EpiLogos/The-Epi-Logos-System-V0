@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
+import { useLightMode } from '@/contexts/LightModeContext';
+import { cn } from '@/lib/utils';
 
 interface ConversationTurn {
   role: 'user' | 'assistant';
@@ -23,34 +25,57 @@ export function ExampleConversationViewer({
   turns,
   onClose
 }: ExampleConversationViewerProps) {
+  const { isLightMode } = useLightMode();
+
   return (
-    <div className="fixed inset-0 z-[100] bg-black">
+    <div className={cn(
+      "fixed inset-0 z-[100] transition-colors duration-500",
+      isLightMode ? "bg-white" : "bg-black"
+    )}>
       {/* Scrollable container */}
       <div className="relative h-full overflow-y-auto">
         {/* Header - scrolls with content */}
-        <div className="border-b border-gray-800 bg-black/95 backdrop-blur-sm">
+        <div className={cn(
+          "border-b backdrop-blur-sm",
+          isLightMode ? "border-slate-300 bg-white/95" : "border-gray-800 bg-black/95"
+        )}>
           <div className="mx-auto max-w-[1400px] px-6 md:px-12 py-6">
             <div className="flex items-start justify-between gap-8">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-[9px] tracking-[0.4em] text-gray-600 uppercase">
+                  <span className={cn(
+                    "text-[9px] tracking-[0.4em] uppercase",
+                    isLightMode ? "text-gray-600" : "text-gray-600"
+                  )}>
                     {framework}
                   </span>
-                  <span className="text-gray-700">•</span>
-                  <span className="text-[9px] tracking-[0.4em] text-gray-600 uppercase">
+                  <span className={isLightMode ? "text-slate-400" : "text-gray-700"}>•</span>
+                  <span className={cn(
+                    "text-[9px] tracking-[0.4em] uppercase",
+                    isLightMode ? "text-gray-600" : "text-gray-600"
+                  )}>
                     Example Inquiry
                   </span>
                 </div>
-                <h1 className="text-[24px] md:text-[28px] font-light tracking-[0.2em] text-white mb-3">
+                <h1 className={cn(
+                  "text-[24px] md:text-[28px] font-light tracking-[0.2em] mb-3",
+                  isLightMode ? "text-slate-900" : "text-white"
+                )}>
                   {title}
                 </h1>
-                <p className="text-[12px] leading-[1.9] text-gray-400 max-w-[800px]">
+                <p className={cn(
+                  "text-[12px] leading-[1.9] max-w-[800px]",
+                  isLightMode ? "text-slate-600" : "text-gray-400"
+                )}>
                   {description}
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="flex items-center gap-2 text-[11px] uppercase tracking-[0.4em] text-gray-500 hover:text-white transition-colors"
+                className={cn(
+                  "flex items-center gap-2 text-[11px] uppercase tracking-[0.4em] transition-colors",
+                  isLightMode ? "text-gray-500 hover:text-slate-900" : "text-gray-500 hover:text-white"
+                )}
               >
                 <X className="w-4 h-4" />
                 Close
@@ -69,35 +94,55 @@ export function ExampleConversationViewer({
                 className="w-full"
               >
                 <div
-                  className={`w-full ${
+                  className={cn(
+                    `w-full border backdrop-blur-sm`,
                     turn.role === 'user'
-                      ? 'bg-gray-900/40 border-gray-800'
-                      : 'bg-gray-950/40 border-gray-800'
-                  } border backdrop-blur-sm`}
+                      ? isLightMode ? 'bg-slate-50/40 border-slate-300' : 'bg-gray-900/40 border-gray-800'
+                      : isLightMode ? 'bg-white/40 border-slate-300' : 'bg-gray-950/40 border-gray-800'
+                  )}
                 >
                   <div className="p-6 md:p-10">
                     <div className="flex items-center gap-3 mb-4">
                       <span
-                        className={`text-[9px] tracking-[0.4em] uppercase ${
+                        className={cn(
+                          'text-[9px] tracking-[0.4em] uppercase',
                           turn.role === 'user' ? 'text-blue-400' : 'text-emerald-400'
-                        }`}
+                        )}
                       >
                         {turn.role === 'user' ? 'User' : 'Assistant'}
                       </span>
                     </div>
                     <div
-                      className="text-[14px] leading-[2] text-gray-200 prose prose-invert max-w-none
-                        prose-p:my-4 prose-p:leading-[2] prose-p:text-gray-200
-                        prose-headings:font-light prose-headings:tracking-[0.1em] prose-headings:text-white
-                        prose-h1:text-[20px] prose-h1:mb-6 prose-h1:mt-8
-                        prose-h2:text-[16px] prose-h2:mb-4 prose-h2:mt-6
-                        prose-h3:text-[14px] prose-h3:mb-3 prose-h3:mt-5
-                        prose-strong:text-white prose-strong:font-medium
-                        prose-em:text-gray-300 prose-em:italic
-                        prose-ul:my-4 prose-ul:space-y-2 prose-ul:text-gray-200
-                        prose-li:my-1 prose-li:text-gray-200
-                        prose-code:text-emerald-300 prose-code:bg-gray-900/60 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-                        prose-blockquote:border-l-2 prose-blockquote:border-gray-700 prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:text-gray-400"
+                      className={cn(
+                        "text-[14px] leading-[2] prose max-w-none",
+                        isLightMode ? "prose-gray" : "prose-invert",
+                        "prose-p:my-4 prose-p:leading-[2]",
+                        "prose-headings:font-light prose-headings:tracking-[0.1em]",
+                        "prose-h1:text-[20px] prose-h1:mb-6 prose-h1:mt-8",
+                        "prose-h2:text-[16px] prose-h2:mb-4 prose-h2:mt-6",
+                        "prose-h3:text-[14px] prose-h3:mb-3 prose-h3:mt-5",
+                        "prose-strong:font-medium prose-em:italic",
+                        "prose-ul:my-4 prose-ul:space-y-2 prose-li:my-1",
+                        "prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded",
+                        "prose-blockquote:border-l-2 prose-blockquote:pl-6 prose-blockquote:italic",
+                        isLightMode ? `
+                          text-slate-700 prose-p:text-slate-700
+                          prose-headings:text-slate-900
+                          prose-strong:text-slate-900
+                          prose-em:text-slate-700
+                          prose-ul:text-slate-700 prose-li:text-slate-700
+                          prose-code:text-emerald-600 prose-code:bg-slate-200
+                          prose-blockquote:border-slate-400 prose-blockquote:text-slate-600
+                        ` : `
+                          text-gray-200 prose-p:text-gray-200
+                          prose-headings:text-white
+                          prose-strong:text-white
+                          prose-em:text-gray-300
+                          prose-ul:text-gray-200 prose-li:text-gray-200
+                          prose-code:text-emerald-300 prose-code:bg-gray-900/60
+                          prose-blockquote:border-gray-700 prose-blockquote:text-gray-400
+                        `
+                      )}
                       dangerouslySetInnerHTML={{ __html: formatContent(turn.content) }}
                     />
                   </div>

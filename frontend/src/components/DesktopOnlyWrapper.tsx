@@ -24,10 +24,11 @@ export default function DesktopOnlyWrapper({ children }: DesktopOnlyWrapperProps
       const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
       const isMobileUA = mobileKeywords.some(keyword => userAgent.includes(keyword));
 
-      // Also check screen width as a secondary measure
-      const isMobileWidth = window.innerWidth < 1024; // Less than lg breakpoint
+      // Only block based on width if the user agent is also mobile
+      // This prevents blocking desktop users with narrow browser windows
+      const isMobileWidth = window.innerWidth < 768; // Smaller threshold for actual mobile devices
 
-      return isMobileUA || isMobileWidth;
+      return isMobileUA && isMobileWidth;
     };
 
     setIsMobile(checkMobile());
