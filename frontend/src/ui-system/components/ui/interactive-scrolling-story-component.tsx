@@ -300,9 +300,12 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                             style={{ width: 'clamp(70%, calc(100vw - 4rem), 85%)' }}
                           >
                             <h2 className={cn(
-                              "text-xl font-normal tracking-[2px] mb-1 md:mb-2 lg:mb-3 flex-shrink-0",
+                              "font-normal tracking-[2px] flex-shrink-0",
                               isLightMode ? "text-slate-900" : "text-white"
-                            )}>
+                            )} style={{
+                              fontSize: 'var(--dynamic-heading-size)',
+                              marginBottom: 'calc(var(--dynamic-spacing) * 0.5)'
+                            }}>
                               {slide.title}
                             </h2>
                             <div className="overflow-y-auto flex-1">
@@ -313,9 +316,13 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                           <div className="w-full h-full flex flex-col">
                             {slide.title && (
                               <h2 className={cn(
-                                "text-2xl font-normal tracking-[2px] mb-8 md:mb-10 pt-2 md:pt-3",
+                                "font-normal tracking-[2px]",
                                 isLightMode ? "text-slate-900" : "text-white"
-                              )}>
+                              )} style={{
+                                fontSize: 'var(--dynamic-heading-size)',
+                                marginBottom: 'var(--dynamic-spacing)',
+                                paddingTop: 'calc(var(--dynamic-spacing) * 0.3)'
+                              }}>
                                 {slide.title}
                               </h2>
                             )}
