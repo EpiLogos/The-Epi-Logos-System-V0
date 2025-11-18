@@ -301,7 +301,7 @@ function AboutPageContent() {
 
       {/* Logo Toggle Button (hidden when viewing essays, prompt packages, or example conversations) */}
       {!currentEssay && (
-        <div className="fixed bottom-1 right-1 z-50 group">
+        <div className="fixed bottom-0.5 right-0.5 md:bottom-1 md:right-1 z-50 group">
           <button
             onClick={handleToggle}
             className="transition-opacity duration-300 hover:opacity-80"
@@ -310,7 +310,7 @@ function AboutPageContent() {
             <img
               src="/ui-system/epi-logos-logo-vibes.png"
               alt="Epi-Logos"
-              className="w-12 h-12 md:w-[58px] md:h-[58px]"
+              className="w-11 h-11 md:w-[58px] md:h-[58px]"
             />
           </button>
 
@@ -341,7 +341,7 @@ function AboutPageContent() {
                   <p className={isLightMode ? "text-gray-900" : "text-white"}>
                     <span className={cn("font-mono", isLightMode ? "text-gray-600" : "text-gray-400")}>L</span>
                     <span className="mx-2"></span>
-                    Dark Mode
+                    Light Mode
                   </p>
                 </div>
               </div>

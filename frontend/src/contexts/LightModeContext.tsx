@@ -10,7 +10,7 @@ interface LightModeContextType {
 const LightModeContext = createContext<LightModeContextType | undefined>(undefined);
 
 export function LightModeProvider({ children }: { children: ReactNode }) {
-  const [isLightMode, setIsLightMode] = useState(true);
+  const [isLightMode, setIsLightMode] = useState(false);
   const [showFadeMask, setShowFadeMask] = useState(false);
   const [fadeMaskColor, setFadeMaskColor] = useState<'white' | 'black'>('white');
 

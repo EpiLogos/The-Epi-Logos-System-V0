@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 // Width has MORE influence because text wraps based on width
 const BASE_SIZE = 2.7;               // Desktop base size
 const DESKTOP_WIDTH_SCALE = 0.006;   // Desktop width influence (primary)
-const DESKTOP_HEIGHT_SCALE = 0.002;  // Desktop height influence (secondary)
+const DESKTOP_HEIGHT_SCALE = 0.0019;  // Desktop height influence (secondary)
 const MOBILE_WIDTH_SCALE = 0.005;    // Mobile width influence (primary)
 const MOBILE_HEIGHT_SCALE = 0.0018;  // Mobile height influence (higher for portrait fill)
 
