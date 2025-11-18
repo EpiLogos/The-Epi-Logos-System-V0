@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { useDynamicFontSize } from '@/hooks/useDynamicFontSize';
 
 interface SlideData {
   title: string;
@@ -46,7 +47,9 @@ export const ScrollingFeatureShowcase = React.forwardRef<
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const stickyPanelRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const lastTriggerTimeRef = useRef(0);
+
+  // Calculate responsive font size (now sets global CSS variable)
+  useDynamicFontSize();  const lastTriggerTimeRef = useRef(0);
 
   // Expose navigation method via ref
   React.useImperativeHandle(ref, () => ({
@@ -278,16 +281,26 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                     <div className={`grid ${showImages && !slide.isHero ? 'grid-cols-1 md:grid-cols-2 ' : 'grid-cols-1'} h-full w-full`}>
                       {/* Content Column */}
                       <div
-                        className={`relative z-10 flex flex-col ${showImages && !slide.isHero ? 'border-r border-gray-700/20 items-center justify-start' : ''} ${slide.isHero ? 'items-center text-center justify-center p-8 md:p-16 ' : ''} ${slide.title && !slide.isHero ? 'px-4 md:pl-[16px]  md:pr-[20px] ' : ''}`}
+                        className={cn(
+                          "relative z-10 flex flex-col",
+                          showImages && !slide.isHero && 'md:border-r border-gray-700/20 items-center justify-start',
+                          slide.isHero && 'items-center text-center justify-center p-8 md:p-16',
+                          slide.title && !slide.isHero && 'px-4 md:pl-[16px] md:pr-[20px]'
+                        )}
                         style={{
+                          width: '100%',
+                          height: '100%',
                           opacity: 'var(--content-opacity, 1)',
                           transition: 'opacity 0.3s ease',
                         } as React.CSSProperties}
                       >
                         {showImages && !slide.isHero && slide.title ? (
-                          <div className="w-full md:w-[85%]  flex flex-col py-4 md:py-8  mt-10 md:mt-12  mb-4 md:mb-8 ">
+                          <div
+                            className="flex flex-col py-4 md:py-6 lg:py-8 mt-8 md:mt-10 lg:mt-12 mb-4 md:mb-6 lg:mb-8"
+                            style={{ width: 'clamp(70%, calc(100vw - 4rem), 85%)' }}
+                          >
                             <h2 className={cn(
-                              "text-base md:text-xl  font-normal tracking-[2px]  mb-2 md:mb-4  flex-shrink-0",
+                              "text-xl font-normal tracking-[2px] mb-1 md:mb-2 lg:mb-3 flex-shrink-0",
                               isLightMode ? "text-slate-900" : "text-white"
                             )}>
                               {slide.title}
@@ -297,33 +310,43 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                             </div>
                           </div>
                         ) : (
-                          <>
+                          <div className="w-full h-full flex flex-col">
                             {slide.title && (
                               <h2 className={cn(
-                                "text-2xl sm:text-3xl md:text-4xl  font-normal tracking-[2px] md:tracking-[3px]  mb-10 pt-2 md:pt-3",
+                                "text-2xl font-normal tracking-[2px] mb-8 md:mb-10 pt-2 md:pt-3",
                                 isLightMode ? "text-slate-900" : "text-white"
                               )}>
                                 {slide.title}
                               </h2>
                             )}
-                            <div className={`${slide.title ? 'max-w-5xl overflow-y-auto flex-1' : 'w-full h-full'}`}>
+                            <div className={cn(
+                              slide.title ? 'max-w-5xl overflow-y-auto flex-1' : 'w-full h-full'
+                            )}>
                               {slide.content || <p>{slide.description}</p>}
                             </div>
-                          </>
+                          </div>
                         )}
                       </div>
 
                       {/* Right Column: Image */}
                       {showImages && !slide.isHero && slide.image && (
-                        <div className=" flex items-center justify-center p-8 -ml-[5px]" style={isLightMode ? {} : gridPatternStyle}>
-                          <div className={cn(
-                            "relative rounded-sm overflow-hidden w-[80%] h-[80vh]",
-                            isLightMode ? "" : "shadow-2xl border border-gray-700/20"
-                          )}>
+                        <div className="hidden md:flex items-center justify-center p-4 md:p-6 lg:p-8" style={isLightMode ? {} : gridPatternStyle}>
+                          <div
+                            className={cn(
+                              "relative rounded-sm overflow-hidden",
+                              isLightMode ? "" : "shadow-2xl border border-gray-700/20"
+                            )}
+                            style={{
+                              width: 'fit-content',
+                              maxWidth: '90%',
+                              maxHeight: '85vh',
+                              margin: '0 auto'
+                            }}
+                          >
                             <img
                               src={slide.image}
                               alt={slide.title}
-                              className="h-full w-full object-cover"
+                              className="block max-w-full max-h-[85vh] w-auto h-auto object-contain"
                             />
                           </div>
                         </div>

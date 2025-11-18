@@ -8,6 +8,7 @@ import { ExampleConversationViewer } from './ExampleConversationViewer';
 import { ciaConversation } from './conversations/cia-democracy';
 import { quantumConsciousnessConversation } from './conversations/quantum-consciousness';
 import { godAndConversation } from './conversations/god-and';
+import { psyopsNciConversation } from './conversations/psyops-nci';
 
 interface PromptPackageViewerProps {
   onClose: () => void;
@@ -70,6 +71,12 @@ const exampleInquiries: ExampleInquiry[] = [
     id: 'god-and',
     title: 'But What About God Tho?',
     description: 'A two-part theological investigation: first examining whether mathematical frameworks can capture divine reality through toroidal topology, then pivoting to analyze "god" as a live cultural-psychological phenomenon across traditions',
+    framework: 'Both'
+  },
+  {
+    id: 'psyops-nci',
+    title: 'Psyops & The Narrative Credibility Index',
+    description: 'Analyzing manipulation detection frameworks: examining the NCI system, recursive paradoxes, and the path from tactical defense to toroidal consciousness in the age of information warfare',
     framework: 'Both'
   }
 ];
@@ -142,6 +149,18 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
     );
   }
 
+  if (selectedConversation === 'psyops-nci') {
+    return (
+      <ExampleConversationViewer
+        title={psyopsNciConversation.title}
+        description={psyopsNciConversation.description}
+        framework={psyopsNciConversation.framework}
+        turns={psyopsNciConversation.turns}
+        onClose={() => setSelectedConversation(null)}
+      />
+    );
+  }
+
   return (
     <div className={cn(
       "relative w-full h-screen overflow-hidden transition-colors duration-500",
@@ -157,13 +176,13 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
           <div className="mx-auto max-w-[1400px] px-6 md:px-12 py-6 flex items-center justify-between">
             <div>
               <p className={cn(
-                "text-[11px] uppercase tracking-[0.42em] mb-2",
+                "text-sm uppercase tracking-[0.42em] mb-2",
                 isLightMode ? "text-gray-500" : "text-gray-500"
               )}>
                 Prompt Packages
               </p>
               <h1 className={cn(
-                "text-[28px] md:text-[32px] font-light tracking-[0.28em]",
+                "text-3xl font-light tracking-[0.28em]",
                 isLightMode ? "text-slate-900" : "text-white"
               )}>
                 MEF + QL FRAMEWORK
@@ -172,7 +191,7 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
             <button
               onClick={onClose}
               className={cn(
-                "text-[11px] uppercase tracking-[0.4em] transition-colors",
+                "text-sm uppercase tracking-[0.4em] transition-colors",
                 isLightMode ? "text-gray-500 hover:text-slate-900" : "text-gray-500 hover:text-white"
               )}
             >
@@ -188,12 +207,12 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
           {/* Introduction */}
           <div className="mb-16 max-w-[900px] mt-16">
             <h2 className={cn(
-              "text-[22px] font-light tracking-[0.2em] mb-6",
+              "text-xl font-light tracking-[0.2em] mb-6",
               isLightMode ? "text-slate-900" : "text-white"
             )}>
               Installation & Usage
             </h2>
-            <div className="space-y-4 text-[14px] leading-[2]">
+            <div className="space-y-4 text-base leading-[2]">
               <p className={isLightMode ? "text-slate-700" : "text-gray-200"}>
                 This package provides the Epi-Logos Philosophy as a "cognitive operating system" combining <span className={isLightMode ? "text-slate-900" : "text-white"}>Quaternal Logic (QL)</span> and the <span className={isLightMode ? "text-slate-900" : "text-white"}>Meta-Epistemic Framework (MEF)</span> - two complementary systems for multi-dimensional, paradox aware reasoning and analysis. They are theoretical lynchpins of the project.
               </p>
@@ -205,25 +224,25 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
 
           {/* Usage Instructions */}
           <div className="mb-16 max-w-[900px]">
-            <h2 className={cn("text-[18px] font-light tracking-[0.2em] mb-6", isLightMode ? "text-slate-900" : "text-white")}>
+            <h2 className={cn("text-xl font-light tracking-[0.2em] mb-6", isLightMode ? "text-slate-900" : "text-white")}>
               How to Use
             </h2>
-            <div className="space-y-6 text-[13px] leading-[2]">
+            <div className="space-y-6 text-base leading-[2]">
               <div>
                 <h3 className={cn("font-light mb-3", isLightMode ? "text-slate-900" : "text-white")}>1. Learn Through Use:</h3>
-                <p className={cn("text-[12px] leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
+                <p className={cn("text-sm leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
                   The frameworks reveal themselves through practice. You can approach them theoretically first, or install, experiment, and let familiarity develop and influence your thinking. Each inquiry deepens your understanding of how the Epi-Logos operates, the reason behind QL and the MEF, and what it all means.
                 </p>
               </div>
               <div>
                 <h3 className={cn("font-light mb-3", isLightMode ? "text-slate-900" : "text-white")}>2. Guide the Agent Back:</h3>
-                <p className={cn("text-[12px] leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
+                <p className={cn("text-sm leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
                   AI naturally drifts from framework discipline over long conversations. When responses become generic or lose structure, redirect: "Return to the QL modeling" or "Apply CMEA here." It's also recommended to give style guidance in your prompts. There's a tendency for responses to be given as lists, so you might want to specify "flowing prose" or "conversationally" in your prompt, depending on the kind of output that speaks to you. The packages don't beat the indeterminism of AI - they require some amount of active engagement to maintain paradigm coherence.
                 </p>
               </div>
               <div>
                 <h3 className={cn("font-light mb-3", isLightMode ? "text-slate-900" : "text-white")}>3. Let Frameworks Transform Thinking:</h3>
-                <p className={cn("text-[12px] leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
+                <p className={cn("text-sm leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
                   Some amount of implicit "going along with it" is implied here. If there's confusion or something isn't clear, ask the agent to clarify or specify details. Our wager; whether applied to personal or institutional conception, the intent is to alchemise paradox and complexity into clarity. If, in the dialogues they help generate, the theories serve this intent we'll be happy with what we're providing.
                 </p>
               </div>
@@ -232,7 +251,7 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
 
           {/* Package Files Grid */}
           <div className="space-y-6 mb-16">
-            <h2 className={cn("text-[18px] font-light tracking-[0.2em] mb-8", isLightMode ? "text-slate-900" : "text-white")}>
+            <h2 className={cn("text-xl font-light tracking-[0.2em] mb-8", isLightMode ? "text-slate-900" : "text-white")}>
               Package Components
             </h2>
 
@@ -250,24 +269,24 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
                   <div className="space-y-6">
                     <div className="flex-1">
                       <div className="flex items-center gap-4 mb-3">
-                        <span className={cn("text-[10px] tracking-[0.4em] uppercase", isLightMode ? "text-slate-500" : "text-gray-600")}>
+                        <span className={cn("text-xs tracking-[0.4em] uppercase", isLightMode ? "text-slate-500" : "text-gray-600")}>
                           File {index + 1}
                         </span>
                       </div>
-                      <h3 className={cn("text-[20px] md:text-[24px] font-light tracking-[0.15em] mb-4", isLightMode ? "text-slate-900" : "text-white")}>
+                      <h3 className={cn("text-2xl font-light tracking-[0.15em] mb-4", isLightMode ? "text-slate-900" : "text-white")}>
                         {file.title}
                       </h3>
-                      <p className={cn("text-[13px] leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
+                      <p className={cn("text-base leading-[1.9]", isLightMode ? "text-slate-700" : "text-gray-200")}>
                         {file.description}
                       </p>
-                      <p className="text-[11px] text-gray-500 mt-4 font-mono">
+                      <p className="text-sm text-gray-500 mt-4 font-mono">
                         {file.filename}
                       </p>
                     </div>
                     <button
                       onClick={() => handleDownload(file)}
                       className={cn(
-                        "flex items-center gap-2 px-6 py-3 border text-[10px] font-normal tracking-[2px] uppercase transition-colors w-fit",
+                        "flex items-center gap-2 px-6 py-3 border text-xs font-normal tracking-[2px] uppercase transition-colors w-fit",
                         isLightMode
                           ? "border-slate-300 text-slate-700 hover:bg-slate-100 hover:text-slate-900"
                           : "border-gray-700 text-gray-300 hover:bg-gray-900 hover:text-white"
@@ -286,7 +305,7 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
               <button
                 onClick={handleDownloadAll}
                 className={cn(
-                  "inline-flex items-center gap-3 px-8 py-4 text-[11px] font-normal tracking-[2px] uppercase transition-colors",
+                  "inline-flex items-center gap-3 px-8 py-4 text-sm font-normal tracking-[2px] uppercase transition-colors",
                   isLightMode
                     ? "bg-slate-900 text-white hover:bg-slate-700"
                     : "bg-white text-black hover:bg-gray-200"
@@ -301,10 +320,10 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
           {/* Example Inquiries Section */}
           {exampleInquiries.length > 0 && (
             <div className={cn("mt-16 max-w-[1200px] border-t pt-16", isLightMode ? "border-slate-200" : "border-gray-800")}>
-              <h2 className={cn("text-[18px] font-light tracking-[0.2em] mb-6", isLightMode ? "text-slate-900" : "text-white")}>
+              <h2 className={cn("text-xl font-light tracking-[0.2em] mb-6", isLightMode ? "text-slate-900" : "text-white")}>
                 Example Dialogues
               </h2>
-              <p className={cn("text-[13px] leading-[2] mb-10 max-w-[900px]", isLightMode ? "text-slate-700" : "text-gray-200")}>
+              <p className={cn("text-base leading-[2] mb-10 max-w-[900px]", isLightMode ? "text-slate-700" : "text-gray-200")}>
                 See the tools in action. These full conversation transcripts demonstrate how QL and MEF bring shape to inquiry.
               </p>
 
@@ -321,17 +340,17 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
                     )}
                   >
                     <div className="flex items-center gap-2 mb-3">
-                      <span className={cn("text-[9px] tracking-[0.4em] uppercase", isLightMode ? "text-slate-500" : "text-gray-600")}>
+                      <span className={cn("text-xs tracking-[0.4em] uppercase", isLightMode ? "text-slate-500" : "text-gray-600")}>
                         {example.framework}
                       </span>
                     </div>
-                    <h3 className={cn("text-[16px] font-light tracking-[0.12em] mb-3", isLightMode ? "text-slate-900 group-hover:text-slate-700" : "text-white group-hover:text-gray-100")}>
+                    <h3 className={cn("text-lg font-light tracking-[0.12em] mb-3", isLightMode ? "text-slate-900 group-hover:text-slate-700" : "text-white group-hover:text-gray-100")}>
                       {example.title}
                     </h3>
-                    <p className={cn("text-[12px] leading-[1.8]", isLightMode ? "text-slate-700" : "text-gray-400")}>
+                    <p className={cn("text-sm leading-[1.8]", isLightMode ? "text-slate-700" : "text-gray-400")}>
                       {example.description}
                     </p>
-                    <div className={cn("mt-4 text-[10px] tracking-[0.3em] uppercase", isLightMode ? "text-slate-600 group-hover:text-slate-700" : "text-gray-600 group-hover:text-gray-500")}>
+                    <div className={cn("mt-4 text-xs tracking-[0.3em] uppercase", isLightMode ? "text-slate-600 group-hover:text-slate-700" : "text-gray-600 group-hover:text-gray-500")}>
                       View Conversation →
                     </div>
                   </button>
@@ -342,13 +361,13 @@ export function PromptPackageViewer({ onClose, onExampleSelect }: PromptPackageV
 
           {/* Feedback Section */}
           <div className={cn("mt-16 max-w-[900px] border p-8 rounded-sm", isLightMode ? "bg-slate-50 border-slate-200" : "bg-gray-900/30 border-gray-800")}>
-            <h3 className={cn("text-[16px] font-light tracking-[0.2em] mb-4", isLightMode ? "text-slate-900" : "text-white")}>
+            <h3 className={cn("text-lg font-light tracking-[0.2em] mb-4", isLightMode ? "text-slate-900" : "text-white")}>
               We Want Your Feedback
             </h3>
-            <p className={cn("text-[13px] leading-[2] mb-4", isLightMode ? "text-slate-700" : "text-gray-200")}>
+            <p className={cn("text-base leading-[2] mb-4", isLightMode ? "text-slate-700" : "text-gray-200")}>
               The frameworks evolve through active use. Every conversation reveals new patterns, every application surfaces questions we haven't yet considered. Your experience using these tools brings invaluable data.
             </p>
-            <p className={cn("text-[12px]", isLightMode ? "text-slate-600" : "text-gray-300")}>
+            <p className={cn("text-sm", isLightMode ? "text-slate-600" : "text-gray-300")}>
               Please share with us where the frameworks bring clarity and where they introduce confusion.
             </p>
           </div>

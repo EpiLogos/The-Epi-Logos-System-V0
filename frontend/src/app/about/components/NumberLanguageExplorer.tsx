@@ -360,7 +360,7 @@ export function NumberLanguageExplorer({ onClose }: NumberLanguageExplorerProps)
       </button>
 
       {/* Keyboard Hints */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 text-[10px] text-gray-600 uppercase tracking-wider">
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 text-xs text-gray-600 uppercase tracking-wider">
         <span>← → Navigate</span>
         <span className="mx-3">|</span>
         <span>M Map</span>
@@ -395,7 +395,7 @@ export function NumberLanguageExplorer({ onClose }: NumberLanguageExplorerProps)
                         : "border-gray-800 hover:border-gray-600"
                     )}
                   >
-                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">
+                    <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">
                       {index + 1}
                     </p>
                     <p className="text-sm text-white mb-1">{section.name}</p>

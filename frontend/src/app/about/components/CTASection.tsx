@@ -14,7 +14,7 @@ export function CTASection({ onEssayClick, onSectionClick }: CTASectionProps) {
         {/* Primary CTA */}
         <button
           onClick={() => onEssayClick('mef')}
-          className="px-10 py-4 bg-white text-black text-[13px] font-normal tracking-[2px] uppercase hover:bg-gray-200 transition-colors"
+          className="px-10 py-4 bg-white text-black text-base font-normal tracking-[2px] uppercase hover:bg-gray-200 transition-colors"
         >
           Read the MEF Essay →
         </button>
@@ -22,7 +22,7 @@ export function CTASection({ onEssayClick, onSectionClick }: CTASectionProps) {
         {/* Secondary CTA */}
         <button
           onClick={() => onSectionClick('collaborate')}
-          className="px-10 py-4 border border-white text-white text-[13px] font-normal tracking-[2px] uppercase hover:bg-white hover:text-black transition-colors"
+          className="px-10 py-4 border border-white text-white text-base font-normal tracking-[2px] uppercase hover:bg-white hover:text-black transition-colors"
         >
           Collaborate →
         </button>
@@ -31,7 +31,7 @@ export function CTASection({ onEssayClick, onSectionClick }: CTASectionProps) {
       {/* Tertiary Link */}
       <button
         onClick={() => onEssayClick('ql')}
-        className="text-[12px] text-gray-400 hover:text-white transition-colors tracking-[1px] underline"
+        className="text-sm text-gray-400 hover:text-white transition-colors tracking-[1px] underline"
       >
         What is Quaternal Logic?
       </button>

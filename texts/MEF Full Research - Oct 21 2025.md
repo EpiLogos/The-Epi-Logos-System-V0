@@ -1,4 +1,4 @@
-# **Archetypal Number and the Quaternary Structure: Historical and Epistemic Resonances**
+dud# **Archetypal Number and the Quaternary Structure: Historical and Epistemic Resonances**
 
   
 

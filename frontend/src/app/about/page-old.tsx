@@ -173,10 +173,10 @@ export default function AboutPage() {
           >
             <div className="w-full h-full border border-gray-800 p-[20px] flex flex-col">
               <div className="mb-5">
-                <h2 className="text-[18px] font-normal tracking-[2px] text-[#333] mb-1">
+                <h2 className="text-xl font-normal tracking-[2px] text-[#333] mb-1">
                   ABOUT THE EPI-LOGOS PROJECT
                 </h2>
-                <p className="text-[10px] text-[#333]/60 tracking-[1px] italic mb-4">
+                <p className="text-xs text-[#333]/60 tracking-[1px] italic mb-4">
                   A consciousness-first computing platform
                 </p>
               </div>
@@ -184,26 +184,26 @@ export default function AboutPage() {
               <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin-custom">
                 <div className="space-y-4 text-[#333]">
                   <div className="pl-4 border-l border-[#333]/30">
-                    <p className="text-[11px] font-normal mb-1 tracking-[0.5px]">Quaternal Logic (QL)</p>
-                    <p className="text-[11px] leading-[1.7]">
+                    <p className="text-sm font-normal mb-1 tracking-[0.5px]">Quaternal Logic (QL)</p>
+                    <p className="text-sm leading-[1.7]">
                       {aboutContent.sections.quternalLogic.description}
                     </p>
                   </div>
                   <div className="pl-4 border-l border-[#333]/30">
-                    <p className="text-[11px] font-normal mb-1 tracking-[0.5px]">Multi-Epistemological Framework (MEF)</p>
-                    <p className="text-[11px] leading-[1.7]">
+                    <p className="text-sm font-normal mb-1 tracking-[0.5px]">Multi-Epistemological Framework (MEF)</p>
+                    <p className="text-sm leading-[1.7]">
                       {aboutContent.sections.mef.description}
                     </p>
                   </div>
                   <div className="pl-4 border-l border-[#333]/30">
-                    <p className="text-[11px] font-normal mb-1 tracking-[0.5px]">Geometric Epistemology</p>
-                    <p className="text-[11px] leading-[1.7]">
+                    <p className="text-sm font-normal mb-1 tracking-[0.5px]">Geometric Epistemology</p>
+                    <p className="text-sm leading-[1.7]">
                       {aboutContent.sections.geometricEpistemology.description}
                     </p>
                   </div>
                   <div className="pl-4 border-l border-[#333]/30">
-                    <p className="text-[11px] font-normal mb-1 tracking-[0.5px]">Coordinate-Augmented Generation (CAG)</p>
-                    <p className="text-[11px] leading-[1.7]">
+                    <p className="text-sm font-normal mb-1 tracking-[0.5px]">Coordinate-Augmented Generation (CAG)</p>
+                    <p className="text-sm leading-[1.7]">
                       {aboutContent.sections.cag.description}
                     </p>
                   </div>
@@ -225,7 +225,7 @@ export default function AboutPage() {
               visible={true}
               delay={200}
               duration="slow"
-              className="text-[18px] font-normal tracking-[2px] text-[#333] mb-6 text-center"
+              className="text-xl font-normal tracking-[2px] text-[#333] mb-6 text-center"
             />
 
             {/* Content Section */}
@@ -236,21 +236,21 @@ export default function AboutPage() {
                     visible={true}
                     delay={600}
                     duration="slow"
-                    className="text-[18px] font-normal text-[#333] leading-[1.3] mb-[2px] text-center"
+                    className="text-xl font-normal text-[#333] leading-[1.3] mb-[2px] text-center"
                   >
                     {aboutContent.title}
                   </TextAnimate>
                   <TextAnimate
                     visible={true}
                     delay={1000}
-                    className="text-[11px] text-[#666] mt-[20px] tracking-[1px] text-center"
+                    className="text-sm text-[#666] mt-[20px] tracking-[1px] text-center"
                   >
                     {aboutContent.subtitle}
                   </TextAnimate>
                   <TextAnimate
                     visible={true}
                     delay={1300}
-                    className="text-[10px] text-[#666] mt-[30px] tracking-[0.5px] text-center leading-[1.6] px-4"
+                    className="text-xs text-[#666] mt-[30px] tracking-[0.5px] text-center leading-[1.6] px-4"
                   >
                     {aboutContent.hero.tagline}
                   </TextAnimate>
@@ -271,11 +271,11 @@ export default function AboutPage() {
                       <h3 className="text-xs font-semibold text-gray-800 tracking-wide">
                         {aboutContent.sections.quternalLogic.title}
                       </h3>
-                      <p className="text-[9px] text-gray-500 italic mt-1">
+                      <p className="text-xs text-gray-500 italic mt-1">
                         {aboutContent.sections.quternalLogic.subtitle}
                       </p>
                     </div>
-                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600 leading-relaxed">
                       {aboutContent.sections.quternalLogic.description}
                     </p>
                   </div>
@@ -287,11 +287,11 @@ export default function AboutPage() {
                       <h3 className="text-xs font-semibold text-gray-800 tracking-wide">
                         {aboutContent.sections.mef.title}
                       </h3>
-                      <p className="text-[9px] text-gray-500 italic mt-1">
+                      <p className="text-xs text-gray-500 italic mt-1">
                         {aboutContent.sections.mef.subtitle}
                       </p>
                     </div>
-                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600 leading-relaxed">
                       {aboutContent.sections.mef.description}
                     </p>
                   </div>
@@ -303,11 +303,11 @@ export default function AboutPage() {
                       <h3 className="text-xs font-semibold text-gray-800 tracking-wide">
                         {aboutContent.sections.geometricEpistemology.title}
                       </h3>
-                      <p className="text-[9px] text-gray-500 italic mt-1">
+                      <p className="text-xs text-gray-500 italic mt-1">
                         {aboutContent.sections.geometricEpistemology.subtitle}
                       </p>
                     </div>
-                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600 leading-relaxed">
                       {aboutContent.sections.geometricEpistemology.description}
                     </p>
                   </div>
@@ -319,11 +319,11 @@ export default function AboutPage() {
                       <h3 className="text-xs font-semibold text-gray-800 tracking-wide">
                         {aboutContent.sections.cag.title}
                       </h3>
-                      <p className="text-[9px] text-gray-500 italic mt-1">
+                      <p className="text-xs text-gray-500 italic mt-1">
                         {aboutContent.sections.cag.subtitle}
                       </p>
                     </div>
-                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600 leading-relaxed">
                       {aboutContent.sections.cag.description}
                     </p>
                   </div>
@@ -336,7 +336,7 @@ export default function AboutPage() {
                         {aboutContent.vision.title}
                       </h3>
                     </div>
-                    <p className="text-[10px] text-gray-600 leading-relaxed">
+                    <p className="text-xs text-gray-600 leading-relaxed">
                       {aboutContent.vision.description}
                     </p>
                   </div>
@@ -406,7 +406,7 @@ export default function AboutPage() {
 
               {/* Corner Modal Indicator */}
               {modalState.isModalExpanded && (
-                <div className="absolute top-5 right-5 text-[10px] text-ui-medium tracking-wider opacity-60">
+                <div className="absolute top-5 right-5 text-xs text-ui-medium tracking-wider opacity-60">
                   EXPANDED
                 </div>
               )}

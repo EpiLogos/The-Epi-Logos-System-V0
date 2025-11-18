@@ -8,7 +8,7 @@ const ASCIIText = dynamic(() => import('@/components/three/ASCIIText'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-full">
-      <h1 className="text-[36px] font-normal tracking-[4px] text-white text-center">
+      <h1 className="text-3xl font-normal tracking-[4px] text-white text-center">
         Epi-Logos
       </h1>
     </div>

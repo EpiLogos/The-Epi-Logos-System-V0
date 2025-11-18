@@ -323,7 +323,7 @@ function AboutPageContent() {
               <div className="space-y-2">
                 <div className="pb-2 mb-2">
                   <p className={cn(
-                    "text-[10px] uppercase tracking-wider font-medium",
+                    "text-xs uppercase tracking-wider font-medium",
                     isLightMode ? "text-gray-500" : "text-gray-500"
                   )}>Navigation</p>
                 </div>

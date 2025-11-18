@@ -40,10 +40,10 @@ export function FeatureCard({
 
       {/* Text Content */}
       <div className="w-full md:w-2/3">
-        <h3 className="text-[18px] font-normal tracking-[2px] text-white mb-4">
+        <h3 className="text-xl font-normal tracking-[2px] text-white mb-4">
           {title}
         </h3>
-        <p className="text-[12px] text-gray-300 leading-[1.8] mb-4 tracking-[0.5px]">
+        <p className="text-base text-gray-300 leading-[1.8] mb-4 tracking-[0.5px]">
           {description}
         </p>
 
@@ -52,7 +52,7 @@ export function FeatureCard({
             {benefits.map((benefit, idx) => (
               <li
                 key={idx}
-                className="text-[11px] text-gray-400 flex items-start gap-2"
+                className="text-sm text-gray-400 flex items-start gap-2"
               >
                 <span className="text-gray-600">•</span>
                 <span>{benefit}</span>

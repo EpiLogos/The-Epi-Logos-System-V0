@@ -44,27 +44,27 @@ export function ExampleConversationViewer({
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-3">
                   <span className={cn(
-                    "text-[9px] tracking-[0.4em] uppercase",
+                    "text-xs tracking-[0.4em] uppercase",
                     isLightMode ? "text-gray-600" : "text-gray-600"
                   )}>
                     {framework}
                   </span>
                   <span className={isLightMode ? "text-slate-400" : "text-gray-700"}>•</span>
                   <span className={cn(
-                    "text-[9px] tracking-[0.4em] uppercase",
+                    "text-xs tracking-[0.4em] uppercase",
                     isLightMode ? "text-gray-600" : "text-gray-600"
                   )}>
                     Example Inquiry
                   </span>
                 </div>
                 <h1 className={cn(
-                  "text-[24px] md:text-[28px] font-light tracking-[0.2em] mb-3",
+                  "text-2xl md:text-[1.75rem] font-light tracking-[0.2em] mb-3",
                   isLightMode ? "text-slate-900" : "text-white"
                 )}>
                   {title}
                 </h1>
                 <p className={cn(
-                  "text-[12px] leading-[1.9] max-w-[800px]",
+                  "text-sm leading-[1.9] max-w-[800px]",
                   isLightMode ? "text-slate-600" : "text-gray-400"
                 )}>
                   {description}
@@ -73,7 +73,7 @@ export function ExampleConversationViewer({
               <button
                 onClick={onClose}
                 className={cn(
-                  "flex items-center gap-2 text-[11px] uppercase tracking-[0.4em] transition-colors",
+                  "flex items-center gap-2 text-sm uppercase tracking-[0.4em] transition-colors",
                   isLightMode ? "text-gray-500 hover:text-slate-900" : "text-gray-500 hover:text-white"
                 )}
               >
@@ -105,7 +105,7 @@ export function ExampleConversationViewer({
                     <div className="flex items-center gap-3 mb-4">
                       <span
                         className={cn(
-                          'text-[9px] tracking-[0.4em] uppercase',
+                          'text-xs tracking-[0.4em] uppercase',
                           turn.role === 'user' ? 'text-blue-400' : 'text-emerald-400'
                         )}
                       >
@@ -114,13 +114,13 @@ export function ExampleConversationViewer({
                     </div>
                     <div
                       className={cn(
-                        "text-[14px] leading-[2] prose max-w-none",
+                        "text-base leading-[2] prose max-w-none",
                         isLightMode ? "prose-gray" : "prose-invert",
                         "prose-p:my-4 prose-p:leading-[2]",
                         "prose-headings:font-light prose-headings:tracking-[0.1em]",
-                        "prose-h1:text-[20px] prose-h1:mb-6 prose-h1:mt-8",
-                        "prose-h2:text-[16px] prose-h2:mb-4 prose-h2:mt-6",
-                        "prose-h3:text-[14px] prose-h3:mb-3 prose-h3:mt-5",
+                        "prose-h1:text-xl prose-h1:mb-6 prose-h1:mt-8",
+                        "prose-h2:text-lg prose-h2:mb-4 prose-h2:mt-6",
+                        "prose-h3:text-base prose-h3:mb-3 prose-h3:mt-5",
                         "prose-strong:font-medium prose-em:italic",
                         "prose-ul:my-4 prose-ul:space-y-2 prose-li:my-1",
                         "prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded",

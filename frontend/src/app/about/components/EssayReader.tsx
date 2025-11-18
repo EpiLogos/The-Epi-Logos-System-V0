@@ -160,7 +160,7 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
         "w-full h-screen flex items-center justify-center",
         isLightMode ? "bg-white text-slate-600" : "bg-black text-gray-600"
       )}>
-        <p className="text-[11px] tracking-[2px]">SELECT AN ESSAY OR DOCUMENT</p>
+        <p className="text-sm tracking-[2px]">SELECT AN ESSAY OR DOCUMENT</p>
       </div>
     );
   }
@@ -171,7 +171,7 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
         "w-full h-screen flex items-center justify-center",
         isLightMode ? "bg-white text-gray-600" : "bg-black text-gray-400"
       )}>
-        <p className="text-[11px] tracking-[2px]">LOADING ESSAY...</p>
+        <p className="text-sm tracking-[2px]">LOADING ESSAY...</p>
       </div>
     );
   }
@@ -229,20 +229,20 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
             )}>
               <div className="flex-1 space-y-4">
                 <p className={cn(
-                  "text-[11px] uppercase tracking-[0.42em]",
+                  "text-sm uppercase tracking-[0.42em]",
                   isLightMode ? "text-gray-500" : "text-gray-500"
                 )}>
                   Essay
                 </p>
                 <h1 className={cn(
-                  "text-[34px] md:text-[40px] font-light tracking-[0.32em]",
+                  "text-[2.5rem] font-light tracking-[0.32em]",
                   isLightMode ? "text-slate-900" : "text-white"
                 )}>
                   {essay.title}
                 </h1>
                 {essay.subtitle && (
                   <p className={cn(
-                    "text-[12px] tracking-[0.28em] uppercase",
+                    "text-sm tracking-[0.28em] uppercase",
                     isLightMode ? "text-slate-600" : "text-gray-400"
                   )}>
                     {essay.subtitle}
@@ -266,16 +266,16 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
               <div className={cn(
                 "prose max-w-none",
                 isLightMode ? "prose-gray" : "prose-invert",
-                `[&_h1]:text-[32px] [&_h1]:md:text-[36px] [&_h1]:font-light [&_h1]:tracking-[0.24em] [&_h1]:mb-8 [&_h1]:scroll-mt-24
-                [&_h2]:text-[26px] [&_h2]:md:text-[30px] [&_h2]:font-light [&_h2]:tracking-[0.24em] [&_h2]:mb-8 [&_h2]:scroll-mt-24
-                [&_h3]:text-[22px] [&_h3]:md:text-[26px] [&_h3]:font-light [&_h3]:tracking-[0.24em] [&_h3]:mb-8 [&_h3]:scroll-mt-24
-                [&_h4]:text-[18px] [&_h4]:md:text-[22px] [&_h4]:font-light [&_h4]:tracking-[0.24em] [&_h4]:mb-8 [&_h4]:scroll-mt-24
-                [&_h5]:text-[16px] [&_h5]:md:text-[18px] [&_h5]:font-light [&_h5]:tracking-[0.24em] [&_h5]:mb-8 [&_h5]:scroll-mt-24
-                [&_h6]:text-[14px] [&_h6]:md:text-[16px] [&_h6]:font-light [&_h6]:tracking-[0.24em] [&_h6]:mb-8 [&_h6]:scroll-mt-24
-                [&_p]:leading-[2.2] [&_p]:tracking-[0.01em] [&_p]:mb-8 [&_p]:text-[15px]
+                `[&_h1]:text-[2.25rem] [&_h1]:font-light [&_h1]:tracking-[0.24em] [&_h1]:mb-8 [&_h1]:scroll-mt-24
+                [&_h2]:text-[1.875rem] [&_h2]:font-light [&_h2]:tracking-[0.24em] [&_h2]:mb-8 [&_h2]:scroll-mt-24
+                [&_h3]:text-[1.625rem] [&_h3]:font-light [&_h3]:tracking-[0.24em] [&_h3]:mb-8 [&_h3]:scroll-mt-24
+                [&_h4]:text-[1.375rem] [&_h4]:font-light [&_h4]:tracking-[0.24em] [&_h4]:mb-8 [&_h4]:scroll-mt-24
+                [&_h5]:text-lg [&_h5]:font-light [&_h5]:tracking-[0.24em] [&_h5]:mb-8 [&_h5]:scroll-mt-24
+                [&_h6]:text-base [&_h6]:font-light [&_h6]:tracking-[0.24em] [&_h6]:mb-8 [&_h6]:scroll-mt-24
+                [&_p]:leading-[2.2] [&_p]:tracking-[0.01em] [&_p]:mb-8 [&_p]:text-base
                 [&_strong]:font-semibold
                 [&_em]:italic
-                [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-sm [&_code]:text-[14px]
+                [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-sm [&_code]:text-sm
                 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-3 [&_ul]:my-8
                 [&_ol]:list-decimal [&_ol]:pl-6 [&_ol]:space-y-3 [&_ol]:my-8
                 [&_li]:leading-[2]
@@ -326,7 +326,7 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
                 isLightMode ? "border-slate-300/50" : "border-gray-700/50"
               )}>
                 <span className={cn(
-                  "rotate-90 text-[9px] uppercase tracking-[0.6em]",
+                  "rotate-90 text-xs uppercase tracking-[0.6em]",
                   isLightMode ? "text-slate-600/60" : "text-white/40"
                 )}>
                   Contents
@@ -337,7 +337,7 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
                 isLightMode ? "bg-white/80 shadow-[0_0_40px_rgba(0,0,0,0.1)]" : "bg-black/80 shadow-[0_0_40px_rgba(0,0,0,0.65)]"
               )}>
                 <div className={cn(
-                  "flex items-center justify-between px-6 pt-6 pb-4 text-[11px] uppercase tracking-[0.4em]",
+                  "flex items-center justify-between px-6 pt-6 pb-4 text-sm uppercase tracking-[0.4em]",
                   isLightMode ? "text-slate-600/60" : "text-white/60"
                 )}>
                   <span>Sections</span>
@@ -349,7 +349,7 @@ export function EssayReader({ essayId, onClose }: EssayReaderProps) {
                       type="button"
                       onClick={() => handleTocClick(heading.id)}
                       className={cn(
-                        'block w-full text-left text-[11px] tracking-[0.32em] uppercase transition-colors py-1.5',
+                        'block w-full text-left text-sm tracking-[0.32em] uppercase transition-colors py-1.5',
                         activeSectionId === heading.id
                           ? isLightMode ? 'text-slate-900' : 'text-white'
                           : isLightMode ? 'text-slate-600 hover:text-slate-900' : 'text-gray-400 hover:text-gray-100'

@@ -4,7 +4,6 @@ import './globals.css';
 import { UnifiedAuthProvider } from '@/auth';
 import { PageTransitionProvider } from '@/contexts/PageTransitionContext';
 import { SidebarProvider } from '@/contexts/SidebarContext';
-import DesktopOnlyWrapper from '@/components/DesktopOnlyWrapper';
 
 export const metadata: Metadata = {
   title: 'The Epi-Logos',
@@ -40,7 +39,6 @@ export const metadata: Metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -51,15 +49,13 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body>
-        <DesktopOnlyWrapper>
-          <UnifiedAuthProvider>
-            <PageTransitionProvider>
-              <SidebarProvider>
-                {children}
-              </SidebarProvider>
-            </PageTransitionProvider>
-          </UnifiedAuthProvider>
-        </DesktopOnlyWrapper>
+        <UnifiedAuthProvider>
+          <PageTransitionProvider>
+            <SidebarProvider>
+              {children}
+            </SidebarProvider>
+          </PageTransitionProvider>
+        </UnifiedAuthProvider>
       </body>
     </html>
   );

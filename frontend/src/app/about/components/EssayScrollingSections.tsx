@@ -182,13 +182,13 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
     content: (
       <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-8">
         <h1 className={cn(
-          "text-[24px] md:text-[36px] font-normal tracking-[4px] text-center mb-6 max-w-[1000px]",
+          "text-3xl font-normal tracking-[4px] text-center mb-6 max-w-[1000px]",
           isLightMode ? "text-slate-900" : "text-white"
         )}>
           TWO FRAMES, FOUR DOORWAYS
         </h1>
         <p className={cn(
-          "text-[10px] md:text-[16px] leading-[2] tracking-[0.8px] max-w-[800px] text-center px-4",
+          "text-lg leading-[2] tracking-[0.8px] max-w-[800px] text-center px-4",
           isLightMode ? "text-slate-700" : "text-gray-300"
         )}>
           Here we share our <button onClick={() => onEssaySelect('prompt-packages')} className={cn(
@@ -197,7 +197,7 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
           )}>prompt packages</button> and essays to introduce people to the system. The best way in is to explore the example conversations in the prompt package section.
         </p>
         <p className={cn(
-          "text-[8px] md:text-[10px] max-w-[900px] leading-[1.8] tracking-[0.6px] text-center mt-12 px-4",
+          "text-xs max-w-[900px] leading-[1.8] tracking-[0.6px] text-center mt-12 px-4",
           isLightMode ? "text-gray-500" : "text-gray-500"
         )}>
           Drafts are live and evolving; feedback is welcome.
@@ -300,7 +300,7 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
                   </div>
                 ) : (
                   <div className="text-center px-6 py-16 space-y-4">
-                    <span className="text-[11px] uppercase tracking-[0.35em] text-gray-600">
+                    <span className="text-sm uppercase tracking-[0.35em] text-gray-600">
                       imagery placeholder
                     </span>
                     <p className="text-xs text-gray-600 leading-relaxed">
@@ -313,29 +313,29 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
               <div className="w-full lg:w-1/2 px-6 py-10 md:px-10 md:py-12 space-y-6">
                 <div className="space-y-3">
                   <p className={cn(
-                    "text-[8px] md:text-[10px] uppercase tracking-[0.5em]",
+                    "text-xs uppercase tracking-[0.5em]",
                     isLightMode ? "text-gray-500" : "text-gray-500"
                   )}>
                     {essay.eyebrow}
                   </p>
                   <h2 className={cn(
-                    "text-lg md:text-xl lg:text-2xl font-light tracking-[0.15em]",
+                    "text-2xl font-light tracking-[0.15em]",
                     isLightMode ? "text-slate-900" : "text-white"
                   )}>
                     {essay.title}
                   </h2>
                 </div>
                 <p className={cn(
-                  "text-[11px] md:text-[13px] lg:text-[15px] leading-relaxed",
+                  "leading-relaxed",
                   isLightMode ? "text-slate-700" : "text-gray-300"
-                )}>
+                )} style={{ fontSize: 'var(--dynamic-font-size)' }}>
                   {essay.description}
                 </p>
                 <button
                   type="button"
                   onClick={() => handleEssayClick(essay.id)}
                   className={cn(
-                    "group inline-flex items-center text-[8px] md:text-[11px] lg:text-[13px] uppercase tracking-[0.4em]",
+                    "group inline-flex items-center text-base uppercase tracking-[0.4em]",
                     essay.callToAction === 'Coming soon'
                       ? cn(isLightMode ? "text-slate-400 cursor-default" : "text-gray-400 cursor-default")
                       : cn("transition-colors", isLightMode ? "text-slate-600 hover:text-slate-900" : "text-gray-400 hover:text-white")

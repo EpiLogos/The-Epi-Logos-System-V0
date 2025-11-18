@@ -15,7 +15,7 @@ export default {
         'ui-gray': '#f5f5f5',
         'ui-dark': '#333',
         'ui-medium': '#666',
-        'ui-border': '#e0e0e0', 
+        'ui-border': '#e0e0e0',
         'ui-panel': '#090a09',
         'ui-panel-border': '#cacaca',
         'ui-coord-text': '#666666',
@@ -28,13 +28,18 @@ export default {
         '40': '40px',
         '50': '50px',
         '90': '90px',
+        // Fluid responsive spacing
+        'fluid-sm': 'clamp(1rem, 2vw, 1.5rem)',
+        'fluid-md': 'clamp(1.5rem, 3vw, 2rem)',
+        'fluid-lg': 'clamp(2rem, 4vw, 3rem)',
       },
       fontSize: {
-        // UI Clones exact font sizes
-        'coord': '72px',
-        'coord-sm': '63px',
-        'ui-sm': '11px',
-        '90': '90px',
+        // UI Clones exact font sizes (reduced by 20%)
+        'coord': '57.6px',      // 72px * 0.8
+        'coord-sm': '50.4px',   // 63px * 0.8
+        'ui-sm': '8.8px',       // 11px * 0.8
+        '90': '72px',           // 90px * 0.8
+        // Fluid responsive typography removed - ready for @theme implementation in globals.css
       },
       width: {
         'grid-sidebar': '300px',
@@ -158,6 +163,7 @@ export default {
   },
   plugins: [
     require('@tailwindcss/typography'),
+    require('@tailwindcss/container-queries'),
     function({ addUtilities }) {
       // SCROLLBAR UTILITIES MOVED TO @utility IN INDEX.CSS (TAILWIND V4 APPROACH)
 
