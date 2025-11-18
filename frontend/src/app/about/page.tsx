@@ -278,7 +278,7 @@ function AboutPageContent() {
 
       {/* Essay Section Pagination Dots - Outside overflow container */}
       {isCollapsed && !currentEssay && (
-        <div className="fixed top-4 left-4 md:top-8 md:left-12 flex space-x-2 z-50">
+        <div className="fixed top-4 md:top-8 left-1/2 -translate-x-1/2 flex space-x-2 z-50">
           {Array.from({ length: totalEssaySections }).map((_, index) => (
             <button
               key={index}
@@ -288,10 +288,10 @@ function AboutPageContent() {
                 window.dispatchEvent(event);
               }}
               className={cn(
-                'h-1 rounded-full transition-colors duration-300',
+                'h-1 w-2 rounded-full transition-colors duration-300',
                 index === essaySectionIndex
-                  ? cn('w-12', isLightMode ? 'bg-gray-800/80' : 'bg-white/80')
-                  : cn('w-6', isLightMode ? 'bg-gray-800/20 hover:bg-gray-800/40' : 'bg-white/20 hover:bg-white/40')
+                  ? isLightMode ? 'bg-gray-800/80' : 'bg-white/80'
+                  : isLightMode ? 'bg-gray-800/20 hover:bg-gray-800/40' : 'bg-white/20 hover:bg-white/40'
               )}
               aria-label={`Go to essay section ${index + 1}`}
             />
@@ -316,7 +316,7 @@ function AboutPageContent() {
 
           {/* Legend - Always shows on hover, auto-shows briefly on startup - Fixed to top-right corner */}
           <div className={cn(
-            "hidden md:block fixed top-4 right-4 transition-opacity duration-300 pointer-events-none",
+            "hidden md:block fixed top-9 right-4 transition-opacity duration-300 pointer-events-none",
             showTooltip ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}>
             <div className="px-6 py-4 text-xs min-w-[240px]">

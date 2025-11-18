@@ -132,8 +132,7 @@ const essayPreviews: EssayPreview[] = [
     id: 'num-lang',
     eyebrow: '#0-3: The Archetypal Number Language',
     title: 'Numbers: the language of being and becoming',
-    description:
-      'Within the Anuttara domain - #0, the silent ground before manifestation - numbers emerge not as quantities but as organizing principles of reality itself. This metaphysical system reveals how Being (pure potential) and Becoming (active agency) fold into each other through archetypal patterns: the mirror that enables self-recognition, the relational field where meaning is born, the first word that speaks intelligence into form, the stable structures that receive divine action. Here, zero is not nothing but witnessing presence; one is not singularity but creative assertion; and their interplay choreographs the eternal dance between emptiness and fullness, structure and process, the blueprint and its unfolding. Numbers become the grammar through which reality organizes its own becoming. Numbers are revealed as the code by which reality programmes and runs itself.',
+    description: '',
     callToAction: 'Coming soon'
   }
 ];
@@ -182,15 +181,15 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
     content: (
       <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-8">
         <h1 className={cn(
-          "text-3xl font-normal tracking-[4px] text-center mb-6 max-w-[1000px]",
+          "text-2xl font-normal tracking-[4px] text-center mb-6 max-w-[1000px]",
           isLightMode ? "text-slate-900" : "text-white"
         )}>
           TWO FRAMES, FOUR DOORWAYS
         </h1>
         <p className={cn(
-          "text-lg leading-[2] tracking-[0.8px] max-w-[800px] text-center px-4",
+          "leading-[2] tracking-[0.8px] max-w-[800px] text-center px-4",
           isLightMode ? "text-slate-700" : "text-gray-300"
-        )}>
+        )} style={{ fontSize: 'var(--dynamic-font-size)' }}>
           Here we share our <button onClick={() => onEssaySelect('prompt-packages')} className={cn(
             "underline transition-colors",
             isLightMode ? "text-slate-700 hover:text-slate-900" : "text-gray-300 hover:text-white"
@@ -319,7 +318,7 @@ export function EssayScrollingSections({ onEssaySelect, onSectionChange }: Essay
                     {essay.eyebrow}
                   </p>
                   <h2 className={cn(
-                    "text-2xl font-light tracking-[0.15em]",
+                    "text-xl font-light tracking-[0.15em]",
                     isLightMode ? "text-slate-900" : "text-white"
                   )}>
                     {essay.title}

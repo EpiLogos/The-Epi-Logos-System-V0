@@ -76,8 +76,8 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
               <ASCIIText
                 text="Epi-Logos"
                 enableWaves={false}
-                asciiFontSize={3}
-                textFontSize={180}
+                asciiFontSize={typeof window !== 'undefined' && window.innerWidth < 768 ? 2.5 : 3}
+                textFontSize={typeof window !== 'undefined' && window.innerWidth < 768 ? 140 : 180}
                 textColor={isLightMode ? "#1a1a1a" : "#fdf9f3"}
                 planeBaseHeight={8}
               />

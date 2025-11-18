@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 const BASE_SIZE = 2.7;               // Desktop base size
 const DESKTOP_WIDTH_SCALE = 0.006;   // Desktop width influence (primary)
 const DESKTOP_HEIGHT_SCALE = 0.002;  // Desktop height influence (secondary)
-const MOBILE_WIDTH_SCALE = 0.0052;    // Mobile width influence (primary)
+const MOBILE_WIDTH_SCALE = 0.005;    // Mobile width influence (primary)
 const MOBILE_HEIGHT_SCALE = 0.0018;  // Mobile height influence (higher for portrait fill)
 
 /**
@@ -64,7 +64,7 @@ export function useDynamicFontSize() {
       document.documentElement.style.setProperty('--dynamic-heading-size', `${headingSize}px`);
 
       // Set spacing (smaller on mobile)
-      const spacing = isMobile ? calculatedSize * 0.8 : calculatedSize * 1.0;
+      const spacing = isMobile ? calculatedSize * 0.7 : calculatedSize * 1.0;
       document.documentElement.style.setProperty('--dynamic-spacing', `${spacing}px`);
     };
 

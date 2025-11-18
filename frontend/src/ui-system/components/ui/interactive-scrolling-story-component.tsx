@@ -219,9 +219,9 @@ export const ScrollingFeatureShowcase = React.forwardRef<
       >
         {/* Tall inner container to create scroll space - extra 100vh for last section positioning */}
         <div style={{ height: `${(slides.length + 1) * 100}vh` }} className="relative">
-          {/* Pagination Dots - Fixed top-left */}
-          {!hidePagination && (
-            <div className="fixed top-8 left-12 flex space-x-2 z-50">
+          {/* Pagination Dots - Fixed right side, responsive orientation */}
+          {!hidePagination && !slides[activeIndex]?.isHero && (
+            <div className="fixed md:top-8 top-1/2 md:-translate-y-0 -translate-y-1/2 md:right-12 right-4 z-50 flex md:flex-row flex-col md:space-x-2 space-y-2 md:space-y-0">
               {slides.map((_, index) => (
                 <button
                   key={index}
@@ -238,8 +238,12 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                   className={cn(
                     "h-1 rounded-full transition-colors duration-300",
                     index === activeIndex
-                      ? isLightMode ? "w-12 bg-gray-800/80" : "w-12 bg-white/80"
-                      : isLightMode ? "w-6 bg-gray-800/20 hover:bg-gray-800/40" : "w-6 bg-white/20 hover:bg-white/40"
+                      ? isLightMode
+                        ? "w-2 md:w-12 bg-gray-800/80"
+                        : "w-2 md:w-12 bg-white/80"
+                      : isLightMode
+                        ? "w-2 md:w-6 bg-gray-800/20 hover:bg-gray-800/40"
+                        : "w-2 md:w-6 bg-white/20 hover:bg-white/40"
                   )}
                   aria-label={`Go to slide ${index + 1}`}
                 />
@@ -284,20 +288,29 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                         className={cn(
                           "relative z-10 flex flex-col",
                           showImages && !slide.isHero && 'md:border-r border-gray-700/20 items-center justify-start',
-                          slide.isHero && 'items-center text-center justify-center p-8 md:p-16',
-                          slide.title && !slide.isHero && 'px-4 md:pl-[16px] md:pr-[20px]'
+                          slide.isHero && 'items-center text-center justify-center',
                         )}
                         style={{
                           width: '100%',
                           height: '100%',
                           opacity: 'var(--content-opacity, 1)',
                           transition: 'opacity 0.3s ease',
+                          padding: slide.isHero
+                            ? 'calc(var(--dynamic-spacing) * 2)'
+                            : slide.title && !slide.isHero
+                              ? 'calc(var(--dynamic-spacing) * 3) var(--dynamic-spacing) 0'
+                              : undefined
                         } as React.CSSProperties}
                       >
                         {showImages && !slide.isHero && slide.title ? (
                           <div
-                            className="flex flex-col py-4 md:py-6 lg:py-8 mt-8 md:mt-10 lg:mt-12 mb-4 md:mb-6 lg:mb-8"
-                            style={{ width: 'clamp(70%, calc(100vw - 4rem), 85%)' }}
+                            className="flex flex-col"
+                            style={{
+                              width: 'clamp(70%, calc(100vw - var(--dynamic-spacing) * 4), 85%)',
+                              padding: 'var(--dynamic-spacing)',
+                              marginTop: 'calc(var(--dynamic-spacing) * 2)',
+                              marginBottom: 'var(--dynamic-spacing)'
+                            }}
                           >
                             <h2 className={cn(
                               "font-normal tracking-[2px] flex-shrink-0",
@@ -353,7 +366,8 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                             <img
                               src={slide.image}
                               alt={slide.title}
-                              className="block max-w-full max-h-[85vh] w-auto h-auto object-contain"
+                              className="block max-w-full max-h-[85vh] w-auto h-auto object-cover"
+                              style={{ transform: 'scale(1.13)' }}
                             />
                           </div>
                         </div>
