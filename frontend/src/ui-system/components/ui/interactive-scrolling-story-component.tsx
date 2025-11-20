@@ -124,6 +124,37 @@ export const ScrollingFeatureShowcase = React.forwardRef<
       }
     };
 
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      e.preventDefault();
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const touchEndY = e.changedTouches[0].clientY;
+      const deltaY = touchStartY - touchEndY;
+      const now = Date.now();
+
+      if (Math.abs(deltaY) < 50) return; // Threshold for swipe
+
+      if (now - lastTriggerTimeRef.current < LOCK_DURATION) return;
+      lastTriggerTimeRef.current = now;
+
+      const direction = deltaY > 0 ? 1 : -1;
+      const newIndex = Math.max(0, Math.min(slides.length - 1, activeIndex + direction));
+
+      if (newIndex === activeIndex) return;
+
+      const startScroll = container.scrollTop;
+      const targetScroll = newIndex * window.innerHeight + (window.innerHeight * 0.5);
+
+      animate(performance.now(), startScroll, targetScroll, newIndex);
+    };
+
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
       const now = Date.now();
@@ -143,8 +174,15 @@ export const ScrollingFeatureShowcase = React.forwardRef<
     };
 
     container.addEventListener('wheel', handleWheel, { passive: false });
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
     return () => {
       container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
       if (animationRafId) cancelAnimationFrame(animationRafId);
     };
   }, [slides.length, activeIndex]);
@@ -215,6 +253,7 @@ export const ScrollingFeatureShowcase = React.forwardRef<
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
+          touchAction: 'none',
         }}
       >
         {/* Tall inner container to create scroll space - extra 100vh for last section positioning */}
