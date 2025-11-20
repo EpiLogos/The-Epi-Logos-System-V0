@@ -94,6 +94,27 @@ function AboutPageContent() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCollapsed, currentEssay, essaySectionIndex, sidebarSectionIndex, totalEssaySections, totalSidebarSections]);
 
+  // Touch gesture sidebar toggle handler
+  useEffect(() => {
+    const handleSidebarSwipe = (event: Event) => {
+      if (currentEssay) return; // Don't toggle when viewing an essay
+
+      const customEvent = event as CustomEvent<{ direction: 'left' | 'right' }>;
+      const direction = customEvent.detail?.direction;
+
+      // Swipe left = close sidebar (collapse to reveal essays)
+      // Swipe right = open sidebar (expand)
+      if (direction === 'left' && !isCollapsed) {
+        handleToggle();
+      } else if (direction === 'right' && isCollapsed) {
+        handleToggle();
+      }
+    };
+
+    window.addEventListener('sidebarSwipeToggle', handleSidebarSwipe);
+    return () => window.removeEventListener('sidebarSwipeToggle', handleSidebarSwipe);
+  }, [isCollapsed, currentEssay]);
+
   const handleToggle = () => {
     setIsTransitioning(true);
     setTimeout(() => {

@@ -202,7 +202,7 @@ export function ScrollingSections({ onEssayClick, onSectionClick, onSectionChang
           <button
             onClick={() => onEssayClick('epilogos')}
             className={cn(
-              "text-sm transition-colors tracking-[0.8px] underline mt-1",
+              "text-xs md:text-sm transition-colors tracking-[0.8px] underline mt-1",
               isLightMode ? "text-slate-600 hover:text-slate-900" : "text-gray-200 hover:text-white"
             )}
           >

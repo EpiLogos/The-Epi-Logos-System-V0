@@ -49,7 +49,12 @@ export const ScrollingFeatureShowcase = React.forwardRef<
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Calculate responsive font size (now sets global CSS variable)
-  useDynamicFontSize();  const lastTriggerTimeRef = useRef(0);
+  useDynamicFontSize();
+
+  const lastTriggerTimeRef = useRef(0);
+
+  // Touch gesture state
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
 
   // Expose navigation method via ref
   React.useImperativeHandle(ref, () => ({
@@ -148,6 +153,142 @@ export const ScrollingFeatureShowcase = React.forwardRef<
       if (animationRafId) cancelAnimationFrame(animationRafId);
     };
   }, [slides.length, activeIndex]);
+
+  // Touch gesture handling for mobile
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let animationRafId: number;
+    const LOCK_DURATION = 1200;
+    const SWIPE_THRESHOLD = 50; // minimum pixels for a swipe
+    const VELOCITY_THRESHOLD = 0.3; // pixels per millisecond for quick flicks
+    const ANGLE_RATIO = 2; // horizontal must be 2x vertical to be horizontal swipe
+
+    const animate = (startTime: number, startScroll: number, targetScroll: number, targetIndex: number) => {
+      const currentTime = performance.now();
+      const elapsed = currentTime - startTime;
+      const duration = 600;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // easeInOutCubic
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      container.scrollTop = startScroll + (targetScroll - startScroll) * eased;
+
+      if (progress < 1) {
+        animationRafId = requestAnimationFrame(() => animate(startTime, startScroll, targetScroll, targetIndex));
+      } else {
+        setActiveIndex(targetIndex);
+        onSectionChange?.(targetIndex);
+      }
+    };
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Only handle single-finger gestures
+      if (e.touches.length !== 1) {
+        touchStartRef.current = null;
+        return;
+      }
+
+      const touch = e.touches[0];
+      touchStartRef.current = {
+        x: touch.clientX,
+        y: touch.clientY,
+        time: Date.now()
+      };
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      // We need to prevent default during move for vertical swipes
+      // to stop native scrolling, but only if we're likely doing a gesture
+      if (!touchStartRef.current || e.touches.length !== 1) return;
+
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touch.clientY - touchStartRef.current.y;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+
+      // If this looks like a vertical swipe, prevent default to stop native scroll
+      if (absY > 10 && absY > absX) {
+        e.preventDefault();
+      }
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+
+      // Get the final position from changedTouches
+      const touch = e.changedTouches[0];
+      if (!touch) {
+        touchStartRef.current = null;
+        return;
+      }
+
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touch.clientY - touchStartRef.current.y;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+      const elapsed = Date.now() - touchStartRef.current.time;
+
+      // Calculate velocities (px/ms)
+      const velocityX = elapsed > 0 ? absX / elapsed : 0;
+      const velocityY = elapsed > 0 ? absY / elapsed : 0;
+
+      touchStartRef.current = null;
+
+      // Determine if this is a horizontal or vertical swipe
+      const isHorizontalSwipe = absX > absY * ANGLE_RATIO;
+      const isVerticalSwipe = absY > absX;
+
+      // Handle horizontal swipe for sidebar toggle
+      if (isHorizontalSwipe && (absX >= SWIPE_THRESHOLD || velocityX >= VELOCITY_THRESHOLD)) {
+        // Dispatch sidebar toggle event
+        // Swipe left (negative deltaX) or right (positive deltaX)
+        const direction = deltaX > 0 ? 'right' : 'left';
+        const event = new CustomEvent('sidebarSwipeToggle', {
+          detail: { direction }
+        });
+        window.dispatchEvent(event);
+        return;
+      }
+
+      // Handle vertical swipe for section navigation
+      if (isVerticalSwipe && (absY >= SWIPE_THRESHOLD || velocityY >= VELOCITY_THRESHOLD)) {
+        const now = Date.now();
+
+        // Check lock duration
+        if (now - lastTriggerTimeRef.current < LOCK_DURATION) return;
+        lastTriggerTimeRef.current = now;
+
+        // Swipe up (negative deltaY) = next section, swipe down (positive deltaY) = previous section
+        const direction = deltaY < 0 ? 1 : -1;
+        const newIndex = Math.max(0, Math.min(slides.length - 1, activeIndex + direction));
+
+        if (newIndex === activeIndex) return;
+
+        const startScroll = container.scrollTop;
+        const targetScroll = newIndex * window.innerHeight + (window.innerHeight * 0.5);
+
+        animate(performance.now(), startScroll, targetScroll, newIndex);
+      }
+    };
+
+    // Use passive: false for touchmove to allow preventDefault
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
+      if (animationRafId) cancelAnimationFrame(animationRafId);
+    };
+  }, [slides.length, activeIndex, onSectionChange]);
 
   // Update blur based on scroll position
   useEffect(() => {
@@ -367,7 +508,7 @@ export const ScrollingFeatureShowcase = React.forwardRef<
                               src={slide.image}
                               alt={slide.title}
                               className="block max-w-full max-h-[85vh] w-auto h-auto object-cover"
-                              style={{ transform: 'scale(1.13)' }}
+                              style={{ transform: 'scale(1.15)' }}
                             />
                           </div>
                         </div>
